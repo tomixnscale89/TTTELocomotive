@@ -1,0 +1,19 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28822.285
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8088BEB9-06B0-480F-B6CB-FF6F10E375CB}"
+	ProjectSection(SolutionItems) = preProject
+		lmssteam.gs = lmssteam.gs
+		tttelocomotive.gs = tttelocomotive.gs
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FEED78BE-4D0B-4014-947B-AF51677488AB}
+	EndGlobalSection
+EndGlobal
