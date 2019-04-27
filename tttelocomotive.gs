@@ -47,7 +47,8 @@ class tttelocomotive isclass Locomotive
   thread void EyeScriptCheckThread(void);
    void SetEyeMeshOrientation(float x, float y, float z);
    void eye_ConstructSoup();
-
+   void eye_DeconstructSoup();
+  
    // ****************************************************************************/
   // Define Variables
   // ****************************************************************************/
