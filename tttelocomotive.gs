@@ -48,7 +48,7 @@ class tttelocomotive isclass Locomotive
    void SetEyeMeshOrientation(float x, float y, float z);
    void eye_ConstructSoup();
    void eye_DeconstructSoup();
-  
+
    // ****************************************************************************/
   // Define Variables
   // ****************************************************************************/
@@ -656,11 +656,11 @@ class tttelocomotive isclass Locomotive
 				//Controller is not currently set to be used, eye rotation should be incremented relative to the current value
 				if(eye_UpPressed)
 				{
-					eyeZ = eyeZ + eye_Speed;
+					eyeX = eyeX - eye_Speed;
 				}
 				if(eye_DownPressed)
 				{
-					eyeZ = eyeZ - eye_Speed;
+					eyeX = eyeX + eye_Speed;
 				}
 				if(eye_RollLeftPressed)
 				{
@@ -672,11 +672,11 @@ class tttelocomotive isclass Locomotive
 				}
 				if(eye_LeftPressed)
 				{
-					eyeX = eyeX - eye_Speed;
+					eyeZ = eyeZ - eye_Speed;
 				}
 				if(eye_RightPressed)
 				{
-					eyeX = eyeX + eye_Speed;
+					eyeZ = eyeZ + eye_Speed;
 				}
 			} else {
 				// This is run when the Controller is set to be used - Absolute mode and relative mode
