@@ -3,8 +3,14 @@
 // Desc: Script designed to make Thomas models more simple for Trainz.
 // Key features of this script are:
 // Replaceable faces with the capabilities of a smokebox door.
-// Eye directions are now handled separately, which makes eye direction easier for content creators.
+// Eye script from Rileyzzz
+// ============================================================================
+// Should work in all Trainz versions.
 // This script is provided as is and people are welcome to publish updates. The source will be available on github.
+// ============================================================================
+// Authors:
+// GDennish (Tomix)
+// Rileyzzz
 // ============================================================================
 
 include "locomotive.gs"
@@ -16,6 +22,12 @@ include "soup.gs"
 // ============================================================================
 // Style of code:
 // Use lmssteam for reference until our code is strong enough to use on it's own.
+// ============================================================================
+
+// ============================================================================
+// TO DO:
+// 1. Update all eyescript code to reflect the latest version on github.
+// 2. Begin implementing a GUI for the Lamps, and make the interface overall a bit more pretty.
 // ============================================================================
 
 
@@ -47,7 +59,7 @@ class tttelocomotive isclass Locomotive
   thread void EyeScriptCheckThread(void);
    void SetEyeMeshOrientation(float x, float y, float z);
    void eye_ConstructSoup();
-   void eye_DeconstructSoup();
+   void eye_DeconstructSoup(Message msg);
 
    // ****************************************************************************/
   // Define Variables
@@ -61,6 +73,40 @@ class tttelocomotive isclass Locomotive
   Asset coupler_idle, coupler_coupled;											// two options for the coupler
   Asset driver, fireman;	// fireman and driver meshes
 
+
+  // Bogie array to use for livery swapping
+  Bogey[] myBogies; // Array of bogies from Conifg
+
+
+  bool m_cameraViewpoint; // Current Camera point
+  bool m_cameraTarget; // Is this the camera target?
+
+  bool m_trainzModule;
+
+  float trainzVersion = World.GetTrainzVersion();
+
+  // LIVERY SWAPPING Variables
+  Asset textureSet; // Texture asset we will use to grab the textures
+  define int LIVERY_0 = 0;
+  define int LIVERY_1 = 1;
+  define int LIVERY_2 = 2;
+  define int LIVERY_3 = 3; // temporary livery Options. This will change from asset to asset...
+
+  int skinSelection; // Integer used to store the current skin of the asset. This will default to zero, unless forced in Init().
+  int copySkin; // May not be needed..
+
+  // Faces Options
+  int faceSelection;
+  //int newFace = -1; Not used until a cleaner approach for swapping faces is available.
+  define int FACE_0 = 0;
+  define int FACE_1 = 1;
+  define int FACE_2 = 2;
+  define int FACE_3 = 3;
+  define int FACE_4 = 4;
+  define int FACE_5 = 5;
+  define int SMOKEBOXDOOR = 6;
+  // we are referencing this as "face_6" inside the config stringtable since the
+  //code will only look for something labeled as "face_". Probably should fix.
 
   // ACS Stuff
   Library     ACSlib;   // reference to the Advanced Coupling System Library
@@ -127,7 +173,15 @@ class tttelocomotive isclass Locomotive
   {
     // call the parent
     inherited();
-	// Message Handlers
+    // ****************************************************************************/
+   // Grab assets from the Locomotive
+   // ****************************************************************************/
+  strTable = GetAsset().GetStringTable(); // String table to be used for obtaining information inside the Config
+  myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
+
+  faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
+
+
 
 	//Eyescript
 	AddHandler(me, "Eyescript", "Up", "HandleKeyUp");
@@ -149,7 +203,14 @@ class tttelocomotive isclass Locomotive
 	//Init should be called for every engine regardless of whether it is selected? so iTrainz eyescript multiplayer should be possible
 
 
-
+  // ****************************************************************************/
+ // Define Camera Handlers for hiding/showing the low poly exterior cab on steam locos.
+ // ****************************************************************************/
+  AddHandler(Interface, "Camera", "Internal-View", "CameraInternalViewHandler");
+  AddHandler(Interface, "Camera", "External-View", "CameraInternalViewHandler");
+  AddHandler(Interface, "Camera", "Tracking-View", "CameraInternalViewHandler");
+  AddHandler(Interface, "Camera", "Roaming-View", "CameraInternalViewHandler");
+  AddHandler(Interface, "Camera", "Target-Changed", "CameraTargetChangedHandler");
 
 
 
@@ -184,13 +245,237 @@ class tttelocomotive isclass Locomotive
     AddHandler(me, "Train", "Turnaround", "TrainTurnaroundHandler");
 
 
-	train = me.GetMyTrain();
-
-	SniffMyTrain();
+	train = me.GetMyTrain(); // Get the train
+	SniffMyTrain(); // Then sniff it
 
 
   // Commented out for rn to keep the script basic
 	//EyeScriptCheckThread(); // Initialize the eyescript thread, position could be changed if this causes errors
+  }
+
+  // ============================================================================
+  // Name: SetCabmesh()
+  // Parm:  None
+  // Desc: Sets the Cabin mesh and driver/fireman meshes to be visible if we are in the correct camera state.
+  // ============================================================================
+  void SetCabmesh()
+  {
+    if (m_cameraViewpoint and m_cameraTarget) // Inside the locomotive
+    {
+      me.SetMeshVisible("cabin", false, 0.0);
+      me.SetMeshVisible("driver", false, 0.0);
+    }
+    else // Outside the cabin
+    {
+      me.SetMeshVisible("cabin", true, 0.0);
+      me.SetMeshVisible("driver", true, 0.0);
+    }
+  }
+
+
+  void CameraInternalViewHandler(Message msg)
+  {
+    m_cameraViewpoint = (msg.minor == "Internal-View");
+
+    SetCabmesh();
+  }
+
+  void CameraTargetChangedHandler(Message msg)
+  {
+    m_cameraTarget = (msg.src == me);
+
+    SetCabmesh();
+  }
+
+
+
+  void ConfigureSkins()
+  {
+    //TrainzScript.Log("Entered ConfigureSkins");
+    switch(skinSelection)
+    {
+      //TrainzScript.Log("Entered switch of ConfigureSkins, "+ m_skinSelection);
+
+      case LIVERY_0:
+
+      break;
+
+      case LIVERY_1:
+
+      break;
+
+      case LIVERY_2:
+
+      break;
+
+      case LIVERY_3:
+
+      break;
+
+      default:
+      //SetFXTextureReplacement("stack_albedo",textureset,m_copySkin);
+
+      //myBogies[0].SetFXTextureReplacement("drive_albedo",textureset,m_copySkinBogey);
+
+      break;
+
+    }
+  }
+
+  // Want to properly implement this, but it doesn't work properly if the user selects a face and then changes their mind.
+  void SetFacesVisible(int faceType, bool visible, float fadeTime)
+  {
+    switch(faceType)
+    {
+      case FACE_0:
+      SetMeshVisible("face0",visible,fadeTime);
+      break;
+
+      case FACE_1:
+      SetMeshVisible("face1",visible,fadeTime);
+      break;
+
+      case FACE_2:
+      SetMeshVisible("face2",visible,fadeTime);
+      break;
+
+      case FACE_3:
+      SetMeshVisible("face3",visible,fadeTime);
+      break;
+
+      case FACE_4:
+      SetMeshVisible("face4",visible,fadeTime);
+      break;
+
+      case FACE_5:
+      SetMeshVisible("face5",visible,fadeTime);
+      break;
+
+      case SMOKEBOXDOOR:
+      SetMeshVisible("smokebox",visible,fadeTime);
+      break;
+
+      default:
+      break;
+    }
+  }
+
+
+  // ============================================================================
+  // Name: ConfigureFaces()
+  // Parm:  None
+  // Desc: Configures the locomotive face. Uses a switch with faceSelection to determmine the correct face to display.
+  // ============================================================================
+  void ConfigureFaces()
+  {
+
+    // This code is for the proper implementation of this method, I'm not sure how to implement it right now.
+    //if(newFace != faceSelection)
+    //{
+      //SetFacesVisible(faceSelection,false,0.0);
+      //newFace = faceSelection;
+      //SetFacesVisible(newFace,true,0.0);
+    //}
+
+    switch(faceSelection) // Switch based on the values from the top of this script
+    {
+      case FACE_0:
+      SetMeshVisible("face0",true,0.0);
+      SetMeshVisible("face1",false,0.0);
+      SetMeshVisible("face2",false,0.0);
+      SetMeshVisible("face3",false,0.0);
+      SetMeshVisible("face4",false,0.0);
+      SetMeshVisible("face5",false,0.0);
+      SetMeshVisible("eye_r",true,0.0);
+      SetMeshVisible("eye_l",true,0.0);
+      SetMeshVisible("smokebox",false,0.0);
+      break;
+
+      case FACE_1:
+      SetMeshVisible("face0",false,0.0);
+      SetMeshVisible("face1",true,0.0);
+      SetMeshVisible("face2",false,0.0);
+      SetMeshVisible("face3",false,0.0);
+      SetMeshVisible("face4",false,0.0);
+      SetMeshVisible("face5",false,0.0);
+      SetMeshVisible("eye_r",true,0.0);
+      SetMeshVisible("eye_l",true,0.0);
+      SetMeshVisible("smokebox",false,0.0);
+      break;
+
+      case FACE_2:
+      SetMeshVisible("face0",false,0.0);
+      SetMeshVisible("face1",false,0.0);
+      SetMeshVisible("face2",true,0.0);
+      SetMeshVisible("face3",false,0.0);
+      SetMeshVisible("face4",false,0.0);
+      SetMeshVisible("face5",false,0.0);
+      SetMeshVisible("eye_r",true,0.0);
+      SetMeshVisible("eye_l",true,0.0);
+      SetMeshVisible("smokebox",false,0.0);
+      break;
+
+      case FACE_3:
+      SetMeshVisible("face0",false,0.0);
+      SetMeshVisible("face1",false,0.0);
+      SetMeshVisible("face2",false,0.0);
+      SetMeshVisible("face3",true,0.0);
+      SetMeshVisible("face4",false,0.0);
+      SetMeshVisible("face5",false,0.0);
+      SetMeshVisible("eye_r",true,0.0);
+      SetMeshVisible("eye_l",true,0.0);
+      SetMeshVisible("smokebox",false,0.0);
+      break;
+
+      case FACE_4:
+      SetMeshVisible("face0",false,0.0);
+      SetMeshVisible("face1",false,0.0);
+      SetMeshVisible("face2",false,0.0);
+      SetMeshVisible("face3",false,0.0);
+      SetMeshVisible("face4",true,0.0);
+      SetMeshVisible("face5",false,0.0);
+      SetMeshVisible("eye_r",true,0.0);
+      SetMeshVisible("eye_l",true,0.0);
+      SetMeshVisible("smokebox",false,0.0);
+      break;
+
+      case FACE_5:
+      SetMeshVisible("face0",false,0.0);
+      SetMeshVisible("face1",false,0.0);
+      SetMeshVisible("face2",false,0.0);
+      SetMeshVisible("face3",false,0.0);
+      SetMeshVisible("face4",false,0.0);
+      SetMeshVisible("face5",true,0.0);
+      SetMeshVisible("eye_r",true,0.0);
+      SetMeshVisible("eye_l",true,0.0);
+      SetMeshVisible("smokebox",false,0.0);
+      break;
+
+      case SMOKEBOXDOOR: // Should not only hide the faces, but also the eyes since this is a smokebox door.
+      SetMeshVisible("face0",false,0.0);
+      SetMeshVisible("face1",false,0.0);
+      SetMeshVisible("face2",false,0.0);
+      SetMeshVisible("face3",false,0.0);
+      SetMeshVisible("face4",false,0.0);
+      SetMeshVisible("face5",false,0.0);
+      SetMeshVisible("eye_r",false,0.0);
+      SetMeshVisible("eye_l",false,0.0);
+      SetMeshVisible("smokebox",true,0.0);
+      break;
+
+      default:
+      SetMeshVisible("face0",true,0.0);
+      SetMeshVisible("face1",false,0.0);
+      SetMeshVisible("face2",false,0.0);
+      SetMeshVisible("face3",false,0.0);
+      SetMeshVisible("face4",false,0.0);
+      SetMeshVisible("face5",false,0.0);
+      SetMeshVisible("eye_r",true,0.0);
+      SetMeshVisible("eye_l",true,0.0);
+      SetMeshVisible("smokebox",false,0.0);
+      break;
+    }
+
   }
 
 
@@ -202,7 +487,7 @@ class tttelocomotive isclass Locomotive
   void ACShandler(Message msg)
   {
     // The ACS Handler is run when a coupling change is detected, either coupled or uncoupled
-    // tokenise msg.minor into pipe ('|') separated strings
+    // tokenwise msg.minor into pipe ('|') separated strings
     string[] callback = Str.Tokens(msg.minor, "|");
 	  // Interface.Print("I entered the ACS Handler");
     if (callback.size() >= 3)
@@ -360,27 +645,94 @@ class tttelocomotive isclass Locomotive
   // ============================================================================
   void ConfigureHeadcodeLamps(int headcode)
   {
+    // We are going to use SetFXAttachment to set the lamps in the correct positions.
+    // This is using the names of the lamps that are in the effects container of the locomotive.
     switch (headcode)
     {
       case HEADCODE_TVS:
-      Interface.Print("Trying to set TVS headcode");
         SetFXAttachment("lamp_tc", null);
         SetFXAttachment("lamp_bc" , null);
         SetFXAttachment("lamp_bl", null);
         SetFXAttachment("lamp_br", headlight_asset);
         break;
+
     case HEADCODE_NONE:
     SetFXAttachment("lamp_tc", null);
     SetFXAttachment("lamp_bc" , null);
     SetFXAttachment("lamp_bl", null);
     SetFXAttachment("lamp_br", null);
     break;
+
     case HEADCODE_LIGHT:
     SetFXAttachment("lamp_tc", headlight_asset);
     SetFXAttachment("lamp_bc" , null);
     SetFXAttachment("lamp_bl", null);
     SetFXAttachment("lamp_br", null);
     break;
+
+    case HEADCODE_EXPRESS:
+    SetFXAttachment("lamp_tc", null);
+    SetFXAttachment("lamp_bc" , null);
+    SetFXAttachment("lamp_bl", headlight_asset);
+    SetFXAttachment("lamp_br", headlight_asset);
+    break;
+
+    case HEADCODE_ALL_LAMPS:
+    SetFXAttachment("lamp_tc", headlight_asset);
+    SetFXAttachment("lamp_bc" , headlight_asset);
+    SetFXAttachment("lamp_bl", headlight_asset);
+    SetFXAttachment("lamp_br", headlight_asset);
+    break;
+
+    case HEADCODE_TAIL_LIGHTS:
+    SetFXAttachment("lamp_tc", null);
+    SetFXAttachment("lamp_bc" , null);
+    SetFXAttachment("lamp_bl", headlight_asset);
+    SetFXAttachment("lamp_br", headlight_asset);
+    break;
+
+    case HEADCODE_BRANCH:
+    SetFXAttachment("lamp_tc", null);
+    SetFXAttachment("lamp_bc" , null);
+    SetFXAttachment("lamp_bl", headlight_asset);
+    SetFXAttachment("lamp_br", null);
+    break;
+
+    case HEADCODE_EXPRESS_FREIGHT:
+    SetFXAttachment("lamp_tc", headlight_asset);
+    SetFXAttachment("lamp_bc" , null);
+    SetFXAttachment("lamp_bl", null);
+    SetFXAttachment("lamp_br", headlight_asset);
+    break;
+
+    case HEADCODE_EXPRESS_FREIGHT_2:
+    SetFXAttachment("lamp_tc", null);
+    SetFXAttachment("lamp_bc" , headlight_asset);
+    SetFXAttachment("lamp_bl", headlight_asset);
+    SetFXAttachment("lamp_br", null);
+    break;
+
+    case HEADCODE_EXPRESS_FREIGHT_3:
+    SetFXAttachment("lamp_tc", headlight_asset);
+    SetFXAttachment("lamp_bc" , null);
+    SetFXAttachment("lamp_bl", headlight_asset);
+    SetFXAttachment("lamp_br", null);
+    break;
+
+    case HEADCODE_GOODS:
+    SetFXAttachment("lamp_tc", null);
+    SetFXAttachment("lamp_bc" , headlight_asset);
+    SetFXAttachment("lamp_bl", null);
+    SetFXAttachment("lamp_br", headlight_asset);
+    break;
+
+    case HEADCODE_THROUGH_FREIGHT:
+    SetFXAttachment("lamp_tc", headlight_asset);
+    SetFXAttachment("lamp_bc" , headlight_asset);
+    SetFXAttachment("lamp_bl", null);
+    SetFXAttachment("lamp_br", null);
+    break;
+
     default:
     Interface.Print("Something did not work");
     break;
@@ -421,6 +773,11 @@ class tttelocomotive isclass Locomotive
     {
       inherited(soup);
 
+      faceSelection = soup.GetNamedTagAsInt("faces", faceSelection);
+      ConfigureFaces();
+
+      skinSelection = soup.GetNamedTagAsInt("skin", skinSelection);
+      ConfigureSkins();
       // load headcode
       m_headCode = soup.GetNamedTagAsInt("headcode-lamps", m_headCode);
     }
@@ -438,6 +795,10 @@ class tttelocomotive isclass Locomotive
       // Save the headcode as a soup tag so we can access it in other locations.
       soup.SetNamedTag("headcode-lamps", m_headCode);
 
+      soup.SetNamedTag("faces", faceSelection);
+
+      soup.SetNamedTag("skin",skinSelection);
+
       return soup;
     }
 
@@ -454,12 +815,21 @@ class tttelocomotive isclass Locomotive
       string html = inherited();
 
       // option to change headcode, this displays inside the ? HTML window in surveyor.
-      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
-      html = html + "<p>" + headcodeLampStr + "</p>";
+      //string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+      //html = html + "<p>" + headcodeLampStr + "</p>";
+
+      string classFaceStr = "<a href=live://property/faces>" + strTable.GetString("face_" + faceSelection) + "</a>";
+      html = html + "<p>" + strTable.GetString1("faces_desc", classFaceStr) + "</p>";
+
+      string classSkinStr = "<a href=live://property/skin>" + strTable.GetString("skin_" + skinSelection) + "</a>";
+      html = html + "<p>" + strTable.GetString1("skin_desc", classSkinStr) + "</p>";
+
+      // Let's post the current Trainz version for debugging purposes.
+      string trainzVerStr = "The Trainz Build number is: " + trainzVersion;
 
   //    TrainzScript.Log("HTML Is: " + html);
 
-      return html;
+      return html + trainzVerStr;
     }
 
   // ============================================================================
@@ -473,6 +843,14 @@ class tttelocomotive isclass Locomotive
   string GetPropertyType(string p_propertyID)
   {
     if (p_propertyID == "headcode_lamps")
+    {
+      return "list";
+    }
+    else if (p_propertyID == "faces")
+    {
+      return "list";
+    }
+    else if (p_propertyID == "skin")
     {
       return "list";
     }
@@ -496,6 +874,14 @@ class tttelocomotive isclass Locomotive
       Interface.Print(" I entered GetPropertyName looking for something");
       return "hello";
     }
+    if (p_propertyID == "faces")
+    {
+      return strTable.GetString("faces_name");
+    }
+    if (p_propertyID == "skin")
+    {
+      return strTable.GetString("skin_name");
+    }
 
     return inherited(p_propertyID);
   }
@@ -516,6 +902,14 @@ class tttelocomotive isclass Locomotive
     {
       Interface.Print(" I entered GetPropertyDescription looking for something");
       return "Please select a lamp headcode you would like to use:";
+    }
+    else if(p_propertyID == "faces")
+    {
+      return strTable.GetString("faces_description");
+    }
+    else if(p_propertyID == "skin")
+    {
+      return strTable.GetString("skin_description");
     }
 
     return inherited(p_propertyID);
@@ -540,6 +934,20 @@ class tttelocomotive isclass Locomotive
       for (i = 0; i < 12; i++) // Let us loop through the entire possible headcodes and list them all.
       {
         result[i] = HeadcodeDescription(i);
+      }
+    }
+    else if (p_propertyID == "faces")
+    {
+      for(i = 0; i < 7; i++) // Let us loop through the entire possible faces and list them all.
+      {
+        result[i] = strTable.GetString("face_" +i);
+      }
+    }
+    else if (p_propertyID == "skin")
+    {
+      for(i = 0; i < 2; i++) // Let us loop through the entire possible skins and list them all.
+      {
+        result[i] = strTable.GetString("skin_" +i);
       }
     }
     else
@@ -567,6 +975,22 @@ class tttelocomotive isclass Locomotive
       if (p_index > -1 and p_index < 12)
       {
         ConfigureHeadcodeLamps(p_index);
+      }
+    }
+    else if (p_propertyID == "faces")
+    {
+      if (p_index > -1 and p_index < 7)
+      {
+        faceSelection = p_index;
+        ConfigureFaces();
+      }
+    }
+    else if (p_propertyID == "skin")
+    {
+      if (p_index > -1 and p_index < 2)
+      {
+        skinSelection = p_index;
+        ConfigureSkins();
       }
     }
     else
