@@ -57,9 +57,9 @@ class tttelocomotive isclass Locomotive
 
 
   thread void EyeScriptCheckThread(void);
-   void SetEyeMeshOrientation(float x, float y, float z);
-   void eye_ConstructSoup();
-   void eye_DeconstructSoup(Message msg);
+  void SetEyeMeshOrientation(float x, float y, float z);
+  thread void MultiplayerBroadcast(void);
+
 
    // ****************************************************************************/
   // Define Variables
@@ -114,16 +114,22 @@ class tttelocomotive isclass Locomotive
 
 
   //Eyescript Variables
-   bool eye_UpPressed, eye_DownPressed, eye_LeftPressed, eye_RightPressed, eye_RollLeftPressed, eye_RollRightPressed;
+  bool eye_UpPressed, eye_DownPressed, eye_LeftPressed, eye_RightPressed, eye_RollLeftPressed, eye_RollRightPressed;
 
-   bool eye_IsControllerSupportEnabled; //Is a controller currently bound and set to control the script?
-   bool eye_ControllerAbsolute = true; //This variable determines the mode of joystick support, true is absolute and false is relative. Absolute is when the axis values directly set the eye rotation, and relative mode instead adds a multiple of the axis value to the current position
-		//These variables keep track of the rotation of the eyes, and will be dynamically updated incrementally. Rotations are defined relative to 0, with 0 being the absolute center of each axis.
+  define bool eye_IsControllerSupportEnabled = true; //Is a controller currently bound and set to control the script?
+
+	//These variables keep track of the rotation of the eyes, and will be dynamically updated incrementally. Rotations are defined relative to 0, with 0 being the absolute center of each axis.
 	float eyeX = 0.0; //Left-Right Eye Rotation
 	float eyeY = 0.0; // Eye Roll
 	float eyeZ = 0.0; // Up-Down Eye Rotation
-	float eye_Speed = 0.1; // Speed of eye movement, should be controlled through keyboard aswell
-	float eye_UpdatePeriod = 0.04; //Time in seconds between each eye update, this should be increased if the eye seems too performance heavy, and decreased if the eye seems too jittery
+
+  //face Variables
+  int eye_submesh = 1;
+  Soup eye_submeshes;
+
+
+	define float eye_UpdatePeriod = 0.02; //Time in seconds between each eye update, this should be increased if the eye seems too performance heavy, and decreased if the eye seems too jittery
+  define float MP_UpdatePeriod = 0.1;
   int eye_animframe = 0;
 
 // eyescript animation variables
@@ -131,8 +137,9 @@ class tttelocomotive isclass Locomotive
   bool eye_isrecording = false;
   bool eye_isanimating = false;
 
-  bool eye_enableexperimentalnetworking = false; // enable experimental iTrainz networking, for multiplayer games
-
+  //unimplemented keyboard control vars
+  define bool eye_ControllerAbsolute = true; //unimplemented
+  define float eye_Speed = 0.1;
 
 
 
@@ -184,23 +191,27 @@ class tttelocomotive isclass Locomotive
 
 
 	//Eyescript
-	AddHandler(me, "Eyescript", "Up", "HandleKeyUp");
-	AddHandler(me, "Eyescript", "UpR", "HandleKeyUpRelease");
-	AddHandler(me, "Eyescript", "Down", "HandleKeyDown");
-	AddHandler(me, "Eyescript", "DownR", "HandleKeyDownRelease");
-	AddHandler(me, "Eyescript", "Left", "HandleKeyLeft");
-	AddHandler(me, "Eyescript", "LeftR", "HandleKeyLeftRelease");
-	AddHandler(me, "Eyescript", "Right", "HandleKeyRight");
-	AddHandler(me, "Eyescript", "RightR", "HandleKeyRightRelease");
-	// Roll handling
-	AddHandler(me, "Eyescript", "RLeft", "HandleKeyRLeft");
-	AddHandler(me, "Eyescript", "RLeftR", "HandleKeyRLeftRelease");
-	AddHandler(me, "Eyescript", "RRight", "HandleKeyRRight");
-	AddHandler(me, "Eyescript", "RRightR", "HandleKeyRRightRelease");
+  AddHandler(me, "Eyescript", "Up", "HandleKeyForward");
+  AddHandler(me, "Eyescript", "UpR", "HandleKeyForwardUp");
+  AddHandler(me, "Eyescript", "Down", "HandleKeyBackward");
+  AddHandler(me, "Eyescript", "DownR", "HandleKeyBackwardUp");
+  AddHandler(me, "Eyescript", "Left", "HandleKeyLeft");
+  AddHandler(me, "Eyescript", "LeftR", "HandleKeyLeftUp");
+  AddHandler(me, "Eyescript", "Right", "HandleKeyRight");
+  AddHandler(me, "Eyescript", "RightR", "HandleKeyRightUp");
+
+  AddHandler(me, "Eyescript", "FLeft", "HandleKeyFLeft");
+  AddHandler(me, "Eyescript", "FRight", "HandleKeyFRight");
+  AddHandler(me, "Eyescript", "Whs", "HandleWheesh");
+  AddHandler(me, "Eyescript", "WhsUp", "HandleWheeshUp");
 
 
-  //AddHandler(null, "tttelocomotive", "eye", "eye_DeconstructSoup"); //Soup deconstructor for multiplayer, null may not be the best thing to use
-	//Init should be called for every engine regardless of whether it is selected? so iTrainz eyescript multiplayer should be possible
+
+
+  //Multiplayer Message! Important!
+  AddHandler(me, "EyescriptMP", "update", "MPUpdate");
+
+  eye_submeshes = submeshes = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions").GetNamedSoup("submeshes-122285");
 
 
   // ****************************************************************************/
@@ -1001,124 +1012,135 @@ class tttelocomotive isclass Locomotive
 
 
 
+  //Eyescript Input Handlers
+  if(eye_IsControllerSupportEnabled)
+  {
+    //Current controller input definitions - will likely change later to a separate axis input
+    public void HandleKeyForward(Message msg)
+    {
+    }
 
-	public void HandleKeyUp(Message msg)
-	{
-    	 eye_UpPressed = true;
-	}
-	public void HandleKeyUpRelease(Message msg)
-	{
-    	 eye_UpPressed = false;
-	}
-	public void HandleKeyDown(Message msg)
-	{
-    	 eye_DownPressed = true;
-	}
-	public void HandleKeyDownRelease(Message msg)
-	{
-    	 eye_DownPressed = false;
-	}
-	public void HandleKeyLeft(Message msg)
-	{
-    	 eye_LeftPressed = true;
-	}
-	public void HandleKeyLeftRelease(Message msg)
-	{
-    	 eye_LeftPressed = false;
-	}
-	public void HandleKeyRight(Message msg)
-	{
-    	 eye_RightPressed = true;
-	}
-	public void HandleKeyRightRelease(Message msg)
-	{
-    	 eye_RightPressed = false;
-	}
+    public void HandleKeyForwardUp(Message msg)
+    {
+    }
 
-	public void HandleKeyRLeft(Message msg)
-	{
-    	 eye_RollLeftPressed = true;
-	}
-	public void HandleKeyRLeftRelease(Message msg)
-	{
-    	 eye_RollLeftPressed = false;
-	}
-	public void HandleKeyRRight(Message msg)
-	{
-    	 eye_RollRightPressed = true;
-	}
-	public void HandleKeyRRightRelease(Message msg)
-	{
-    	 eye_RollRightPressed = false;
-	}
+    public void HandleKeyBackward(Message msg)
+    {
+      //eyeudprev = eyeud;
+      Soup parameters = msg.paramSoup;
+      parameters.GetNamedTagAsFloat("control-value");
+      eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+    }
 
+    public void HandleKeyBackwardUp(Message msg)
+    {
+    }
+
+    public void HandleKeyLeft(Message msg)
+    {
+      //eyelrprev = eyelr;
+      Soup parameters = msg.paramSoup;
+      parameters.GetNamedTagAsFloat("control-value");
+      eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+    }
+
+    public void HandleKeyLeftUp(Message msg)
+    {
+    }
+
+    public void HandleKeyRight(Message msg)
+    {
+    }
+
+    public void HandleKeyRightUp(Message msg)
+    {
+    }
+
+    //Face changing
+    //Refactor to not use superscript
+    public void HandleKeyFLeft(Message msg)
+    {
+      if (eye_submesh > 1){
+        eye_submesh = eye_submesh - 1;
+      }
+      string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+      //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+    }
+
+    public void HandleKeyFRight(Message msg)
+    {
+      if (eye_submesh < eye_submeshes.CountTags() - 1){
+        eye_submesh = eye_submesh + 1;
+      }
+      string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+      //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+    }
+    //wheeshing, currently disabled
+    public void HandleWheesh(Message msg)
+    {
+      //PostMessage(me, "pfx", "+4",0.0);
+      //Wheeshing = true;
+    }
+
+    public void HandleWheeshUp(Message msg)
+    {
+      //PostMessage(me, "pfx", "-4",0.0);
+      //Wheeshing = false;
+    }
+
+  }
+  else
+  {
+    //unimplemented keyboard support
+    public void HandleKeyForward(Message msg)
+    {
+    }
+
+    public void HandleKeyForwardUp(Message msg)
+    {
+    }
+
+    public void HandleKeyBackward(Message msg)
+    {
+    }
+
+    public void HandleKeyBackwardUp(Message msg)
+    {
+    }
+
+    public void HandleKeyLeft(Message msg)
+    {
+    }
+
+    public void HandleKeyLeftUp(Message msg)
+    {
+    }
+
+    public void HandleKeyRight(Message msg)
+    {
+    }
+
+    public void HandleKeyRightUp(Message msg)
+    {
+    }
+
+    //Face changing
+    //currently enabled on keyboards, as it only uses a button input
+
+
+  }
 
 	void SetEyeMeshOrientation(float x, float y, float z)
 	{
     SetMeshOrientation("eye_l", x, y, z);
 		SetMeshOrientation("eye_r", x, y, z);
-    //Network to other players here
-    if(eye_enableexperimentalnetworking){
-      //UNIMPLEMENTED
-      eye_ConstructSoup();
-    }
 	}
 
-
-
-
-
-
 	thread void EyeScriptCheckThread() {
-		while(true)
-		{
-		//all of this should eventually be in an if statement to check whether you are focused to this loco and have control over it, with an else statement that should listen for messages through multiplayer connections
-
-		//This thread should be run whenever the engine is initialized?, and will constantly update eyescript position variables and set orientations relevant to the eyescript implementation
-
-			if (!eye_IsControllerSupportEnabled){
-				//Controller is not currently set to be used, eye rotation should be incremented relative to the current value
-				if(eye_UpPressed)
-				{
-					eyeX = eyeX - eye_Speed;
-				}
-				if(eye_DownPressed)
-				{
-					eyeX = eyeX + eye_Speed;
-				}
-				if(eye_RollLeftPressed)
-				{
-					eyeY = eyeY - eye_Speed;
-				}
-				if(eye_RollRightPressed)
-				{
-					eyeY = eyeY + eye_Speed;
-				}
-				if(eye_LeftPressed)
-				{
-					eyeZ = eyeZ - eye_Speed;
-				}
-				if(eye_RightPressed)
-				{
-					eyeZ = eyeZ + eye_Speed;
-				}
-			} else {
-				// This is run when the Controller is set to be used - Absolute mode and relative mode
-
-				//CURRENTLY UNIMPLEMENTED
-				if(eye_ControllerAbsolute)
-				{
-				//Absolute mode is enabled
-
-				} else {
-				//Relative mode is enabled
-
-
-				}
-			}
-
-      //add to animation array logic
+		while(true) {
       //warning - this runs at the same speed as the eyescript, and can be performance heavy due to this
+      //increase the update period if this is the case
+
       if(eye_isanimating and (eye_animframe <= (eye_anim.size()-1))){ // check if the eye should be currently animating and the animation isnt over
         Orientation eye_Angdeconstruct = eye_anim[eye_animframe];
         eyeX = eye_Angdeconstruct.rx;
@@ -1126,8 +1148,8 @@ class tttelocomotive isclass Locomotive
         eyeZ = eye_Angdeconstruct.rz;
 
         eye_animframe = eye_animframe + 1;
-      }else{
 
+      } else {
         eye_animframe = 0;
         eye_isanimating = false;
       }
@@ -1140,32 +1162,78 @@ class tttelocomotive isclass Locomotive
         eye_Angbuilder.ry = eyeY;
         eye_Angbuilder.rz = eyeZ;
         eye_anim[eye_anim.size()] = eye_Angbuilder; //Append animation frame to array
-
       }
 
-			//And Finally, once all of the eye logic has been run, the script needs to actually apply the variable changes to the eye orientations themselves ================================================
-
+			//final orientation apply ================================================
 			SetEyeMeshOrientation(eyeX, eyeY, eyeZ);
 
 			Sleep(eye_UpdatePeriod);
 		}
 	}
 
-  void eye_ConstructSoup()
-	{
-    if(eye_enableexperimentalnetworking){
-      Soup datasoup;
 
+  //This section of the code handles the multiplayer, using some epic advanced soup business
 
-      //BroadcastGameplayMessage(string msgMajor, string msgMinor, Soup data);
-      //BroadcastGameplayMessage("tttelocomotive", "eye", datasoup); Currently this broadcasts to everyone on the server, it should eventually be changed to only broadcast to other clients that have their cameras near the locomotive (however it may not even be parsed if the draw distance doesnt cause script execution on invisible locos)
+  //sends a message to other game clients
+	thread void MultiplayerBroadcast() {
+		while(true)
+		{
+			//CHECK FOR CLIENT OWNERSHIP, OTHERWISE IT WILL GET MESSY
+			DriverCharacter driver = me.GetMyTrain().GetActiveDriver();
+			if (MultiplayerGame.IsActive() and driver and driver.IsLocalPlayerOwner()) {
 
-    }
+				//this thread will package up data and send it across the server to be listened for
+				Soup senddata = Constructors.NewSoup();       // this soup will be empty
+        senddata.SetNamedTag("eyeX",eyeX);
+        senddata.SetNamedTag("eyeY",eyeY);
+        senddata.SetNamedTag("eyeZ",eyeZ);
+				senddata.SetNamedTag("submesh",eye_submesh);
+				//senddata.SetNamedTag("wheesh",Wheeshing);
+				senddata.SetNamedTag("id",me.GetGameObjectID());
+				MultiplayerGame.BroadcastGameplayMessage("EyescriptMP", "update", senddata);
+				//MultiplayerGame.SendGameplayMessageToServer("EyescriptMP", "update", senddata); //Send to the host too!!!!
+				//Interface.Print("Multiplayer Data Sent!");
+
+			}
+			Sleep(MP_UpdatePeriod); // don't go too crazy with data
+		}
 	}
-  void eye_DeconstructSoup(Message msg)
-	{
-    if(eye_enableexperimentalnetworking){
 
-    }
+	//receives and handles multiplayer messages
+	public void MPUpdate(Message msg)
+	{
+		Soup ReceivedData = msg.paramSoup;
+
+		DriverCharacter driver = me.GetMyTrain().GetActiveDriver();
+		if(driver.IsLocalPlayerOwner() == false and me.GetGameObjectID().DoesMatch(ReceivedData.GetNamedTagAsGameObjectID("id"))) //this might not work idk
+		{
+			//Interface.Print("Data Confirmed!");
+      float ReyeX = ReceivedData.GetNamedTagAsFloat("eyeX");
+    	float ReyeY = ReceivedData.GetNamedTagAsFloat("eyeY");
+      float ReyeZ = ReceivedData.GetNamedTagAsFloat("eyeZ");
+
+			int Rsubmesh = ReceivedData.GetNamedTagAsInt("submesh");
+
+			eyeX = ReyeX;
+			eyeY = ReyeY;
+      eyeZ = ReyeZ;
+			if(eye_submesh != Rsubmesh)
+			{
+				eye_submesh = Rsubmesh;
+				string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+        //fix later
+				//PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+			}
+
+			//bool Rwheesh = ReceivedData.GetNamedTagAsBool("wheesh");
+
+			//if(Rwheesh and !Wheeshing)
+			//{
+			//	PostMessage(me, "pfx", "+4",0.0);
+			//} else if(!Rwheesh and Wheeshing) {
+			//	PostMessage(me, "pfx", "-4",0.0);
+			//}
+		}
 	}
+
 };
