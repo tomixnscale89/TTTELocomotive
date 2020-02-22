@@ -211,8 +211,12 @@ class tttelocomotive isclass Locomotive
   //Multiplayer Message! Important!
   AddHandler(me, "EyescriptMP", "update", "MPUpdate");
 
-  eye_submeshes = submeshes = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions").GetNamedSoup("submeshes-122285");
+  eye_submeshes = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions").GetNamedSoup("submeshes-122285");
 
+  EyeScriptCheckThread();
+  if(MultiplayerGame.IsActive()){
+    MultiplayerBroadcast();
+  }
 
   // ****************************************************************************/
  // Define Camera Handlers for hiding/showing the low poly exterior cab on steam locos.
@@ -1012,123 +1016,80 @@ class tttelocomotive isclass Locomotive
 
 
 
-  //Eyescript Input Handlers
-  if(eye_IsControllerSupportEnabled)
+
+  //Current controller input definitions - will likely change later to a separate axis input
+  public void HandleKeyForward(Message msg)
   {
-    //Current controller input definitions - will likely change later to a separate axis input
-    public void HandleKeyForward(Message msg)
-    {
-    }
-
-    public void HandleKeyForwardUp(Message msg)
-    {
-    }
-
-    public void HandleKeyBackward(Message msg)
-    {
-      //eyeudprev = eyeud;
-      Soup parameters = msg.paramSoup;
-      parameters.GetNamedTagAsFloat("control-value");
-      eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
-    }
-
-    public void HandleKeyBackwardUp(Message msg)
-    {
-    }
-
-    public void HandleKeyLeft(Message msg)
-    {
-      //eyelrprev = eyelr;
-      Soup parameters = msg.paramSoup;
-      parameters.GetNamedTagAsFloat("control-value");
-      eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
-    }
-
-    public void HandleKeyLeftUp(Message msg)
-    {
-    }
-
-    public void HandleKeyRight(Message msg)
-    {
-    }
-
-    public void HandleKeyRightUp(Message msg)
-    {
-    }
-
-    //Face changing
-    //Refactor to not use superscript
-    public void HandleKeyFLeft(Message msg)
-    {
-      if (eye_submesh > 1){
-        eye_submesh = eye_submesh - 1;
-      }
-      string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-      //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
-    }
-
-    public void HandleKeyFRight(Message msg)
-    {
-      if (eye_submesh < eye_submeshes.CountTags() - 1){
-        eye_submesh = eye_submesh + 1;
-      }
-      string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-      //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
-    }
-    //wheeshing, currently disabled
-    public void HandleWheesh(Message msg)
-    {
-      //PostMessage(me, "pfx", "+4",0.0);
-      //Wheeshing = true;
-    }
-
-    public void HandleWheeshUp(Message msg)
-    {
-      //PostMessage(me, "pfx", "-4",0.0);
-      //Wheeshing = false;
-    }
-
   }
-  else
+
+  public void HandleKeyForwardUp(Message msg)
   {
-    //unimplemented keyboard support
-    public void HandleKeyForward(Message msg)
-    {
-    }
-
-    public void HandleKeyForwardUp(Message msg)
-    {
-    }
-
-    public void HandleKeyBackward(Message msg)
-    {
-    }
-
-    public void HandleKeyBackwardUp(Message msg)
-    {
-    }
-
-    public void HandleKeyLeft(Message msg)
-    {
-    }
-
-    public void HandleKeyLeftUp(Message msg)
-    {
-    }
-
-    public void HandleKeyRight(Message msg)
-    {
-    }
-
-    public void HandleKeyRightUp(Message msg)
-    {
-    }
-
-    //Face changing
-    //currently enabled on keyboards, as it only uses a button input
-
-
   }
+
+  public void HandleKeyBackward(Message msg)
+  {
+    //eyeudprev = eyeud;
+    Soup parameters = msg.paramSoup;
+    parameters.GetNamedTagAsFloat("control-value");
+    eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+  }
+
+  public void HandleKeyBackwardUp(Message msg)
+  {
+  }
+
+  public void HandleKeyLeft(Message msg)
+  {
+    //eyelrprev = eyelr;
+    Soup parameters = msg.paramSoup;
+    parameters.GetNamedTagAsFloat("control-value");
+    eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+  }
+
+  public void HandleKeyLeftUp(Message msg)
+  {
+  }
+
+  public void HandleKeyRight(Message msg)
+  {
+  }
+
+  public void HandleKeyRightUp(Message msg)
+  {
+  }
+
+  //Face changing
+  //Refactor to not use superscript
+  public void HandleKeyFLeft(Message msg)
+  {
+    if (eye_submesh > 1){
+      eye_submesh = eye_submesh - 1;
+    }
+    string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+    //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+  }
+
+  public void HandleKeyFRight(Message msg)
+  {
+    if (eye_submesh < eye_submeshes.CountTags() - 1){
+      eye_submesh = eye_submesh + 1;
+    }
+    string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+    //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+  }
+  //wheeshing, currently disabled
+  public void HandleWheesh(Message msg)
+  {
+    //PostMessage(me, "pfx", "+4",0.0);
+    //Wheeshing = true;
+  }
+
+  public void HandleWheeshUp(Message msg)
+  {
+    //PostMessage(me, "pfx", "-4",0.0);
+    //Wheeshing = false;
+  }
+
 
 	void SetEyeMeshOrientation(float x, float y, float z)
 	{
@@ -1165,7 +1126,7 @@ class tttelocomotive isclass Locomotive
       }
 
 			//final orientation apply ================================================
-			SetEyeMeshOrientation(eyeX, eyeY, eyeZ);
+			SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
 
 			Sleep(eye_UpdatePeriod);
 		}
