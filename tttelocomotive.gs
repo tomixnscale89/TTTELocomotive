@@ -114,7 +114,7 @@ class tttelocomotive isclass Locomotive
 
 
   //Eyescript Variables
-  bool eye_UpPressed, eye_DownPressed, eye_LeftPressed, eye_RightPressed, eye_RollLeftPressed, eye_RollRightPressed;
+
 
   define bool eye_IsControllerSupportEnabled = true; //Is a controller currently bound and set to control the script?
 
@@ -140,7 +140,7 @@ class tttelocomotive isclass Locomotive
   //unimplemented keyboard control vars
   define bool eye_ControllerAbsolute = true; //unimplemented
   define float eye_Speed = 0.1;
-
+  bool eye_UpPressed, eye_DownPressed, eye_LeftPressed, eye_RightPressed, eye_RollLeftPressed, eye_RollRightPressed;
 
 
   // Options for headcode lights;
