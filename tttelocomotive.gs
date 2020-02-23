@@ -1149,6 +1149,7 @@ class tttelocomotive isclass Locomotive
         senddata.SetNamedTag("eyeY",eyeY);
         senddata.SetNamedTag("eyeZ",eyeZ);
 				senddata.SetNamedTag("submesh",eye_submesh);
+        senddata.SetNamedTag("skin",skinSelection);
 				//senddata.SetNamedTag("wheesh",Wheeshing);
 				senddata.SetNamedTag("id",me.GetGameObjectID());
 				MultiplayerGame.BroadcastGameplayMessage("EyescriptMP", "update", senddata);
@@ -1174,7 +1175,7 @@ class tttelocomotive isclass Locomotive
       float ReyeZ = ReceivedData.GetNamedTagAsFloat("eyeZ");
 
 			int Rsubmesh = ReceivedData.GetNamedTagAsInt("submesh");
-
+      int Rskinselection = ReceivedData.GetNamedTagAsInt("skin");
 			eyeX = ReyeX;
 			eyeY = ReyeY;
       eyeZ = ReyeZ;
@@ -1186,6 +1187,8 @@ class tttelocomotive isclass Locomotive
 				//PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
 			}
 
+      skinSelection = Rskinselection;
+      ConfigureSkins();
 			//bool Rwheesh = ReceivedData.GetNamedTagAsBool("wheesh");
 
 			//if(Rwheesh and !Wheeshing)
