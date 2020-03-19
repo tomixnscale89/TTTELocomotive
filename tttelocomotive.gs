@@ -1050,6 +1050,7 @@ class tttelocomotive isclass Locomotive
     Soup parameters = msg.paramSoup;
     parameters.GetNamedTagAsFloat("control-value");
     eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+    SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
   }
 
   public void HandleKeyBackwardUp(Message msg)
@@ -1062,6 +1063,7 @@ class tttelocomotive isclass Locomotive
     Soup parameters = msg.paramSoup;
     parameters.GetNamedTagAsFloat("control-value");
     eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+    SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
   }
 
   public void HandleKeyLeftUp(Message msg)
