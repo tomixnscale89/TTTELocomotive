@@ -59,8 +59,9 @@ class tttelocomotive isclass Locomotive
   thread void EyeScriptCheckThread(void);
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
-
-
+  void createLocoWindow();
+  void loadBrowserTab(string filename);
+  thread void ScanBrowser(void);
    // ****************************************************************************/
   // Define Variables
   // ****************************************************************************/
@@ -142,6 +143,8 @@ class tttelocomotive isclass Locomotive
   define float eye_Speed = 0.1;
   bool eye_UpPressed, eye_DownPressed, eye_LeftPressed, eye_RightPressed, eye_RollLeftPressed, eye_RollRightPressed;
 
+  //Browser interface
+  Browser browser;
 
   // Options for headcode lights;
   define int HEADCODE_NONE = 0;
@@ -236,6 +239,9 @@ class tttelocomotive isclass Locomotive
   ACSParams = new GSObject[1];
   ACSParams[0] = me;
 
+  //create the browser menu - this could be changed later to link to a pantograph or keybind
+  createLocoWindow();
+  ScanBrowser();
   // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
   coupler_idle = GetAsset().FindAsset("coupler_idle");
   coupler_coupled = GetAsset().FindAsset("coupler_coupled");
@@ -264,8 +270,7 @@ class tttelocomotive isclass Locomotive
 	SniffMyTrain(); // Then sniff it
 
 
-  // Commented out for rn to keep the script basic
-	//EyeScriptCheckThread(); // Initialize the eyescript thread, position could be changed if this causes errors
+
   }
 
   // ============================================================================
@@ -1014,8 +1019,21 @@ class tttelocomotive isclass Locomotive
     }
   }
 
+  void createLocoWindow()
+  {
+    browser = null;
+    if ( !browser )	browser = Constructors.NewBrowser();
+    browser.SetCloseEnabled(true);
+  	browser.SetWindowPosition(Interface.GetDisplayWidth()-320, Interface.GetDisplayHeight() - 525);
+  	browser.SetWindowSize(300, 350);
+  	browser.SetWindowVisible(true);
+  	browser.LoadHTMLFile(GetAsset(), "/html/menu.html");
+  }
 
-
+  void loadBrowserTab(string filename)
+  {
+  	browser.LoadHTMLFile(GetAsset(), "/html/" + filename + ".html");
+  }
 
   //Current controller input definitions - will likely change later to a separate axis input
   public void HandleKeyForward(Message msg)
@@ -1202,5 +1220,107 @@ class tttelocomotive isclass Locomotive
 			//}
 		}
 	}
+
+
+  thread void ScanBrowser() {
+		Message msg;
+		wait(){
+      on "Browser-URL", "live://open_eye", msg:
+      if ( browser and msg.src == browser )
+      {
+          //open tab Window
+          loadBrowserTab("eye");
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://return", msg:
+      if ( browser and msg.src == browser )
+      {
+          //open tab Window
+          loadBrowserTab("menu");
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://eye-4", msg:
+      if ( browser and msg.src == browser )
+      {
+  			//playing = false;
+  			//if (Dial == true)
+  			//{
+    			//Dial = false;
+
+  			//}else {
+    			//Dial = true;
+    			//SliderCheck();
+  			//}
+      }
+      msg.src = null;
+      continue;
+
+			on "Browser-URL", "live://eye-5", msg:
+      if ( browser and msg.src == browser )
+      {
+  			//if (Dial2 == true)
+  			//{
+  			//     Dial2 = false;
+  			//} else {
+  			//     Dial2 = true;
+			  //     DialCheck();
+  			//}
+      }
+		  msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://eye-6", msg:
+      if ( browser and msg.src == browser )
+      {
+  		  browser.SetElementProperty("dcc","value",(string)0.0);
+  		  browser.SetElementProperty("lrslider","value",(string)0.0);
+  		  browser.SetElementProperty("udslider","value",(string)0.0);
+      }
+      msg.src = null;
+      continue;
+
+		  on "Browser-URL", "live://record", msg:
+      if ( browser and msg.src == browser )
+      {
+  			//recording = true;
+  			//record();
+      }
+      msg.src = null;
+      continue;
+
+	    on "Browser-URL", "live://record-stop", msg:
+      if ( browser and msg.src == browser )
+      {
+			     //recording = false;
+      }
+      msg.src = null;
+      continue;
+
+	    on "Browser-URL", "live://play", msg:
+      if ( browser and msg.src == browser )
+      {
+		       //playanim();
+      }
+      msg.src = null;
+      continue;
+
+
+      on "Browser-Closed", "", msg:
+      {
+      if ( browser and msg.src == browser ) browser = null;
+        //BrowserClosed = true;
+      }
+      msg.src = null;
+      continue;
+
+      Sleep(0.5);
+		}
+	}
+
+
 
 };
