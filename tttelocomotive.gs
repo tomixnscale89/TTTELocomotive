@@ -98,16 +98,7 @@ class tttelocomotive isclass Locomotive
 
   // Faces Options
   int faceSelection;
-  //int newFace = -1; Not used until a cleaner approach for swapping faces is available.
-  define int FACE_0 = 0;
-  define int FACE_1 = 1;
-  define int FACE_2 = 2;
-  define int FACE_3 = 3;
-  define int FACE_4 = 4;
-  define int FACE_5 = 5;
-  define int SMOKEBOXDOOR = 6;
-  // we are referencing this as "face_6" inside the config stringtable since the
-  //code will only look for something labeled as "face_". Probably should fix.
+
 
   Soup ExtensionsContainer;
   Soup FacesContainer;
@@ -373,6 +364,7 @@ class tttelocomotive isclass Locomotive
   // ============================================================================
   void ConfigureFaces()
   {
+    TrainzScript.Log("Setting face to " + (string)faceSelection);
     //clear our faces
     int i;
     for(i = 0; i < FacesContainer.CountTags(); i++)
@@ -380,9 +372,10 @@ class tttelocomotive isclass Locomotive
         SetMeshVisible(FacesContainer.GetIndexedTagName(i), false, 0.0);
     }
 
-    string activeFaceMesh = FacesContainer.GetIndexedTagName(faceSelection);
     //set our active face to be visible
-    SetMeshVisible(FacesContainer.GetIndexedTagName(activeFaceMesh), true, 0.0);
+    SetMeshVisible(FacesContainer.GetIndexedTagName(faceSelection), true, 0.0);
+
+    string activeFaceMesh = FacesContainer.GetIndexedTagName(faceSelection);
 
     //determine if this is a smokebox mesh
     if(SmokeboxContainer.GetIndexForNamedTag(activeFaceMesh) == -1)
@@ -738,7 +731,7 @@ class tttelocomotive isclass Locomotive
       //string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
       //html = html + "<p>" + headcodeLampStr + "</p>";
 
-      string classFaceStr = "<a href=live://property/faces>" + strTable.GetString("face_" + faceSelection) + "</a>";
+      string classFaceStr = "<a href=live://property/faces>" + FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection)) + "</a>";
       html = html + "<p>" + strTable.GetString1("faces_desc", classFaceStr) + "</p>";
 
       string classSkinStr = "<a href=live://property/skin>" + strTable.GetString("skin_" + skinSelection) + "</a>";
@@ -858,9 +851,9 @@ class tttelocomotive isclass Locomotive
     }
     else if (p_propertyID == "faces")
     {
-      for(i = 0; i < 7; i++) // Let us loop through the entire possible faces and list them all.
+      for(i = 0; i < FacesContainer.CountTags(); i++) // Let us loop through the entire possible faces and list them all.
       {
-        result[i] = strTable.GetString("face_" +i);
+        result[i] = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
       }
     }
     else if (p_propertyID == "skin")
@@ -899,7 +892,7 @@ class tttelocomotive isclass Locomotive
     }
     else if (p_propertyID == "faces")
     {
-      if (p_index > -1 and p_index < 7)
+      if (p_index > -1 and p_index < FacesContainer.CountTags())
       {
         faceSelection = p_index;
         ConfigureFaces();
