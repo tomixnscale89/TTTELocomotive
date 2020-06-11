@@ -975,21 +975,20 @@ class tttelocomotive isclass Locomotive
   //Refactor to not use superscript
   public void HandleKeyFLeft(Message msg)
   {
-    //if (eye_submesh > 1){
-    //  eye_submesh = eye_submesh - 1;
-    //}
-    //string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-
+    if (faceSelection > 0){
+      faceSelection = faceSelection - 1;
+    }
+    ConfigureFaces();
   }
 
   public void HandleKeyFRight(Message msg)
   {
-    //if (eye_submesh < eye_submeshes.CountTags() - 1){
-    //  eye_submesh = eye_submesh + 1;
-    //}
-    //string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-
+    if (faceSelection < FacesContainer.CountTags()){
+      faceSelection = faceSelection + 1;
+    }
+    ConfigureFaces();
   }
+
   //wheeshing, currently disabled
   public void HandleWheesh(Message msg)
   {
@@ -1067,9 +1066,6 @@ class tttelocomotive isclass Locomotive
 				//senddata.SetNamedTag("wheesh",Wheeshing);
 				senddata.SetNamedTag("id",me.GetGameObjectID());
 				MultiplayerGame.BroadcastGameplayMessage("EyescriptMP", "update", senddata);
-				//MultiplayerGame.SendGameplayMessageToServer("EyescriptMP", "update", senddata); //Send to the host too!!!!
-				//Interface.Print("Multiplayer Data Sent!");
-
 			}
 			Sleep(MP_UpdatePeriod); // don't go too crazy with data
 		}
@@ -1098,8 +1094,7 @@ class tttelocomotive isclass Locomotive
 			if(faceSelection != RfaceSelection)
 			{
 				faceSelection = RfaceSelection;
-				//string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-
+        ConfigureFaces();
 			}
 
       skinSelection = Rskinselection;
@@ -1136,36 +1131,6 @@ class tttelocomotive isclass Locomotive
           loadBrowserTab("menu");
       }
       msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://eye-4", msg:
-      if ( browser and msg.src == browser )
-      {
-  			//playing = false;
-  			//if (Dial == true)
-  			//{
-    			//Dial = false;
-
-  			//}else {
-    			//Dial = true;
-    			//SliderCheck();
-  			//}
-      }
-      msg.src = null;
-      continue;
-
-			on "Browser-URL", "live://eye-5", msg:
-      if ( browser and msg.src == browser )
-      {
-  			//if (Dial2 == true)
-  			//{
-  			//     Dial2 = false;
-  			//} else {
-  			//     Dial2 = true;
-			  //     DialCheck();
-  			//}
-      }
-		  msg.src = null;
       continue;
 
       on "Browser-URL", "live://eye-6", msg:
