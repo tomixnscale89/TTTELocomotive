@@ -109,6 +109,11 @@ class tttelocomotive isclass Locomotive
   // we are referencing this as "face_6" inside the config stringtable since the
   //code will only look for something labeled as "face_". Probably should fix.
 
+  Soup ExtensionsContainer;
+  Soup FacesContainer;
+  Soup LiveryContainer;
+  Soup SmokeboxContainer;
+
   // ACS Stuff
   Library     ACSlib;   // reference to the Advanced Coupling System Library
   GSObject[] ACSParams; // not sure what this is
@@ -124,9 +129,7 @@ class tttelocomotive isclass Locomotive
 	float eyeY = 0.0; // Eye Roll
 	float eyeZ = 0.0; // Up-Down Eye Rotation
 
-  //face Variables
-  int eye_submesh = 1;
-  Soup eye_submeshes;
+
 
 
 	define float eye_UpdatePeriod = 0.02; //Time in seconds between each eye update, this should be increased if the eye seems too performance heavy, and decreased if the eye seems too jittery
@@ -191,6 +194,29 @@ class tttelocomotive isclass Locomotive
 
   faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
 
+  ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
+  FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
+  LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
+  SmokeboxContainer = ExtensionsContainer.GetNamedSoup("smokeboxes");
+
+  //typical extensions container example
+  //faces
+  //{
+  //  happy "Happy"
+  //  sad "Sad"
+  //  smokebox1 "Red Smokebox"
+  //  smokebox2 "Green Smokebox"
+  //}
+  //smokeboxes
+  //{
+  //  smokebox1 "static"
+  //  smokebox2 "animated"
+  //}
+  //liveries
+  //{
+  //  red "Red"
+  //  green "Green"
+  //}
 
 
 	//Eyescript
@@ -209,12 +235,8 @@ class tttelocomotive isclass Locomotive
   AddHandler(me, "Eyescript", "WhsUp", "HandleWheeshUp");
 
 
-
-
   //Multiplayer Message! Important!
   AddHandler(me, "EyescriptMP", "update", "MPUpdate");
-
-  eye_submeshes = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions").GetNamedSoup("submeshes-122285");
 
   EyeScriptCheckThread();
   if(MultiplayerGame.IsActive()){
@@ -251,19 +273,19 @@ class tttelocomotive isclass Locomotive
 
 
    // message handlers for ACS entry points and tail lights
-    AddHandler(me, "Vehicle", "Coupled", "VehicleCoupleHandler");
-    AddHandler(me, "Vehicle", "Decoupled", "VehicleDecoupleHandler");
-    AddHandler(me, "Vehicle", "Derailed", "VehicleDerailHandler");
-    // lashed on as it happens to do the right thing
-    AddHandler(me, "World", "ModuleInit", "VehicleDecoupleHandler");
+  AddHandler(me, "Vehicle", "Coupled", "VehicleCoupleHandler");
+  AddHandler(me, "Vehicle", "Decoupled", "VehicleDecoupleHandler");
+  AddHandler(me, "Vehicle", "Derailed", "VehicleDerailHandler");
+  // lashed on as it happens to do the right thing
+  AddHandler(me, "World", "ModuleInit", "VehicleDecoupleHandler");
 
-    // ACS callback handler
-    AddHandler(me, "ACScallback", "", "ACShandler");
+  // ACS callback handler
+  AddHandler(me, "ACScallback", "", "ACShandler");
 
-    // headcode / reporting number handler
+  // headcode / reporting number handler
 
-    // handler necessary for tail lights
-    AddHandler(me, "Train", "Turnaround", "TrainTurnaroundHandler");
+  // handler necessary for tail lights
+  AddHandler(me, "Train", "Turnaround", "TrainTurnaroundHandler");
 
 
 	train = me.GetMyTrain(); // Get the train
@@ -312,6 +334,7 @@ class tttelocomotive isclass Locomotive
   void ConfigureSkins()
   {
     //TrainzScript.Log("Entered ConfigureSkins");
+
     switch(skinSelection)
     {
       //TrainzScript.Log("Entered switch of ConfigureSkins, "+ m_skinSelection);
@@ -342,44 +365,6 @@ class tttelocomotive isclass Locomotive
     }
   }
 
-  // Want to properly implement this, but it doesn't work properly if the user selects a face and then changes their mind.
-  void SetFacesVisible(int faceType, bool visible, float fadeTime)
-  {
-    switch(faceType)
-    {
-      case FACE_0:
-      SetMeshVisible("face0",visible,fadeTime);
-      break;
-
-      case FACE_1:
-      SetMeshVisible("face1",visible,fadeTime);
-      break;
-
-      case FACE_2:
-      SetMeshVisible("face2",visible,fadeTime);
-      break;
-
-      case FACE_3:
-      SetMeshVisible("face3",visible,fadeTime);
-      break;
-
-      case FACE_4:
-      SetMeshVisible("face4",visible,fadeTime);
-      break;
-
-      case FACE_5:
-      SetMeshVisible("face5",visible,fadeTime);
-      break;
-
-      case SMOKEBOXDOOR:
-      SetMeshVisible("smokebox",visible,fadeTime);
-      break;
-
-      default:
-      break;
-    }
-  }
-
 
   // ============================================================================
   // Name: ConfigureFaces()
@@ -388,112 +373,27 @@ class tttelocomotive isclass Locomotive
   // ============================================================================
   void ConfigureFaces()
   {
-
-    // This code is for the proper implementation of this method, I'm not sure how to implement it right now.
-    //if(newFace != faceSelection)
-    //{
-      //SetFacesVisible(faceSelection,false,0.0);
-      //newFace = faceSelection;
-      //SetFacesVisible(newFace,true,0.0);
-    //}
-
-    switch(faceSelection) // Switch based on the values from the top of this script
+    //clear our faces
+    int i;
+    for(i = 0; i < FacesContainer.CountTags(); i++)
     {
-      case FACE_0:
-      SetMeshVisible("face0",true,0.0);
-      SetMeshVisible("face1",false,0.0);
-      SetMeshVisible("face2",false,0.0);
-      SetMeshVisible("face3",false,0.0);
-      SetMeshVisible("face4",false,0.0);
-      SetMeshVisible("face5",false,0.0);
-      SetMeshVisible("eye_r",true,0.0);
-      SetMeshVisible("eye_l",true,0.0);
-      SetMeshVisible("smokebox",false,0.0);
-      break;
+        SetMeshVisible(FacesContainer.GetIndexedTagName(i), false, 0.0);
+    }
 
-      case FACE_1:
-      SetMeshVisible("face0",false,0.0);
-      SetMeshVisible("face1",true,0.0);
-      SetMeshVisible("face2",false,0.0);
-      SetMeshVisible("face3",false,0.0);
-      SetMeshVisible("face4",false,0.0);
-      SetMeshVisible("face5",false,0.0);
-      SetMeshVisible("eye_r",true,0.0);
-      SetMeshVisible("eye_l",true,0.0);
-      SetMeshVisible("smokebox",false,0.0);
-      break;
+    string activeFaceMesh = FacesContainer.GetIndexedTagName(faceSelection);
+    //set our active face to be visible
+    SetMeshVisible(FacesContainer.GetIndexedTagName(activeFaceMesh), true, 0.0);
 
-      case FACE_2:
-      SetMeshVisible("face0",false,0.0);
-      SetMeshVisible("face1",false,0.0);
-      SetMeshVisible("face2",true,0.0);
-      SetMeshVisible("face3",false,0.0);
-      SetMeshVisible("face4",false,0.0);
-      SetMeshVisible("face5",false,0.0);
-      SetMeshVisible("eye_r",true,0.0);
-      SetMeshVisible("eye_l",true,0.0);
-      SetMeshVisible("smokebox",false,0.0);
-      break;
-
-      case FACE_3:
-      SetMeshVisible("face0",false,0.0);
-      SetMeshVisible("face1",false,0.0);
-      SetMeshVisible("face2",false,0.0);
-      SetMeshVisible("face3",true,0.0);
-      SetMeshVisible("face4",false,0.0);
-      SetMeshVisible("face5",false,0.0);
-      SetMeshVisible("eye_r",true,0.0);
-      SetMeshVisible("eye_l",true,0.0);
-      SetMeshVisible("smokebox",false,0.0);
-      break;
-
-      case FACE_4:
-      SetMeshVisible("face0",false,0.0);
-      SetMeshVisible("face1",false,0.0);
-      SetMeshVisible("face2",false,0.0);
-      SetMeshVisible("face3",false,0.0);
-      SetMeshVisible("face4",true,0.0);
-      SetMeshVisible("face5",false,0.0);
-      SetMeshVisible("eye_r",true,0.0);
-      SetMeshVisible("eye_l",true,0.0);
-      SetMeshVisible("smokebox",false,0.0);
-      break;
-
-      case FACE_5:
-      SetMeshVisible("face0",false,0.0);
-      SetMeshVisible("face1",false,0.0);
-      SetMeshVisible("face2",false,0.0);
-      SetMeshVisible("face3",false,0.0);
-      SetMeshVisible("face4",false,0.0);
-      SetMeshVisible("face5",true,0.0);
-      SetMeshVisible("eye_r",true,0.0);
-      SetMeshVisible("eye_l",true,0.0);
-      SetMeshVisible("smokebox",false,0.0);
-      break;
-
-      case SMOKEBOXDOOR: // Should not only hide the faces, but also the eyes since this is a smokebox door.
-      SetMeshVisible("face0",false,0.0);
-      SetMeshVisible("face1",false,0.0);
-      SetMeshVisible("face2",false,0.0);
-      SetMeshVisible("face3",false,0.0);
-      SetMeshVisible("face4",false,0.0);
-      SetMeshVisible("face5",false,0.0);
-      SetMeshVisible("eye_r",false,0.0);
-      SetMeshVisible("eye_l",false,0.0);
-      SetMeshVisible("smokebox",true,0.0);
-      break;
-
-      default:
-      SetMeshVisible("face0",true,0.0);
-      SetMeshVisible("face1",false,0.0);
-      SetMeshVisible("face2",false,0.0);
-      SetMeshVisible("face3",false,0.0);
-      SetMeshVisible("face4",false,0.0);
-      SetMeshVisible("face5",false,0.0);
-      SetMeshVisible("eye_r",true,0.0);
-      SetMeshVisible("eye_l",true,0.0);
-      SetMeshVisible("smokebox",false,0.0);
-      break;
+    //determine if this is a smokebox mesh
+    if(SmokeboxContainer.GetIndexForNamedTag(activeFaceMesh) == -1)
+    {
+      SetMeshVisible("eye_l", true, 0.0);
+      SetMeshVisible("eye_r", true, 0.0);
+    }
+    else
+    {
+      SetMeshVisible("eye_l", false, 0.0);
+      SetMeshVisible("eye_r", false, 0.0);
     }
 
   }
@@ -1082,20 +982,20 @@ class tttelocomotive isclass Locomotive
   //Refactor to not use superscript
   public void HandleKeyFLeft(Message msg)
   {
-    if (eye_submesh > 1){
-      eye_submesh = eye_submesh - 1;
-    }
-    string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-    //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+    //if (eye_submesh > 1){
+    //  eye_submesh = eye_submesh - 1;
+    //}
+    //string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+
   }
 
   public void HandleKeyFRight(Message msg)
   {
-    if (eye_submesh < eye_submeshes.CountTags() - 1){
-      eye_submesh = eye_submesh + 1;
-    }
-    string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-    //PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+    //if (eye_submesh < eye_submeshes.CountTags() - 1){
+    //  eye_submesh = eye_submesh + 1;
+    //}
+    //string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+
   }
   //wheeshing, currently disabled
   public void HandleWheesh(Message msg)
@@ -1168,7 +1068,7 @@ class tttelocomotive isclass Locomotive
         senddata.SetNamedTag("eyeX",eyeX);
         senddata.SetNamedTag("eyeY",eyeY);
         senddata.SetNamedTag("eyeZ",eyeZ);
-				senddata.SetNamedTag("submesh",eye_submesh);
+				senddata.SetNamedTag("face", faceSelection);
         senddata.SetNamedTag("skin",skinSelection);
         senddata.SetNamedTag("headcode",m_headCode);
 				//senddata.SetNamedTag("wheesh",Wheeshing);
@@ -1195,18 +1095,18 @@ class tttelocomotive isclass Locomotive
     	float ReyeY = ReceivedData.GetNamedTagAsFloat("eyeY");
       float ReyeZ = ReceivedData.GetNamedTagAsFloat("eyeZ");
 
-			int Rsubmesh = ReceivedData.GetNamedTagAsInt("submesh");
+			int RfaceSelection = ReceivedData.GetNamedTagAsInt("face");
       int Rskinselection = ReceivedData.GetNamedTagAsInt("skin");
       int Rheadcode = ReceivedData.GetNamedTagAsInt("headcode");
 			eyeX = ReyeX;
 			eyeY = ReyeY;
       eyeZ = ReyeZ;
-			if(eye_submesh != Rsubmesh)
+
+			if(faceSelection != RfaceSelection)
 			{
-				eye_submesh = Rsubmesh;
-				string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
-        //fix later
-				//PostMessage(me, "SS-122285", "Submesh" + "," + tagname,0.0);
+				faceSelection = RfaceSelection;
+				//string tagname = eye_submeshes.GetIndexedTagName(eye_submesh);
+
 			}
 
       skinSelection = Rskinselection;
