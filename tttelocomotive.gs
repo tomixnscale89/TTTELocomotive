@@ -590,6 +590,7 @@ class tttelocomotive isclass Locomotive
     else SetFXAttachment("lamp_tc", null);
 
   }
+
   // ============================================================================
   // Name: HeadcodeDescription()
   // Desc: Returns the description (aka name) of the headcode selected.
@@ -597,12 +598,28 @@ class tttelocomotive isclass Locomotive
   // Data the user has to put in their own creations. Plus, this will never change
   // so there is no reason for the user to specify what headcodes to use.
   // ============================================================================
+  bool FlagTest(int flags, int mask)
+  {
+    return flags == mask;
+  }
 
   string HeadcodeDescription(int headcode)
   {
     string temp = "xxx"; // Create a temporary scratch string to use
 
-    if ((headcode & HEADCODE_TVS) == HEADCODE_TVS) temp = "TVS Lamp Headcode";
+    //temporary, move to string table later
+    if (FlagTest(headcode, HEADCODE_NONE)) temp = "None";
+    if (FlagTest(headcode, HEADCODE_ALL_LAMPS)) temp = "All Lamps";
+    if (FlagTest(headcode, HEADCODE_TAIL_LIGHTS)) temp = "Tail Lights";
+    if (FlagTest(headcode, HEADCODE_BRANCH)) temp = "Branch Headcode";
+    if (FlagTest(headcode, HEADCODE_EXPRESS)) temp = "Express Headcode";
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT)) temp = "Express Freight 1";
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_2)) temp = "Express Freight 2";
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_3)) temp = "Express Freight 3";
+    if (FlagTest(headcode, HEADCODE_GOODS)) temp = "Goods";
+    if (FlagTest(headcode, HEADCODE_LIGHT)) temp = "Light";
+    if (FlagTest(headcode, HEADCODE_THROUGH_FREIGHT)) temp = "Through Freight";
+    if (FlagTest(headcode, HEADCODE_TVS)) temp = "TVS Lamp Headcode";
     return temp;
   }
 
@@ -709,8 +726,8 @@ class tttelocomotive isclass Locomotive
       string html = inherited();
 
       // option to change headcode, this displays inside the ? HTML window in surveyor.
-      //string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
-      //html = html + "<p>" + headcodeLampStr + "</p>";
+      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+      html = html + "<p>" + headcodeLampStr + "</p>";
 
       string classFaceStr = "<a href=live://property/faces>" + FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection)) + "</a>";
       html = html + "<p>" + strTable.GetString1("faces_desc", classFaceStr) + "</p>";
@@ -868,7 +885,8 @@ class tttelocomotive isclass Locomotive
     {
       if (p_index > -1 and p_index < 12)
       {
-        ConfigureHeadcodeLamps(GetHeadcodeFlags(p_index));
+        m_headCode = GetHeadcodeFlags(p_index);
+        ConfigureHeadcodeLamps(m_headCode);
       }
     }
     else if (p_propertyID == "faces")
