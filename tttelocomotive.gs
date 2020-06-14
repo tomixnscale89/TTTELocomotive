@@ -60,6 +60,7 @@ class tttelocomotive isclass Locomotive
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
   void createLocoWindow();
+  thread void BrowserThread();
   thread void ScanBrowser(void);
    // ****************************************************************************/
   // Define Variables
@@ -137,6 +138,9 @@ class tttelocomotive isclass Locomotive
   define int BROWSER_MAINMENU = 0;
   define int BROWSER_EYEMENU = 1;
   int CurrentMenu = BROWSER_MAINMENU;
+  bool HasFocus = false;
+  bool BrowserClosed;
+
 
   //bitwise flags
   define int HEADCODE_BL = 1;
@@ -269,6 +273,7 @@ class tttelocomotive isclass Locomotive
   //create the browser menu - this could be changed later to link to a pantograph or keybind
   createLocoWindow();
   ScanBrowser();
+  BrowserThread();
   // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
   coupler_idle = GetAsset().FindAsset("coupler_idle");
   coupler_coupled = GetAsset().FindAsset("coupler_coupled");
@@ -1001,7 +1006,7 @@ class tttelocomotive isclass Locomotive
       }
 
       //Get rotation from Menu
-      if (CurrentMenu == BROWSER_EYEMENU)
+      if (CurrentMenu == BROWSER_EYEMENU and !BrowserClosed)
       {
         eyeX = Str.ToFloat(browser.GetElementProperty("eyeX", "value")) * Math.PI / 180;
         eyeY = Str.ToFloat(browser.GetElementProperty("eyeY", "value")) * Math.PI / 180;
@@ -1111,7 +1116,7 @@ class tttelocomotive isclass Locomotive
     	output.Print("<table>");
 
       output.Print("<tr><td>");
-      output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></a>");
+      output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
       output.Print("</tr></td>");
 
       //Options
@@ -1119,12 +1124,6 @@ class tttelocomotive isclass Locomotive
       output.Print("<font><b>Eye Controls</font>");
       output.Print("<br>");
       output.Print("<a href='live://eye-reset' tooltip='reset'><font>Reset Controls</font></a>");
-      output.Print("<br>");
-      output.Print("<a href='live://record'><font>Start Recording</font></a>");
-      output.Print("<br>");
-      output.Print("<a href='live://record-stop'><font>Stop Recording</font></a>");
-      output.Print("<br>");
-      output.Print("<a href='live://play'><font>Play Animation</font></a>");
       output.Print("</tr></td>");
 
       //controls
@@ -1145,6 +1144,14 @@ class tttelocomotive isclass Locomotive
       output.Print("<trainz-object style=dial width=100 height=100 id='eyeZ' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
       output.Print("</tr></td>");
 
+      output.Print("<tr><td>");
+      output.Print("<a href='live://record'><font>Start Recording</font></a>");
+      output.Print("<br>");
+      output.Print("<a href='live://record-stop'><font>Stop Recording</font></a>");
+      output.Print("<br>");
+      output.Print("<a href='live://play'><font>Play Animation</font></a>");
+      output.Print("</tr></td>");
+
       output.Print("</table>");
     	output.Print("</body></html>");
 
@@ -1156,12 +1163,32 @@ class tttelocomotive isclass Locomotive
     browser = null;
     if ( !browser )	browser = Constructors.NewBrowser();
     browser.SetCloseEnabled(true);
-  	browser.SetWindowPosition(Interface.GetDisplayWidth()-320, Interface.GetDisplayHeight() - 525);
+  	browser.SetWindowPosition(Interface.GetDisplayWidth()-450, Interface.GetDisplayHeight() - 625);
   	browser.SetWindowSize(300, 350);
   	browser.SetWindowVisible(true);
   	browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+    BrowserClosed = false;
   }
 
+  thread void BrowserThread()
+  {
+    while(true)
+    {
+      if (!HasFocus)
+      {
+        browser = null;
+        BrowserClosed = true;
+      }
+      if (HasFocus and BrowserClosed)
+      {
+        //replace this with keybind
+        createLocoWindow();
+        BrowserClosed = false;
+      }
+
+      Sleep(0.1);
+    }
+  }
 
   thread void ScanBrowser() {
 		Message msg;
@@ -1223,6 +1250,13 @@ class tttelocomotive isclass Locomotive
       {
       if ( browser and msg.src == browser ) browser = null;
         //BrowserClosed = true;
+      }
+      msg.src = null;
+      continue;
+      on "Camera","Target-Changed", msg:
+      {
+        if(msg.src == me) HasFocus = true;
+        else HasFocus = false;
       }
       msg.src = null;
       continue;
