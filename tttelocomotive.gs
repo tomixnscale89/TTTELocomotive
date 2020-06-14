@@ -140,21 +140,41 @@ class tttelocomotive isclass Locomotive
   //Browser interface
   Browser browser;
 
-  // Options for headcode lights;
+  //bitwise flags
+  define int HEADCODE_BL = 1;
+  define int HEADCODE_BC = 2;
+  define int HEADCODE_BR = 4;
+  define int HEADCODE_TC = 8;
+
   define int HEADCODE_NONE = 0;
-  define int HEADCODE_ALL_LAMPS = 1;
-  define int HEADCODE_TAIL_LIGHTS = 2;
-  define int HEADCODE_BRANCH = 3;
-  define int HEADCODE_EXPRESS = 4;
-  define int HEADCODE_EXPRESS_FREIGHT = 5;
-  define int HEADCODE_EXPRESS_FREIGHT_2 = 6;
-  define int HEADCODE_EXPRESS_FREIGHT_3 = 7;
-  define int HEADCODE_GOODS = 8;
-  define int HEADCODE_LIGHT = 9;
-  define int HEADCODE_THROUGH_FREIGHT = 10;
-  define int HEADCODE_TVS = 11;
+  define int HEADCODE_ALL_LAMPS = HEADCODE_BL | HEADCODE_BC | HEADCODE_BR | HEADCODE_TC;
+  define int HEADCODE_TAIL_LIGHTS = HEADCODE_BL | HEADCODE_BR;
+  define int HEADCODE_BRANCH = HEADCODE_BL;
+  define int HEADCODE_EXPRESS = HEADCODE_BL | HEADCODE_BR;
+  define int HEADCODE_EXPRESS_FREIGHT = HEADCODE_TC | HEADCODE_BR;
+  define int HEADCODE_EXPRESS_FREIGHT_2 = HEADCODE_BC | HEADCODE_BL;
+  define int HEADCODE_EXPRESS_FREIGHT_3 = HEADCODE_TC | HEADCODE_BL;
+  define int HEADCODE_GOODS = HEADCODE_BC | HEADCODE_BR;
+  define int HEADCODE_LIGHT = HEADCODE_TC;
+  define int HEADCODE_THROUGH_FREIGHT = HEADCODE_TC | HEADCODE_BC;
+  define int HEADCODE_TVS = HEADCODE_BR;
+
+  // Options for headcode lights;
+  //define int HEADCODE_NONE = 0;
+  //define int HEADCODE_ALL_LAMPS = 1;
+  //define int HEADCODE_TAIL_LIGHTS = 2;
+  //define int HEADCODE_BRANCH = 3;
+  //define int HEADCODE_EXPRESS = 4;
+  //define int HEADCODE_EXPRESS_FREIGHT = 5;
+  //define int HEADCODE_EXPRESS_FREIGHT_2 = 6;
+  //define int HEADCODE_EXPRESS_FREIGHT_3 = 7;
+  //define int HEADCODE_GOODS = 8;
+  //define int HEADCODE_LIGHT = 9;
+  //define int HEADCODE_THROUGH_FREIGHT = 10;
+  //define int HEADCODE_TVS = 11;
 
   int m_headCode;   // Stores the current state of the headcode lamps
+
 
 
   public define int CAR_DERAILED = -1;
@@ -500,7 +520,7 @@ class tttelocomotive isclass Locomotive
   }
 
 
-    // ============================================================================
+  // ============================================================================
   // Name: DetermineCarPosition()
   // Desc: Determine our position in this consist
   // ============================================================================
@@ -560,96 +580,10 @@ class tttelocomotive isclass Locomotive
   {
     // We are going to use SetFXAttachment to set the lamps in the correct positions.
     // This is using the names of the lamps that are in the effects container of the locomotive.
-    switch (headcode)
-    {
-      case HEADCODE_TVS:
-        SetFXAttachment("lamp_tc", null);
-        SetFXAttachment("lamp_bc" , null);
-        SetFXAttachment("lamp_bl", null);
-        SetFXAttachment("lamp_br", headlight_asset);
-        break;
-
-    case HEADCODE_NONE:
-    SetFXAttachment("lamp_tc", null);
-    SetFXAttachment("lamp_bc" , null);
-    SetFXAttachment("lamp_bl", null);
-    SetFXAttachment("lamp_br", null);
-    break;
-
-    case HEADCODE_LIGHT:
-    SetFXAttachment("lamp_tc", headlight_asset);
-    SetFXAttachment("lamp_bc" , null);
-    SetFXAttachment("lamp_bl", null);
-    SetFXAttachment("lamp_br", null);
-    break;
-
-    case HEADCODE_EXPRESS:
-    SetFXAttachment("lamp_tc", null);
-    SetFXAttachment("lamp_bc" , null);
-    SetFXAttachment("lamp_bl", headlight_asset);
-    SetFXAttachment("lamp_br", headlight_asset);
-    break;
-
-    case HEADCODE_ALL_LAMPS:
-    SetFXAttachment("lamp_tc", headlight_asset);
-    SetFXAttachment("lamp_bc" , headlight_asset);
-    SetFXAttachment("lamp_bl", headlight_asset);
-    SetFXAttachment("lamp_br", headlight_asset);
-    break;
-
-    case HEADCODE_TAIL_LIGHTS:
-    SetFXAttachment("lamp_tc", null);
-    SetFXAttachment("lamp_bc" , null);
-    SetFXAttachment("lamp_bl", headlight_asset);
-    SetFXAttachment("lamp_br", headlight_asset);
-    break;
-
-    case HEADCODE_BRANCH:
-    SetFXAttachment("lamp_tc", null);
-    SetFXAttachment("lamp_bc" , null);
-    SetFXAttachment("lamp_bl", headlight_asset);
-    SetFXAttachment("lamp_br", null);
-    break;
-
-    case HEADCODE_EXPRESS_FREIGHT:
-    SetFXAttachment("lamp_tc", headlight_asset);
-    SetFXAttachment("lamp_bc" , null);
-    SetFXAttachment("lamp_bl", null);
-    SetFXAttachment("lamp_br", headlight_asset);
-    break;
-
-    case HEADCODE_EXPRESS_FREIGHT_2:
-    SetFXAttachment("lamp_tc", null);
-    SetFXAttachment("lamp_bc" , headlight_asset);
-    SetFXAttachment("lamp_bl", headlight_asset);
-    SetFXAttachment("lamp_br", null);
-    break;
-
-    case HEADCODE_EXPRESS_FREIGHT_3:
-    SetFXAttachment("lamp_tc", headlight_asset);
-    SetFXAttachment("lamp_bc" , null);
-    SetFXAttachment("lamp_bl", headlight_asset);
-    SetFXAttachment("lamp_br", null);
-    break;
-
-    case HEADCODE_GOODS:
-    SetFXAttachment("lamp_tc", null);
-    SetFXAttachment("lamp_bc" , headlight_asset);
-    SetFXAttachment("lamp_bl", null);
-    SetFXAttachment("lamp_br", headlight_asset);
-    break;
-
-    case HEADCODE_THROUGH_FREIGHT:
-    SetFXAttachment("lamp_tc", headlight_asset);
-    SetFXAttachment("lamp_bc" , headlight_asset);
-    SetFXAttachment("lamp_bl", null);
-    SetFXAttachment("lamp_br", null);
-    break;
-
-    default:
-    Interface.Print("Something did not work");
-    break;
-    }
+    if (headcode & HEADCODE_BL != 0) SetFXAttachment("lamp_bl", headlight_asset) else SetFXAttachment("lamp_bl", null);
+    if (headcode & HEADCODE_BC != 0) SetFXAttachment("lamp_bc", headlight_asset) else SetFXAttachment("lamp_bc", null);
+    if (headcode & HEADCODE_BR != 0) SetFXAttachment("lamp_br", headlight_asset) else SetFXAttachment("lamp_br", null);
+    if (headcode & HEADCODE_TC != 0) SetFXAttachment("lamp_tc", headlight_asset) else SetFXAttachment("lamp_tc", null);
 
   }
   // ============================================================================
@@ -663,19 +597,62 @@ class tttelocomotive isclass Locomotive
   string HeadcodeDescription(int headcode)
   {
     string temp = "xxx"; // Create a temporary scratch string to use
-    switch(headcode) // Let the headcode integer be passed through the function, and the switch will return the description.
-    {
-      case HEADCODE_TVS:
-      temp = "TVS Lamp Headcode";
-      break;
-      default:
-      Interface.Print("Something did not work");
-      break;
 
-    }
+    if (headcode & HEADCODE_TVS != 0) temp = "TVS Lamp Headcode";
     return temp;
   }
 
+  // ============================================================================
+  // Name: GetHeadcodeFlags()
+  // Desc: Converts a headcode number to a series of flags.
+  // ============================================================================
+
+  int GetHeadcodeFlags(int headcode_number)
+  {
+    int returnFlags = 0;
+    switch(headcode_number)
+    {
+      case 0:
+        returnFlags = HEADCODE_NONE;
+        break;
+      case 1:
+        returnFlags = HEADCODE_ALL_LAMPS;
+        break;
+      case 2:
+        returnFlags = HEADCODE_TAIL_LIGHTS;
+        break;
+      case 3:
+        returnFlags = HEADCODE_BRANCH;
+        break;
+      case 4:
+        returnFlags = HEADCODE_EXPRESS;
+        break;
+      case 5:
+        returnFlags = HEADCODE_EXPRESS_FREIGHT;
+        break;
+      case 6:
+        returnFlags = HEADCODE_EXPRESS_FREIGHT_2;
+        break;
+      case 7:
+        returnFlags = HEADCODE_EXPRESS_FREIGHT_3;
+        break;
+      case 8:
+        returnFlags = HEADCODE_GOODS;
+        break;
+      case 9:
+        returnFlags = HEADCODE_LIGHT;
+        break;
+      case 10:
+        returnFlags = HEADCODE_THROUGH_FREIGHT;
+        break;
+      case 11:
+        returnFlags = HEADCODE_TVS;
+        break;
+      default:
+        returnFlags = HEADCODE_NONE;
+    }
+    return returnFlags;
+  }
 
     // ============================================================================
     // Name: SetProperties()
@@ -846,7 +823,7 @@ class tttelocomotive isclass Locomotive
     {
       for (i = 0; i < 12; i++) // Let us loop through the entire possible headcodes and list them all.
       {
-        result[i] = HeadcodeDescription(i);
+        result[i] = HeadcodeDescription(GetHeadcodeFlags(i));
       }
     }
     else if (p_propertyID == "faces")
@@ -887,7 +864,7 @@ class tttelocomotive isclass Locomotive
     {
       if (p_index > -1 and p_index < 12)
       {
-        ConfigureHeadcodeLamps(p_index);
+        ConfigureHeadcodeLamps(GetHeadcodeFlags(p_index));
       }
     }
     else if (p_propertyID == "faces")
