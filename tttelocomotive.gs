@@ -580,10 +580,14 @@ class tttelocomotive isclass Locomotive
   {
     // We are going to use SetFXAttachment to set the lamps in the correct positions.
     // This is using the names of the lamps that are in the effects container of the locomotive.
-    if (headcode & HEADCODE_BL != 0) SetFXAttachment("lamp_bl", headlight_asset) else SetFXAttachment("lamp_bl", null);
-    if (headcode & HEADCODE_BC != 0) SetFXAttachment("lamp_bc", headlight_asset) else SetFXAttachment("lamp_bc", null);
-    if (headcode & HEADCODE_BR != 0) SetFXAttachment("lamp_br", headlight_asset) else SetFXAttachment("lamp_br", null);
-    if (headcode & HEADCODE_TC != 0) SetFXAttachment("lamp_tc", headlight_asset) else SetFXAttachment("lamp_tc", null);
+    if ((headcode & HEADCODE_BL) != 0) SetFXAttachment("lamp_bl", headlight_asset);
+    else SetFXAttachment("lamp_bl", null);
+    if ((headcode & HEADCODE_BC) != 0) SetFXAttachment("lamp_bc", headlight_asset);
+    else SetFXAttachment("lamp_bc", null);
+    if ((headcode & HEADCODE_BR) != 0) SetFXAttachment("lamp_br", headlight_asset);
+    else SetFXAttachment("lamp_br", null);
+    if ((headcode & HEADCODE_TC) != 0) SetFXAttachment("lamp_tc", headlight_asset);
+    else SetFXAttachment("lamp_tc", null);
 
   }
   // ============================================================================
@@ -598,7 +602,7 @@ class tttelocomotive isclass Locomotive
   {
     string temp = "xxx"; // Create a temporary scratch string to use
 
-    if (headcode & HEADCODE_TVS != 0) temp = "TVS Lamp Headcode";
+    if ((headcode & HEADCODE_TVS) == HEADCODE_TVS) temp = "TVS Lamp Headcode";
     return temp;
   }
 
