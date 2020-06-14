@@ -60,7 +60,6 @@ class tttelocomotive isclass Locomotive
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
   void createLocoWindow();
-  void loadBrowserTab(string filename);
   thread void ScanBrowser(void);
    // ****************************************************************************/
   // Define Variables
@@ -231,14 +230,10 @@ class tttelocomotive isclass Locomotive
 
 
 	//Eyescript
-  AddHandler(me, "Eyescript", "Up", "HandleKeyForward");
-  AddHandler(me, "Eyescript", "UpR", "HandleKeyForwardUp");
   AddHandler(me, "Eyescript", "Down", "HandleKeyBackward");
   AddHandler(me, "Eyescript", "DownR", "HandleKeyBackwardUp");
   AddHandler(me, "Eyescript", "Left", "HandleKeyLeft");
   AddHandler(me, "Eyescript", "LeftR", "HandleKeyLeftUp");
-  AddHandler(me, "Eyescript", "Right", "HandleKeyRight");
-  AddHandler(me, "Eyescript", "RightR", "HandleKeyRightUp");
 
   AddHandler(me, "Eyescript", "FLeft", "HandleKeyFLeft");
   AddHandler(me, "Eyescript", "FRight", "HandleKeyFRight");
@@ -911,31 +906,14 @@ class tttelocomotive isclass Locomotive
     }
   }
 
-  void createLocoWindow()
-  {
-    browser = null;
-    if ( !browser )	browser = Constructors.NewBrowser();
-    browser.SetCloseEnabled(true);
-  	browser.SetWindowPosition(Interface.GetDisplayWidth()-320, Interface.GetDisplayHeight() - 525);
-  	browser.SetWindowSize(300, 350);
-  	browser.SetWindowVisible(true);
-  	browser.LoadHTMLFile(GetAsset(), "/html/menu.html");
-  }
 
-  void loadBrowserTab(string filename)
-  {
-  	browser.LoadHTMLFile(GetAsset(), "/html/" + filename + ".html");
-  }
+  void SetEyeMeshOrientation(float x, float y, float z)
+	{
+    SetMeshOrientation("eye_l", x, y, z);
+		SetMeshOrientation("eye_r", x, y, z);
+	}
 
   //Current controller input definitions - will likely change later to a separate axis input
-  public void HandleKeyForward(Message msg)
-  {
-  }
-
-  public void HandleKeyForwardUp(Message msg)
-  {
-  }
-
   public void HandleKeyBackward(Message msg)
   {
     //eyeudprev = eyeud;
@@ -962,19 +940,11 @@ class tttelocomotive isclass Locomotive
   {
   }
 
-  public void HandleKeyRight(Message msg)
-  {
-  }
-
-  public void HandleKeyRightUp(Message msg)
-  {
-  }
-
   //Face changing
-  //Refactor to not use superscript
   public void HandleKeyFLeft(Message msg)
   {
-    if (faceSelection > 0){
+    if (faceSelection > 0)
+    {
       faceSelection = faceSelection - 1;
     }
     ConfigureFaces();
@@ -982,7 +952,8 @@ class tttelocomotive isclass Locomotive
 
   public void HandleKeyFRight(Message msg)
   {
-    if (faceSelection < FacesContainer.CountTags()){
+    if (faceSelection < FacesContainer.CountTags())
+    {
       faceSelection = faceSelection + 1;
     }
     ConfigureFaces();
@@ -1000,13 +971,6 @@ class tttelocomotive isclass Locomotive
     //PostMessage(me, "pfx", "-4",0.0);
     //Wheeshing = false;
   }
-
-
-	void SetEyeMeshOrientation(float x, float y, float z)
-	{
-    SetMeshOrientation("eye_l", x, y, z);
-		SetMeshOrientation("eye_r", x, y, z);
-	}
 
 	thread void EyeScriptCheckThread() {
 		while(true) {
@@ -1120,6 +1084,77 @@ class tttelocomotive isclass Locomotive
 	}
 
 
+  string GetMenuHTML()
+  {
+  	//StringTable strTable = GetAsset().GetStringTable();
+  	HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+  	output.Print("<a href='live://open_eye' tooltip='Eye Window'><img src='html/eye_button.png' width=500 height=30></a>");
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
+
+    string GetEyeWindowHTML()
+    {
+    	HTMLBuffer output = HTMLBufferStatic.Construct();
+    	output.Print("<html><body>");
+    	output.Print("<table>");
+
+      output.Print("<tr><td>");
+      output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></a>");
+      output.Print("</tr></td>");
+
+      //Options
+      output.Print("<tr><td>");
+      output.Print("<font><b>Eye Controls</font>");
+      output.Print("<br>");
+      output.Print("<a href='live://eye-reset' tooltip='reset'><font>Reset Controls</font></a>");
+      output.Print("<br>");
+      output.Print("<a href='live://record'><font>Start Recording</font></a>");
+      output.Print("<br>");
+      output.Print("<a href='live://record-stop'><font>Stop Recording</font></a>");
+      output.Print("<br>");
+      output.Print("<a href='live://play'><font>Play Animation</font></a>");
+      output.Print("</tr></td>");
+
+      //controls
+      output.Print("<tr><td>");
+      output.Print("Eye Rotation Left/Right:");
+      output.Print("<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=20 id='lrslider' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+      output.Print("</tr></td>");
+
+      output.Print("<tr><td>");
+      output.Print("Eye Rotation Up/Down:");
+      output.Print("<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=20 id='udslider' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+      output.Print("</tr></td>");
+
+      //dial is no longer advanced lol
+      output.Print("<tr><td>");
+      output.Print("<trainz-object style=dial width=100 height=100 id='dcc' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
+      output.Print("</tr></td>");
+
+      output.Print("</table>");
+    	output.Print("</body></html>");
+
+    	return output.AsString();
+    }
+
+  void createLocoWindow()
+  {
+    browser = null;
+    if ( !browser )	browser = Constructors.NewBrowser();
+    browser.SetCloseEnabled(true);
+  	browser.SetWindowPosition(Interface.GetDisplayWidth()-320, Interface.GetDisplayHeight() - 525);
+  	browser.SetWindowSize(300, 350);
+  	browser.SetWindowVisible(true);
+  	browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+  }
+
+
   thread void ScanBrowser() {
 		Message msg;
 		wait(){
@@ -1127,7 +1162,7 @@ class tttelocomotive isclass Locomotive
       if ( browser and msg.src == browser )
       {
           //open tab Window
-          loadBrowserTab("eye");
+          browser.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
       }
       msg.src = null;
       continue;
@@ -1136,12 +1171,12 @@ class tttelocomotive isclass Locomotive
       if ( browser and msg.src == browser )
       {
           //open tab Window
-          loadBrowserTab("menu");
+          browser.LoadHTMLString(GetAsset(), GetMenuHTML());
       }
       msg.src = null;
       continue;
 
-      on "Browser-URL", "live://eye-6", msg:
+      on "Browser-URL", "live://eye-reset", msg:
       if ( browser and msg.src == browser )
       {
   		  browser.SetElementProperty("dcc","value",(string)0.0);
