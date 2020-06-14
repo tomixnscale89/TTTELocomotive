@@ -1096,9 +1096,18 @@ class tttelocomotive isclass Locomotive
         ConfigureFaces();
 			}
 
-      skinSelection = Rskinselection;
-      m_headCode = Rheadcode;
-      ConfigureSkins();
+      if(skinSelection != Rskinselection)
+      {
+        skinSelection = Rskinselection;
+        ConfigureSkins();
+      }
+
+      if(m_headCode != Rheadcode)
+      {
+        m_headCode = Rheadcode;
+        ConfigureHeadcodeLamps(m_headCode);
+      }
+
 			//bool Rwheesh = ReceivedData.GetNamedTagAsBool("wheesh");
 
 			//if(Rwheesh and !Wheeshing)
