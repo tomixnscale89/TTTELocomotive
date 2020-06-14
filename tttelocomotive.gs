@@ -67,7 +67,6 @@ class tttelocomotive isclass Locomotive
   StringTable strTable; // This asset's string table, saved for convenient fast access
 
 
-
   Asset headlight_asset;      // headlight asset used by the loco
   Asset rear_headlight_asset; // Backup headlight (not sure if we want this)
   Asset coupler_idle, coupler_coupled;											// two options for the coupler
@@ -119,10 +118,7 @@ class tttelocomotive isclass Locomotive
 	float eyeY = 0.0; // Eye Roll
 	float eyeZ = 0.0; // Up-Down Eye Rotation
 
-
-
-
-	define float eye_UpdatePeriod = 0.02; //Time in seconds between each eye update, this should be increased if the eye seems too performance heavy, and decreased if the eye seems too jittery
+	define float eye_UpdatePeriod = 0.01;
   define float MP_UpdatePeriod = 0.1;
   int eye_animframe = 0;
 
@@ -138,6 +134,9 @@ class tttelocomotive isclass Locomotive
 
   //Browser interface
   Browser browser;
+  define int BROWSER_MAINMENU = 0;
+  define int BROWSER_EYEMENU = 1;
+  int CurrentMenu = BROWSER_MAINMENU;
 
   //bitwise flags
   define int HEADCODE_BL = 1;
@@ -977,6 +976,7 @@ class tttelocomotive isclass Locomotive
       //warning - this runs at the same speed as the eyescript, and can be performance heavy due to this
       //increase the update period if this is the case
 
+      //Animation setup
       if(eye_isanimating and (eye_animframe <= (eye_anim.size()-1))){ // check if the eye should be currently animating and the animation isnt over
         Orientation eye_Angdeconstruct = eye_anim[eye_animframe];
         eyeX = eye_Angdeconstruct.rx;
@@ -998,6 +998,14 @@ class tttelocomotive isclass Locomotive
         eye_Angbuilder.ry = eyeY;
         eye_Angbuilder.rz = eyeZ;
         eye_anim[eye_anim.size()] = eye_Angbuilder; //Append animation frame to array
+      }
+
+      //Get rotation from Menu
+      if (CurrentMenu == BROWSER_EYEMENU)
+      {
+        eyeX = Str.ToFloat(browser.GetElementProperty("eyeX", "value")) * Math.PI / 180;
+        eyeY = Str.ToFloat(browser.GetElementProperty("eyeY", "value")) * Math.PI / 180;
+        eyeZ = Str.ToFloat(browser.GetElementProperty("eyeZ", "value")) * Math.PI / 180;
       }
 
 			//final orientation apply ================================================
@@ -1123,18 +1131,18 @@ class tttelocomotive isclass Locomotive
       output.Print("<tr><td>");
       output.Print("Eye Rotation Left/Right:");
       output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=20 id='lrslider' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
       output.Print("</tr></td>");
 
       output.Print("<tr><td>");
       output.Print("Eye Rotation Up/Down:");
       output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=20 id='udslider' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
       output.Print("</tr></td>");
 
       //dial is no longer advanced lol
       output.Print("<tr><td>");
-      output.Print("<trainz-object style=dial width=100 height=100 id='dcc' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
+      output.Print("<trainz-object style=dial width=100 height=100 id='eyeZ' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
       output.Print("</tr></td>");
 
       output.Print("</table>");
@@ -1161,8 +1169,8 @@ class tttelocomotive isclass Locomotive
       on "Browser-URL", "live://open_eye", msg:
       if ( browser and msg.src == browser )
       {
-          //open tab Window
           browser.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
+          CurrentMenu = BROWSER_EYEMENU;
       }
       msg.src = null;
       continue;
@@ -1170,8 +1178,8 @@ class tttelocomotive isclass Locomotive
       on "Browser-URL", "live://return", msg:
       if ( browser and msg.src == browser )
       {
-          //open tab Window
           browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+          CurrentMenu = BROWSER_MAINMENU;
       }
       msg.src = null;
       continue;
@@ -1179,9 +1187,9 @@ class tttelocomotive isclass Locomotive
       on "Browser-URL", "live://eye-reset", msg:
       if ( browser and msg.src == browser )
       {
-  		  browser.SetElementProperty("dcc","value",(string)0.0);
-  		  browser.SetElementProperty("lrslider","value",(string)0.0);
-  		  browser.SetElementProperty("udslider","value",(string)0.0);
+  		  browser.SetElementProperty("eyeX","value",(string)0.0);
+  		  browser.SetElementProperty("eyeY","value",(string)0.0);
+  		  browser.SetElementProperty("eyeZ","value",(string)0.0);
       }
       msg.src = null;
       continue;
@@ -1210,7 +1218,6 @@ class tttelocomotive isclass Locomotive
       }
       msg.src = null;
       continue;
-
 
       on "Browser-Closed", "", msg:
       {
