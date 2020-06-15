@@ -233,15 +233,13 @@ class tttelocomotive isclass Locomotive
 
 
 	//Eyescript
-  AddHandler(me, "Eyescript", "Down", "HandleKeyBackward");
-  AddHandler(me, "Eyescript", "DownR", "HandleKeyBackwardUp");
-  AddHandler(me, "Eyescript", "Left", "HandleKeyLeft");
-  AddHandler(me, "Eyescript", "LeftR", "HandleKeyLeftUp");
+  AddHandler(me, "ControlSet", "eye-xaxis", "HandleXAxis");
+  AddHandler(me, "ControlSet", "eye-yaxis", "HandleYAxis");
 
-  AddHandler(me, "Eyescript", "FLeft", "HandleKeyFLeft");
-  AddHandler(me, "Eyescript", "FRight", "HandleKeyFRight");
-  AddHandler(me, "Eyescript", "Whs", "HandleWheesh");
-  AddHandler(me, "Eyescript", "WhsUp", "HandleWheeshUp");
+  AddHandler(me, "ControlSet", "eye-fl", "HandleKeyFLeft");
+  AddHandler(me, "ControlSet", "eye-fr", "HandleKeyFRight");
+  AddHandler(me, "ControlSet", "eye-wh", "HandleWheesh");
+  AddHandler(me, "ControlSet", "eye-wh-up", "HandleWheeshUp");
 
 
   //Multiplayer Message! Important!
@@ -917,21 +915,7 @@ class tttelocomotive isclass Locomotive
 		SetMeshOrientation("eye_r", x, y, z);
 	}
 
-  //Current controller input definitions - will likely change later to a separate axis input
-  public void HandleKeyBackward(Message msg)
-  {
-    //eyeudprev = eyeud;
-    Soup parameters = msg.paramSoup;
-    parameters.GetNamedTagAsFloat("control-value");
-    eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
-    SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
-  }
-
-  public void HandleKeyBackwardUp(Message msg)
-  {
-  }
-
-  public void HandleKeyLeft(Message msg)
+  public void HandleXAxis(Message msg)
   {
     //eyelrprev = eyelr;
     Soup parameters = msg.paramSoup;
@@ -940,8 +924,13 @@ class tttelocomotive isclass Locomotive
     SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
   }
 
-  public void HandleKeyLeftUp(Message msg)
+  public void HandleYAxis(Message msg)
   {
+    //eyeudprev = eyeud;
+    Soup parameters = msg.paramSoup;
+    parameters.GetNamedTagAsFloat("control-value");
+    eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+    SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
   }
 
   //Face changing
@@ -1102,7 +1091,8 @@ class tttelocomotive isclass Locomotive
   	//StringTable strTable = GetAsset().GetStringTable();
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
-  	output.Print("<a href='live://open_eye' tooltip='Eye Window'><img src='html/eye_button.png' width=500 height=30></a>");
+  	//output.Print("<a href='live://open_eye' tooltip='Eye Window'><img src='html/eye_button.png' width=500 height=30></a>");
+    output.Print("<a href='live://open_eye' tooltip='Eye Window'><img kuid='<kuid:414976:103313>' width=500 height=30></a>");
   	output.Print("</body></html>");
 
   	return output.AsString();
