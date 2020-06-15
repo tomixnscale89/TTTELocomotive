@@ -917,7 +917,6 @@ class tttelocomotive isclass Locomotive
 
   public void HandleXAxis(Message msg)
   {
-    //eyelrprev = eyelr;
     Soup parameters = msg.paramSoup;
     parameters.GetNamedTagAsFloat("control-value");
     eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
@@ -926,7 +925,6 @@ class tttelocomotive isclass Locomotive
 
   public void HandleYAxis(Message msg)
   {
-    //eyeudprev = eyeud;
     Soup parameters = msg.paramSoup;
     parameters.GetNamedTagAsFloat("control-value");
     eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;

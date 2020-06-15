@@ -1,5 +1,6 @@
+include "tttethomascabin.gs"
 
-class tttecontrollercabin isclass Cabin
+class tttecontrollercabin isclass tttethomascabin
 {
 	Locomotive loco;
 	
@@ -9,6 +10,7 @@ class tttecontrollercabin isclass Cabin
 
 		loco = cast<Locomotive>me.GetParentObject();
 		
-		Sniff(loco, "ControlSet", "", true);
+		loco.Sniff(me, "ControlSet", "", true);
+		//PostMessage(loco, "Cabin", "InitCabin", 0.0);
 	}
 };
