@@ -138,6 +138,7 @@ class tttelocomotive isclass Locomotive
   define int BROWSER_MAINMENU = 0;
   define int BROWSER_EYEMENU = 1;
   define int BROWSER_LOCOMENU = 2;
+  define int BROWSER_SMOKEMENU = 3;
 
   int CurrentMenu = BROWSER_MAINMENU;
   bool HasFocus = false;
@@ -145,6 +146,10 @@ class tttelocomotive isclass Locomotive
 
   //tab specific Options
   bool b_WheelslipEnabled = false;
+  float normal_maxtractiveeffort;
+  float normal_traction;
+  float normal_momentum;
+
 
   //bitwise flags
   define int HEADCODE_BL = 1;
@@ -929,16 +934,24 @@ class tttelocomotive isclass Locomotive
 
   public void HandleXAxis(Message msg)
   {
-    Soup parameters = msg.paramSoup;
-    eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
-    SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
+    //Cabin Source = cast<Cabin>msg.src;
+    //if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    //{
+      Soup parameters = msg.paramSoup;
+      eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
+      SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
+    //}
   }
 
   public void HandleYAxis(Message msg)
   {
+    //Cabin Source = cast<Cabin>msg.src;
+    //if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    //{
     Soup parameters = msg.paramSoup;
     eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
     SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
+    //}
   }
 
   //Face handling
@@ -1072,7 +1085,7 @@ class tttelocomotive isclass Locomotive
 			eyeX = ReyeX;
 			eyeY = ReyeY;
       eyeZ = ReyeZ;
-      
+
 			if(faceSelection != RfaceSelection)
 			{
 				faceSelection = RfaceSelection;
@@ -1115,6 +1128,8 @@ class tttelocomotive isclass Locomotive
     output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=500 height=30></a>");
     output.Print("<br>");
     output.Print("<a href='live://open_loco'>Locomotive Window</a>");
+    output.Print("<br>");
+    output.Print("<a href='live://open_smoke'>Smoke Controllers</a>");
   	output.Print("</body></html>");
 
   	return output.AsString();
@@ -1175,10 +1190,35 @@ class tttelocomotive isclass Locomotive
     HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
   	output.Print("<table>");
+
+    output.Print("<tr><td>");
+    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("</tr></td>");
+
     output.Print("<tr><td>");
     output.Print(HTMLWindow.CheckBox("live://property/loco-wheelslip", b_WheelslipEnabled));
     output.Print(" Wheelslip");
     output.Print("</tr></td>");
+    output.Print("</table>");
+    output.Print("</body></html>");
+
+    return output.AsString();
+  }
+
+  string GetSmokeWindowHTML()
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+    output.Print("<html><body>");
+    output.Print("<table>");
+
+    output.Print("<tr><td>");
+    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("</tr></td>");
+
+    output.Print("<tr><td>");
+
+    output.Print("</tr></td>");
+
     output.Print("</table>");
     output.Print("</body></html>");
 
@@ -1219,6 +1259,9 @@ class tttelocomotive isclass Locomotive
       break;
       case BROWSER_LOCOMENU:
       browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
+      break;
+      case BROWSER_SMOKEMENU:
+      browser.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
       break;
       default:
       browser.LoadHTMLString(GetAsset(), GetMenuHTML());
@@ -1282,23 +1325,32 @@ class tttelocomotive isclass Locomotive
       if ( browser and msg.src == browser )
       {
           b_WheelslipEnabled = !b_WheelslipEnabled;
-          Bogey[] testBogies = me.GetBogeyList();
           if(b_WheelslipEnabled)
           {
-            int i;
-            for(i = 0; i < testBogies.size(); i++)
-            {
-              //testBogies[i].SetMeshAnimationSpeed("default", 4.0);
-            }
+            normal_maxtractiveeffort = GetMaximumTractiveEffort();
+            normal_traction = GetWheelslipTractionMultiplier();
+            normal_momentum = GetWheelslipMomentumMultiplier();
+
+            SetMaximumTractiveEffort(0.01);
+            SetWheelslipTractionMultiplier(1.0);
+            SetWheelslipMomentumMultiplier(0.1);
           }
           else
           {
-            int i;
-            for(i = 0; i < testBogies.size(); i++)
-            {
-              //testBogies[i].SetMeshAnimationSpeed("default", 1.0);
-            }
+            SetMaximumTractiveEffort(normal_maxtractiveeffort);
+            SetWheelslipTractionMultiplier(normal_traction);
+            SetWheelslipMomentumMultiplier(normal_momentum);
           }
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      //Smoke Window
+      on "Browser-URL", "live://open_smoke", msg:
+      if ( browser and msg.src == browser )
+      {
+          CurrentMenu = BROWSER_SMOKEMENU;
           RefreshBrowser();
       }
       msg.src = null;
