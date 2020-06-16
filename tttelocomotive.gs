@@ -240,10 +240,10 @@ class tttelocomotive isclass Locomotive
   AddHandler(me, "ControlSet", "eye-xaxis", "HandleXAxis");
   AddHandler(me, "ControlSet", "eye-yaxis", "HandleYAxis");
 
-  AddHandler(me, "ControlSet", "eye-fl", "HandleKeyFLeft");
-  AddHandler(me, "ControlSet", "eye-fr", "HandleKeyFRight");
-  AddHandler(me, "ControlSet", "eye-wh", "HandleWheesh");
-  AddHandler(me, "ControlSet", "eye-wh-up", "HandleWheeshUp");
+  AddHandler(me, "ControlSet", "eye-faceleft", "HandleKeyFLeft");
+  AddHandler(me, "ControlSet", "eye-faceright", "HandleKeyFRight");
+  AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh");
+  AddHandler(me, "ControlSet", "eye-wheesh-up", "HandleWheeshUp");
 
 
   //Multiplayer Message! Important!
@@ -955,7 +955,7 @@ class tttelocomotive isclass Locomotive
 
   public void HandleKeyFRight(Message msg)
   {
-    if (faceSelection < FacesContainer.CountTags())
+    if (faceSelection < FacesContainer.CountTags() - 1)
     {
       faceSelection = faceSelection + 1;
     }
