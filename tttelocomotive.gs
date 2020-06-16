@@ -54,7 +54,7 @@ class tttelocomotive isclass Locomotive
   string GetPropertyDescription(string p_propertyID);
   public string[] GetPropertyElementList(string p_propertyID);
   void SetPropertyValue(string p_propertyID, string p_value, int p_index);
-
+  void SetNamedFloatFromExisting(Soup in, Soup out, string tagName);
 
   thread void EyeScriptCheckThread(void);
   void SetEyeMeshOrientation(float x, float y, float z);
@@ -98,12 +98,13 @@ class tttelocomotive isclass Locomotive
   // Faces Options
   int faceSelection;
 
-
+  Soup myConfig;
   Soup ExtensionsContainer;
   Soup FacesContainer;
   Soup LiveryContainer;
   Soup SmokeboxContainer;
 
+  Soup SmokeEdits;
   // ACS Stuff
   Library     ACSlib;   // reference to the Advanced Coupling System Library
   GSObject[] ACSParams; // not sure what this is
@@ -198,8 +199,6 @@ class tttelocomotive isclass Locomotive
 
   Train train;
 
-
-
   // ============================================================================
   // Name: Init()
   // Desc: The Init function is called when the object is created
@@ -216,10 +215,37 @@ class tttelocomotive isclass Locomotive
 
   faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
 
+  myConfig = me.GetAsset().GetConfigSoup();
   ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
   FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
   LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
   SmokeboxContainer = ExtensionsContainer.GetNamedSoup("smokeboxes");
+
+  SmokeEdits = Constructors.NewSoup();
+  int ParticleCount = 0;
+  int curTag;
+  for(curTag = 0; curTag < myConfig.CountTags(); curTag++)
+  {
+    string tagName = myConfig.GetIndexedTagName(curTag);
+    if(TrainUtil.HasPrefix(tagName, "smoke"))
+    {
+      Soup curSmoke = myConfig.GetNamedSoup(tagName);
+
+      Soup NewContainer = Constructors.NewSoup();
+      NewContainer.SetNamedTag("active", false); //whether to override
+      SetNamedFloatFromExisting(curSmoke, NewContainer, "rate");
+      SetNamedFloatFromExisting(curSmoke, NewContainer, "velocity");
+      SetNamedFloatFromExisting(curSmoke, NewContainer, "lifetime");
+      SetNamedFloatFromExisting(curSmoke, NewContainer, "minsize");
+      SetNamedFloatFromExisting(curSmoke, NewContainer, "maxsize");
+
+      TrainzScript.Log(NewContainer.AsString());
+      SmokeEdits.SetNamedSoup((string)ParticleCount, NewContainer);
+      ParticleCount = ParticleCount + 1;
+    }
+  }
+
+  TrainzScript.Log((string)ParticleCount + " particles found.");
 
   //typical extensions container example
   //faces
@@ -310,6 +336,15 @@ class tttelocomotive isclass Locomotive
 
 
 
+  }
+
+  // ============================================================================
+  // Name: SetNamedFloatFromExisting()
+  // Desc: Utility for copying soups.
+  // ============================================================================
+  void SetNamedFloatFromExisting(Soup in, Soup out, string tagName)
+  {
+    if(in.GetIndexForNamedTag(tagName) != -1) out.SetNamedTag(tagName, Str.UnpackFloat(in.GetNamedTag(tagName)));
   }
 
   // ============================================================================
@@ -1215,6 +1250,7 @@ class tttelocomotive isclass Locomotive
     output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
     output.Print("</tr></td>");
 
+    //Get the total number of smoke objects in this asset
     output.Print("<tr><td>");
 
     output.Print("</tr></td>");
