@@ -133,6 +133,9 @@ class tttelocomotive isclass Locomotive
   define float eye_Speed = 0.1;
   bool eye_UpPressed, eye_DownPressed, eye_LeftPressed, eye_RightPressed, eye_RollLeftPressed, eye_RollRightPressed;
 
+  AsyncObjectSearchResult WorldObjects;
+  MapObject EyeTarget;
+
   //Browser interface
   Browser browser;
   define int BROWSER_MAINMENU = 0;
@@ -145,6 +148,7 @@ class tttelocomotive isclass Locomotive
 
   //tab specific Options
   bool b_WheelslipEnabled = false;
+  bool b_EyeTargetEnabled = false;
 
   //bitwise flags
   define int HEADCODE_BL = 1;
@@ -253,6 +257,8 @@ class tttelocomotive isclass Locomotive
   if(MultiplayerGame.IsActive()){
     MultiplayerBroadcast();
   }
+
+  WorldObjects = World.GetNamedObjectList("", "", false);
 
   // ****************************************************************************/
  // Define Camera Handlers for hiding/showing the low poly exterior cab on steam locos.
@@ -736,6 +742,9 @@ class tttelocomotive isclass Locomotive
       string classSkinStr = "<a href=live://property/skin>" + strTable.GetString("skin_" + skinSelection) + "</a>";
       html = html + "<p>" + strTable.GetString1("skin_desc", classSkinStr) + "</p>";
 
+      //Property lists are the only way to easily display a list as far as i know
+      html = html + "<a href=live://property/eye_target>Set Eye Lock Target</a>";
+
       // Let's post the current Trainz version for debugging purposes.
       string trainzVerStr = "The Trainz Build number is: " + trainzVersion;
 
@@ -763,6 +772,10 @@ class tttelocomotive isclass Locomotive
       return "list";
     }
     else if (p_propertyID == "skin")
+    {
+      return "list";
+    }
+    else if (p_propertyID == "eye_target")
     {
       return "list";
     }
@@ -794,6 +807,10 @@ class tttelocomotive isclass Locomotive
     {
       return strTable.GetString("skin_name");
     }
+    if (p_propertyID == "eye_target")
+    {
+      return "Eye Lock Target";
+    }
 
     return inherited(p_propertyID);
   }
@@ -822,6 +839,10 @@ class tttelocomotive isclass Locomotive
     else if(p_propertyID == "skin")
     {
       return strTable.GetString("skin_description");
+    }
+    else if(p_propertyID == "eye_target")
+    {
+      return "Select an eye target:";
     }
 
     return inherited(p_propertyID);
@@ -861,6 +882,18 @@ class tttelocomotive isclass Locomotive
       {
         result[i] = strTable.GetString("skin_" +i);
       }
+    }
+    else if (p_propertyID == "eye_target")
+    {
+      //Find all relevant objects
+      //if(WorldObjects.SynchronouslyWaitForResults("AsyncLoadComplete"))
+      //{
+        NamedObjectInfo[] ObjectResults = WorldObjects.GetResults();
+        for(i = 0; i < ObjectResults.size(); i++) // Let us loop through the entire possible skins and list them all.
+        {
+          result[i] = ObjectResults[i].localisedUsername;
+        }
+      //}
     }
     else
     {
@@ -905,6 +938,14 @@ class tttelocomotive isclass Locomotive
         skinSelection = p_index;
         ConfigureSkins();
       }
+    }
+    else if (p_propertyID == "eye_target")
+    {
+      //if(WorldObjects.SynchronouslyWaitForResults("AsyncLoadComplete"))
+      //{
+        NamedObjectInfo[] ObjectResults = WorldObjects.GetResults();
+        EyeTarget = cast<MapObject>ObjectResults[p_index].objectRef;
+      //}
     }
     else
     {
@@ -967,6 +1008,174 @@ class tttelocomotive isclass Locomotive
     //Wheeshing = false;
   }
 
+  float floor(float input)
+  {
+    return Str.ToFloat(Str.Tokens((string)input, ".")[0]);
+  }
+
+  float normalizeAngle(float angle)
+  {
+    float fraction = angle / (Math.PI * 2);
+    return (fraction - floor(fraction)) * (Math.PI * 2);
+  }
+
+  //Eyescript look functions
+  float DotProduct(float[] vecA, float[] vecB) // verified working
+  {
+    float product = 0;
+    int i;
+    for (i = 0; i < 3; i++)
+    {
+      product = product + vecA[i] * vecB[i];
+    }
+    return product;
+  }
+
+  float[] CrossProduct(float[] vector_a, float[] vector_b) // verified working
+  {
+    float[] output = new float[3];
+    output[0] = vector_a[1] * vector_b[2] - vector_a[2] * vector_b[1];
+    output[1] = vector_a[0] * vector_b[2] - vector_a[2] * vector_b[0];
+    output[2] = vector_a[0] * vector_b[1] - vector_a[1] * vector_b[0];
+    return output;
+  }
+
+  float[] WCtoGlobal(WorldCoordinate Coord) // verified working
+  {
+    float[] output = new float[3];
+    output[0] = Coord.x + Coord.baseboardX * 720;
+    output[1] = Coord.y + Coord.baseboardY * 720;
+    output[2] = Coord.z;
+    return output;
+  }
+
+  float sqr(float x)
+  {
+        return x * x;
+  }
+
+  float sin(float x)
+  {
+      int a = (int)(x / (2 * Math.PI));
+      x = x - 2 * a * Math.PI;
+      a = 1;
+
+      if(Math.PI < x and x <= 2 * Math.PI) {
+          x = x - Math.PI;
+          a = -a;
+      }
+      if(Math.PI / 2 < x and x <= Math.PI) {
+          x = Math.PI - x;
+      }
+
+      return a * (x - x*x*x / 6 + x*x*x*x*x / 120 - x*x*x*x*x*x*x / 5040 + x*x*x*x*x*x*x*x*x / 362880);
+  }
+
+  float cos(float x)
+  {
+    return Math.Sqrt(1 - sqr(sin(x)));
+  }
+
+  float atan(float x)
+  {
+    return (Math.PI/4)*x - x*(Math.Fabs(x) - 1)*(0.2447 + 0.0663*Math.Fabs(x));
+  }
+
+  float asin(float x)
+  {
+    //return x*(1+x*x*(1/6+ x*x*(3/(2*4*5) + x*x*((1*3*5)/(2*4*6*7)))));
+    return atan(x/(Math.Sqrt(1-sqr(x))));
+  }
+
+  float acos(float x)
+  {
+    return atan((Math.Sqrt(1-sqr(x)))/x);
+  }
+
+
+
+  float[] normalize(float[] p) // verified working
+  {
+    float[] output = new float[3];
+    float w = Math.Sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
+    output[0] = p[0] / w;
+    output[1] = p[1] / w;
+    output[2] = p[2] / w;
+    return output;
+  }
+
+  float atan2(float y, float x) // verified working
+  {
+      float ONEQTR_PI = Math.PI / 4.0;
+    	float THRQTR_PI = 3.0 * Math.PI / 4.0;
+      float r;
+      float retangle;
+    	float abs_y = Math.Fabs(y) + 0.0000000001;      // kludge to prevent 0/0 condition
+    	if ( x < 0.0 )
+    	{
+    		r = (x + abs_y) / (abs_y - x);
+    		retangle = THRQTR_PI;
+    	}
+    	else
+    	{
+    		r = (x - abs_y) / (x + abs_y);
+    		retangle = ONEQTR_PI;
+    	}
+    	retangle = retangle + (0.1963 * r * r - 0.9817) * r;
+    	if ( y < 0.0 ) return -retangle;
+
+      return retangle;
+  }
+
+  float[] toEuler(float x, float y, float z, float angle)
+  {
+    float heading = 0.0;
+    float attitude = 0.0;
+    float bank = 0.0;
+
+    TrainzScript.Log("Angle is " + (string)angle);
+  	float s = sin(angle);
+  	float c = cos(angle);
+  	float t = 1 - c;
+
+  	if ((x*y*t + z*s) > 0.998) { // north pole singularity detected
+      TrainzScript.Log("north pole singularity");
+  		heading = 2 * atan2(x * sin(angle / 2), cos(angle / 2));
+  		attitude = Math.PI / 2;
+  		bank = 0;
+  	}
+  	else if ((x*y*t + z*s) < -0.998) { // south pole singularity detected
+      TrainzScript.Log("south pole singularity");
+  		heading = -2 * atan2(x * sin(angle / 2), cos(angle / 2));
+  		attitude = -Math.PI / 2;
+  		bank = 0;
+  	}
+    else
+    {
+      heading = atan2(y * s - x * z * t , 1 - (y*y+ z*z) * t);
+      attitude = asin(x * y * t + z * s);
+      bank = atan2(x * s - y * z * t , 1 - (x*x + z*z) * t);
+    }
+    TrainzScript.Log("heading " + (string)heading + " bank " + (string)bank + " attitude " + (string)attitude + " s " + (string)s + " c " + (string)c + " t " + (string)t);
+    float[] output = new float[3];
+    output[0] = heading;
+    output[1] = attitude;
+    output[2] = bank;
+    return output;
+  }
+
+  float[] GetLookAngle(WorldCoordinate Start, WorldCoordinate End)
+  {
+    float[] StartGlobal = WCtoGlobal(Start);
+    float[] EndGlobal = WCtoGlobal(End);
+
+    TrainzScript.Log("normalized angle is " + (string)normalizeAngle(DotProduct(StartGlobal, EndGlobal)));
+    float NewAngle = acos(normalizeAngle(DotProduct(StartGlobal, EndGlobal)));
+    float[] NewAxis = normalize(CrossProduct(StartGlobal, EndGlobal));
+
+    return toEuler(NewAxis[0], NewAxis[1], NewAxis[2], NewAngle);
+  }
+
 	thread void EyeScriptCheckThread() {
 		while(true) {
       //warning - this runs at the same speed as the eyescript, and can be performance heavy due to this
@@ -1002,6 +1211,25 @@ class tttelocomotive isclass Locomotive
         eyeX = Str.ToFloat(browser.GetElementProperty("eyeX", "value")) * Math.PI / 180;
         eyeY = Str.ToFloat(browser.GetElementProperty("eyeY", "value")) * Math.PI / 180;
         eyeZ = Str.ToFloat(browser.GetElementProperty("eyeZ", "value")) * Math.PI / 180;
+      }
+
+      if(b_EyeTargetEnabled and EyeTarget)
+      {
+        float[] TargetAngle = GetLookAngle(me.GetMapObjectPosition(), EyeTarget.GetMapObjectPosition());
+
+        float[] StartGlobal = WCtoGlobal(me.GetMapObjectPosition());
+        float[] EndGlobal = WCtoGlobal(EyeTarget.GetMapObjectPosition());
+
+        TrainzScript.Log("sin " + (string)sin(0.5) + " cos " + (string)cos(0.5) + " asin " + (string)asin(sin(0.5)) + " acos " + (string)acos(cos(0.5)));
+
+        //TrainzScript.Log("CP is: X: " + (string)CP[0] + " Y: " + (string)CP[1] + " Z: " + (string)CP[2]);
+        //TrainzScript.Log("Normalized is: X: " + (string)NewAxis[0] + " Y: " + (string)NewAxis[1] + " Z: " + (string)NewAxis[2]);
+        //TrainzScript.Log("pos is: X: " + (string)WCtoGlobal(me.GetMapObjectPosition())[0] + " Y: " + (string)WCtoGlobal(me.GetMapObjectPosition())[1] + " Z: " + (string)WCtoGlobal(me.GetMapObjectPosition())[2]);
+
+        TrainzScript.Log("Target Angle is: X: " + (string)TargetAngle[0] + " Y: " + (string)TargetAngle[1] + " Z: " + (string)TargetAngle[2]);
+        eyeX = TargetAngle[1];
+        eyeY = TargetAngle[0];
+        eyeZ = TargetAngle[2];
       }
 
 			//final orientation apply ================================================
@@ -1145,6 +1373,10 @@ class tttelocomotive isclass Locomotive
     output.Print("<a href='live://play'><font>Play Animation</font></a>");
     output.Print("</tr></td>");
 
+    output.Print("<tr><td>");
+    output.Print(HTMLWindow.CheckBox("live://eye-target", b_EyeTargetEnabled) + " Enable Eye Target");
+    output.Print("</tr></td>");
+
     output.Print("</table>");
   	output.Print("</body></html>");
 
@@ -1224,6 +1456,15 @@ class tttelocomotive isclass Locomotive
       if ( browser and msg.src == browser )
       {
           CurrentMenu = BROWSER_EYEMENU;
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://eye-target", msg:
+      if ( browser and msg.src == browser )
+      {
+          b_EyeTargetEnabled = !b_EyeTargetEnabled;
           RefreshBrowser();
       }
       msg.src = null;
