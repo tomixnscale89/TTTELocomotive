@@ -930,16 +930,14 @@ class tttelocomotive isclass Locomotive
   public void HandleXAxis(Message msg)
   {
     Soup parameters = msg.paramSoup;
-    parameters.GetNamedTagAsFloat("control-value");
-    eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+    eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
     SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
   }
 
   public void HandleYAxis(Message msg)
   {
     Soup parameters = msg.paramSoup;
-    parameters.GetNamedTagAsFloat("control-value");
-    eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5)/1;
+    eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
     SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
   }
 
@@ -1074,7 +1072,7 @@ class tttelocomotive isclass Locomotive
 			eyeX = ReyeX;
 			eyeY = ReyeY;
       eyeZ = ReyeZ;
-
+      
 			if(faceSelection != RfaceSelection)
 			{
 				faceSelection = RfaceSelection;
