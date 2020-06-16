@@ -247,7 +247,7 @@ class tttelocomotive isclass Locomotive
 
 
   //Multiplayer Message! Important!
-  AddHandler(me, "EyescriptMP", "update", "MPUpdate");
+  AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
 
   EyeScriptCheckThread();
   if(MultiplayerGame.IsActive()){
@@ -912,12 +912,20 @@ class tttelocomotive isclass Locomotive
     }
   }
 
+  // ============================================================================
+  // Name: SetEyeMeshOrientation()
+  // Desc: Sets the locomotive eye rotation.
+  // ============================================================================
 
   void SetEyeMeshOrientation(float x, float y, float z)
 	{
     SetMeshOrientation("eye_l", x, y, z);
 		SetMeshOrientation("eye_r", x, y, z);
 	}
+
+  // ============================================================================
+  // Name: ControlSet Handlers
+  // ============================================================================
 
   public void HandleXAxis(Message msg)
   {
@@ -935,7 +943,7 @@ class tttelocomotive isclass Locomotive
     SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
   }
 
-  //Face changing
+  //Face handling
   public void HandleKeyFLeft(Message msg)
   {
     if (faceSelection > 0)
@@ -966,12 +974,13 @@ class tttelocomotive isclass Locomotive
     //PostMessage(me, "pfx", "-4",0.0);
     //Wheeshing = false;
   }
+  // ============================================================================
+  // Name: EyeScriptCheckThread()
+  // Desc: A thread that manages eye movement.
+  // ============================================================================
 
 	thread void EyeScriptCheckThread() {
 		while(true) {
-      //warning - this runs at the same speed as the eyescript, and can be performance heavy due to this
-      //increase the update period if this is the case
-
       //Animation setup
       if(eye_isanimating and (eye_animframe <= (eye_anim.size()-1))){ // check if the eye should be currently animating and the animation isnt over
         Orientation eye_Angdeconstruct = eye_anim[eye_animframe];
@@ -997,7 +1006,7 @@ class tttelocomotive isclass Locomotive
       }
 
       //Get rotation from Menu
-      if (CurrentMenu == BROWSER_EYEMENU and !BrowserClosed)
+      if (CurrentMenu == BROWSER_EYEMENU and !BrowserClosed and browser)
       {
         eyeX = Str.ToFloat(browser.GetElementProperty("eyeX", "value")) * Math.PI / 180;
         eyeY = Str.ToFloat(browser.GetElementProperty("eyeY", "value")) * Math.PI / 180;
@@ -1012,18 +1021,21 @@ class tttelocomotive isclass Locomotive
 	}
 
 
-  //This section of the code handles the multiplayer, using some epic advanced soup business
+  // ============================================================================
+  // Name: MultiplayerBroadcast()
+  // Desc: Thread that networks all locomotive information to other MP clients.
+  // ============================================================================
 
-  //sends a message to other game clients
+  //This section of the code handles the multiplayer, using some epic advanced soup business
 	thread void MultiplayerBroadcast() {
 		while(true)
-		{
+    {
 			//CHECK FOR CLIENT OWNERSHIP, OTHERWISE IT WILL GET MESSY
 			DriverCharacter driver = me.GetMyTrain().GetActiveDriver();
 			if (MultiplayerGame.IsActive() and driver and driver.IsLocalPlayerOwner()) {
 
 				//this thread will package up data and send it across the server to be listened for
-				Soup senddata = Constructors.NewSoup();       // this soup will be empty
+				Soup senddata = Constructors.NewSoup();
         senddata.SetNamedTag("eyeX",eyeX);
         senddata.SetNamedTag("eyeY",eyeY);
         senddata.SetNamedTag("eyeZ",eyeZ);
@@ -1032,11 +1044,16 @@ class tttelocomotive isclass Locomotive
         senddata.SetNamedTag("headcode",m_headCode);
 				//senddata.SetNamedTag("wheesh",Wheeshing);
 				senddata.SetNamedTag("id",me.GetGameObjectID());
-				MultiplayerGame.BroadcastGameplayMessage("EyescriptMP", "update", senddata);
+				MultiplayerGame.BroadcastGameplayMessage("TTTELocomotiveMP", "update", senddata);
 			}
 			Sleep(MP_UpdatePeriod); // don't go too crazy with data
 		}
 	}
+
+  // ============================================================================
+  // Name: MPUpdate()
+  // Desc: Client side MP information handler.
+  // ============================================================================
 
 	//receives and handles multiplayer messages
 	public void MPUpdate(Message msg)
@@ -1087,6 +1104,10 @@ class tttelocomotive isclass Locomotive
 		}
 	}
 
+  // ============================================================================
+  // Name: GetMenuHTML()
+  // Desc: Browser HTML tabs.
+  // ============================================================================
 
   string GetMenuHTML()
   {
@@ -1166,6 +1187,11 @@ class tttelocomotive isclass Locomotive
     return output.AsString();
   }
 
+  // ============================================================================
+  // Name: createMenuWindow()
+  // Desc: Creates the browser.
+  // ============================================================================
+
   void createMenuWindow()
   {
     browser = null;
@@ -1177,6 +1203,11 @@ class tttelocomotive isclass Locomotive
   	browser.LoadHTMLString(GetAsset(), GetMenuHTML());
     BrowserClosed = false;
   }
+
+  // ============================================================================
+  // Name: RefreshBrowser()
+  // Desc: Updates all browser parameters by reloading the HTML strings.
+  // ============================================================================
 
   void RefreshBrowser()
   {
@@ -1195,6 +1226,11 @@ class tttelocomotive isclass Locomotive
       browser.LoadHTMLString(GetAsset(), GetMenuHTML());
     }
   }
+
+  // ============================================================================
+  // Name: BrowserThread()
+  // Desc: Recreates the browser if it is closed. (should be swapped for a module change handler)
+  // ============================================================================
 
   thread void BrowserThread()
   {
@@ -1215,6 +1251,11 @@ class tttelocomotive isclass Locomotive
       Sleep(0.1);
     }
   }
+
+  // ============================================================================
+  // Name: ScanBrowser()
+  // Desc: Handles all browser input.
+  // ============================================================================
 
   thread void ScanBrowser() {
 		Message msg;
