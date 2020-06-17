@@ -1157,7 +1157,28 @@ class tttelocomotive isclass Locomotive
   // ============================================================================
   void UpdateSmoke()
   {
+    int i;
+    for(i = 0; i < SmokeEdits.CountTags(); i++)
+    {
+      Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
+      int curProperty;
+      for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
+      {
+        string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
+        if(curTagName != "active" and curTagName != "expanded")
+        {
+          float value = CurrentSmoke.GetNamedTagAsFloat(curTagName);
+          int phase = 0;
+          TrainzScript.Log("Attempting to set " + curTagName + " to " + (string)value + " for smoke" + (string)i);
+          if(curTagName == "rate") SetPFXEmitterRate(i, phase, value);
+          if(curTagName == "velocity") SetPFXEmitterVelocity(i, phase, value);
+          if(curTagName == "lifetime") SetPFXEmitterLifetime(i, phase, value);
+          if(curTagName == "minsize") SetPFXEmitterMinSize(i, phase, value);
+          if(curTagName == "maxsize") SetPFXEmitterMaxSize(i, phase, value);
 
+        }
+      }
+    }
   }
 
   // ============================================================================
@@ -1183,7 +1204,7 @@ class tttelocomotive isclass Locomotive
       }
     }
   }
-  
+
   // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
@@ -1311,7 +1332,7 @@ class tttelocomotive isclass Locomotive
             output.Print(curTagName);
             output.Print("<br>");
             output.Print("<a href='live://smoke-update/" + (string)i + curTagName + "'>");
-            output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=16 id='" + (string)i + curTagName + "' min=0.0 max=8.0 value=0.0 page-size=0.5 draw-marks=1 draw-lines=1></trainz-object>");
+            output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=16 id='" + (string)i + curTagName + "' min=0.0 max=50.0 value=0.0 page-size=0.5 draw-marks=1 draw-lines=1></trainz-object>");
             output.Print("</a>");
             output.Print("<br>");
             output.Print("<trainz-text id='" + (string)i + curTagName + "-text" + "' text='" + (string)CurrentSmoke.GetNamedTagAsFloat(curTagName) + "'></trainz-text>");
