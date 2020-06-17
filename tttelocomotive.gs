@@ -1161,6 +1161,30 @@ class tttelocomotive isclass Locomotive
   }
 
   // ============================================================================
+  // Name: RefreshSmokeTags()
+  // Desc: Updates all smoke sliders.
+  // ============================================================================
+
+  void RefreshSmokeTags()
+  {
+    int i;
+    for(i = 0; i < SmokeEdits.CountTags(); i++)
+    {
+      Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
+      int curProperty;
+      for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
+      {
+        string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
+        if(curTagName != "active" and curTagName != "expanded")
+        {
+          string id = (string)i + curTagName;
+          browser.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
+        }
+      }
+    }
+  }
+  
+  // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
   // ============================================================================
@@ -1286,12 +1310,11 @@ class tttelocomotive isclass Locomotive
             output.Print("<tr><td>");
             output.Print(curTagName);
             output.Print("<br>");
-            string foundValue = (string)CurrentSmoke.GetNamedTagAsFloat(curTagName);
-            Str.TrimRight(foundValue, "0");
-            Str.TrimRight(foundValue, ".");
+            output.Print("<a href='live://smoke-update/" + (string)i + curTagName + "'>");
             output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=16 id='" + (string)i + curTagName + "' min=0.0 max=8.0 value=0.0 page-size=0.5 draw-marks=1 draw-lines=1></trainz-object>");
+            output.Print("</a>");
             output.Print("<br>");
-            output.Print((string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
+            output.Print("<trainz-text id='" + (string)i + curTagName + "-text" + "' text='" + (string)CurrentSmoke.GetNamedTagAsFloat(curTagName) + "'></trainz-text>");
             output.Print("<br>");
             output.Print("</tr></td>");
           }
@@ -1348,23 +1371,7 @@ class tttelocomotive isclass Locomotive
       break;
       case BROWSER_SMOKEMENU:
       browser.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
-
-      int i;
-      for(i = 0; i < SmokeEdits.CountTags(); i++)
-      {
-        Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
-        int curProperty;
-        for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
-        {
-          string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
-          if(curTagName != "active" and curTagName != "expanded")
-          {
-            string id = (string)i + curTagName;
-            browser.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
-          }
-        }
-      }
-
+      RefreshSmokeTags();
       break;
       default:
       browser.LoadHTMLString(GetAsset(), GetMenuHTML());
@@ -1508,26 +1515,50 @@ class tttelocomotive isclass Locomotive
       on "Browser-URL", "", msg:
       if ( browser and msg.src == browser )
       {
-		       if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
-           {
-             string command = Str.Tokens(msg.minor, "live://contract/")[0];
-             if(command)
-             {
-               Soup smoke = SmokeEdits.GetNamedSoup(command);
-               smoke.SetNamedTag("expanded", false);
-               RefreshBrowser();
-             }
-           }
-           if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
-            {
-              string command = Str.Tokens(msg.minor, "live://expand/")[0];
-              if(command)
-              {
-                Soup smoke = SmokeEdits.GetNamedSoup(command);
-                smoke.SetNamedTag("expanded", true);
-                RefreshBrowser();
-              }
-            }
+
+        if(TrainUtil.HasPrefix(msg.minor, "live://smoke-update/"))
+        {
+          string command = msg.minor;
+          Str.TrimLeft(command, "live://smoke-update/");
+          if(command)
+          {
+            //unpackint removes the integer from the original string
+            string[] propertytokens = Str.Tokens(command, "0123456789");
+            string propertyname = propertytokens[propertytokens.size() - 1];
+            string smokeid = Str.UnpackInt(Str.CloneString(command));
+            Soup smoke = SmokeEdits.GetNamedSoup(smokeid);
+
+            float value = Str.ToFloat(browser.GetElementProperty(command, "value"));
+
+            smoke.SetNamedTag(propertyname, value);
+
+            browser.SetTrainzText(command + "-text", (string)value);
+
+            RefreshSmokeTags();
+            UpdateSmoke();
+          }
+        }
+       if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
+       {
+         string command = Str.Tokens(msg.minor, "live://contract/")[0];
+         if(command)
+         {
+           Soup smoke = SmokeEdits.GetNamedSoup(command);
+           smoke.SetNamedTag("expanded", false);
+           RefreshBrowser();
+         }
+       }
+       if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://expand/")[0];
+          if(command)
+          {
+            Soup smoke = SmokeEdits.GetNamedSoup(command);
+            smoke.SetNamedTag("expanded", true);
+            RefreshBrowser();
+          }
+        }
+
       }
       msg.src = null;
       continue;
