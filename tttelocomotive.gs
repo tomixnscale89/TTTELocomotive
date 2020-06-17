@@ -105,6 +105,7 @@ class tttelocomotive isclass Locomotive
   Soup SmokeboxContainer;
 
   Soup SmokeEdits;
+  int BoundWheesh = -1;
   // ACS Stuff
   Library     ACSlib;   // reference to the Advanced Coupling System Library
   GSObject[] ACSParams; // not sure what this is
@@ -1313,9 +1314,16 @@ class tttelocomotive isclass Locomotive
       output.Print("<tr><td>");
       output.Print("<b>");
       output.Print("smoke" + (string)i + " ");
+      output.Print("</b>");
 
       if(CurrentSmoke.GetNamedTagAsBool("expanded")) output.Print("<a href='live://contract/" + (string)i + "'>-</a>");
       else output.Print("<a href='live://expand/" + (string)i + "'>+</a>");
+
+      output.Print("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+      if(i != BoundWheesh)
+      {
+        output.Print("<i><a href='live://smoke-bind/" + (string)i + "'>(bind to wheesh)</a></i>");
+      }
 
       output.Print("</b>");
       output.Print("<br>");
@@ -1579,7 +1587,15 @@ class tttelocomotive isclass Locomotive
             RefreshBrowser();
           }
         }
-
+        if(TrainUtil.HasPrefix(msg.minor, "live://smoke-bind/"))
+         {
+           string command = Str.Tokens(msg.minor, "live://smoke-bind/")[0];
+           if(command)
+           {
+             BoundWheesh = Str.UnpackInt(command);
+             RefreshBrowser();
+           }
+         }
       }
       msg.src = null;
       continue;
