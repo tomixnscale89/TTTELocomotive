@@ -233,6 +233,7 @@ class tttelocomotive isclass Locomotive
 
       Soup NewContainer = Constructors.NewSoup();
       NewContainer.SetNamedTag("active", false); //whether to override
+      NewContainer.SetNamedTag("expanded", false);
       SetNamedFloatFromExisting(curSmoke, NewContainer, "rate");
       SetNamedFloatFromExisting(curSmoke, NewContainer, "velocity");
       SetNamedFloatFromExisting(curSmoke, NewContainer, "lifetime");
@@ -1151,6 +1152,15 @@ class tttelocomotive isclass Locomotive
 	}
 
   // ============================================================================
+  // Name: UpdateSmoke()
+  // Desc: Update all smoke values.
+  // ============================================================================
+  void UpdateSmoke()
+  {
+
+  }
+
+  // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
   // ============================================================================
@@ -1250,9 +1260,49 @@ class tttelocomotive isclass Locomotive
     output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
     output.Print("</tr></td>");
 
-    //Get the total number of smoke objects in this asset
-    output.Print("<tr><td>");
+    //Generate smoke containers
+    int i;
+    for(i = 0; i < SmokeEdits.CountTags(); i++)
+    {
+      Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
+      output.Print("<tr><td>");
+      output.Print("<b>");
+      output.Print("smoke" + (string)i + " ");
 
+      if(CurrentSmoke.GetNamedTagAsBool("expanded")) output.Print("<a href='live://contract/" + (string)i + "'>-</a>");
+      else output.Print("<a href='live://expand/" + (string)i + "'>+</a>");
+
+      output.Print("</b>");
+      output.Print("<br>");
+      if(CurrentSmoke.GetNamedTagAsBool("expanded"))
+      {
+        output.Print("<table>");
+        int curProperty;
+        for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
+        {
+          string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
+          if(curTagName != "active" and curTagName != "expanded")
+          {
+            output.Print("<tr><td>");
+            output.Print(curTagName);
+            output.Print("<br>");
+            string foundValue = (string)CurrentSmoke.GetNamedTagAsFloat(curTagName);
+            Str.TrimRight(foundValue, "0");
+            Str.TrimRight(foundValue, ".");
+            output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=16 id='" + (string)i + curTagName + "' min=0.0 max=8.0 value=0.0 page-size=0.5 draw-marks=1 draw-lines=1></trainz-object>");
+            output.Print("<br>");
+            output.Print((string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
+            output.Print("<br>");
+            output.Print("</tr></td>");
+          }
+        }
+        output.Print("</table>");
+      }
+      output.Print("</tr></td>");
+    }
+
+    output.Print("<tr><td>");
+    output.Print("<a href='live://smoke-apply'>Apply</a>");
     output.Print("</tr></td>");
 
     output.Print("</table>");
@@ -1298,6 +1348,23 @@ class tttelocomotive isclass Locomotive
       break;
       case BROWSER_SMOKEMENU:
       browser.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
+
+      int i;
+      for(i = 0; i < SmokeEdits.CountTags(); i++)
+      {
+        Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
+        int curProperty;
+        for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
+        {
+          string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
+          if(curTagName != "active" and curTagName != "expanded")
+          {
+            string id = (string)i + curTagName;
+            browser.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
+          }
+        }
+      }
+
       break;
       default:
       browser.LoadHTMLString(GetAsset(), GetMenuHTML());
@@ -1433,6 +1500,34 @@ class tttelocomotive isclass Locomotive
       if ( browser and msg.src == browser )
       {
 		       //playanim();
+      }
+      msg.src = null;
+      continue;
+
+      //other messages
+      on "Browser-URL", "", msg:
+      if ( browser and msg.src == browser )
+      {
+		       if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
+           {
+             string command = Str.Tokens(msg.minor, "live://contract/")[0];
+             if(command)
+             {
+               Soup smoke = SmokeEdits.GetNamedSoup(command);
+               smoke.SetNamedTag("expanded", false);
+               RefreshBrowser();
+             }
+           }
+           if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
+            {
+              string command = Str.Tokens(msg.minor, "live://expand/")[0];
+              if(command)
+              {
+                Soup smoke = SmokeEdits.GetNamedSoup(command);
+                smoke.SetNamedTag("expanded", true);
+                RefreshBrowser();
+              }
+            }
       }
       msg.src = null;
       continue;
