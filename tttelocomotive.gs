@@ -1345,9 +1345,9 @@ class tttelocomotive isclass Locomotive
       output.Print("</tr></td>");
     }
 
-    output.Print("<tr><td>");
-    output.Print("<a href='live://smoke-apply'>Apply</a>");
-    output.Print("</tr></td>");
+    //output.Print("<tr><td>");
+    //output.Print("<a href='live://smoke-apply'>Apply</a>");
+    //output.Print("</tr></td>");
 
     output.Print("</table>");
     output.Print("</body></html>");
