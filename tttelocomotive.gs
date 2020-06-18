@@ -93,7 +93,8 @@ class tttelocomotive isclass Locomotive
   define int LIVERY_3 = 3; // temporary livery Options. This will change from asset to asset...
 
   int skinSelection; // Integer used to store the current skin of the asset. This will default to zero, unless forced in Init().
-  int copySkin; // May not be needed..
+  int m_copySkin; // May not be needed..
+  int m_copySkinBogey;
 
   // Faces Options
   int faceSelection;
@@ -316,6 +317,8 @@ class tttelocomotive isclass Locomotive
   headlight_asset = GetAsset().FindAsset("lamp");
   m_carPosition = DetermineCarPosition();
 
+  textureSet = GetAsset().FindAsset("liveries"); // Grab the textures we need for the livery swapping
+
 
    // message handlers for ACS entry points and tail lights
   AddHandler(me, "Vehicle", "Coupled", "VehicleCoupleHandler");
@@ -388,6 +391,7 @@ class tttelocomotive isclass Locomotive
   void ConfigureSkins()
   {
     //TrainzScript.Log("Entered ConfigureSkins");
+    TrainzScript.Log("Setting skin to " + (string)skinSelection);
 
     switch(skinSelection)
     {
@@ -395,30 +399,75 @@ class tttelocomotive isclass Locomotive
 
       case LIVERY_0:
 
+      m_copySkin = 0;
+      m_copySkinBogey = 15;
+
+      SetFXTextureReplacement("thomas_main0_albedo",textureSet,m_copySkin);
+      SetFXTextureReplacement("thomas_main0_normal",textureSet,m_copySkin + 1);
+      SetFXTextureReplacement("thomas_main0_parameter",textureSet,m_copySkin + 2);
+      SetFXTextureReplacement("thomas_main1_albedo",textureSet,m_copySkin + 3);
+      SetFXTextureReplacement("thomas_main1_normal",textureSet,m_copySkin + 4);
+      SetFXTextureReplacement("thomas_main1_parameter",textureSet,m_copySkin + 5);
+      SetFXTextureReplacement("thomas_main2_albedo",textureSet,m_copySkin + 6);
+      SetFXTextureReplacement("thomas_main2_normal",textureSet,m_copySkin + 7);
+      SetFXTextureReplacement("thomas_main2_parameter",textureSet,m_copySkin + 8);
+      SetFXTextureReplacement("thomas_main3_albedo",textureSet,m_copySkin + 9);
+      SetFXTextureReplacement("thomas_main3_normal",textureSet,m_copySkin + 10);
+      SetFXTextureReplacement("thomas_main3_parameter",textureSet,m_copySkin + 11);
+      SetFXTextureReplacement("thomas_main4_albedo",textureSet,m_copySkin + 12);
+      SetFXTextureReplacement("thomas_main4_normal",textureSet,m_copySkin + 13);
+      SetFXTextureReplacement("thomas_main4_parameter",textureSet,m_copySkin + 14);
+
+      myBogies[2].SetFXTextureReplacement("thomas_rod_albedo",textureSet,m_copySkinBogey);
+      myBogies[2].SetFXTextureReplacement("thomas_rod_normal",textureSet,m_copySkinBogey + 1);
+      myBogies[2].SetFXTextureReplacement("thomas_rod_parameter",textureSet,m_copySkinBogey + 2);
+      myBogies[2].SetFXTextureReplacement("thomas_wheel_albedo",textureSet,m_copySkinBogey + 3);
+      myBogies[2].SetFXTextureReplacement("thomas_wheel_normal",textureSet,m_copySkinBogey + 4);
+      myBogies[2].SetFXTextureReplacement("thomas_wheel_parameter",textureSet,m_copySkinBogey + 5);
+
       break;
 
       case LIVERY_1:
 
-      break;
+      m_copySkin = 21;
+      m_copySkinBogey = 36;
 
-      case LIVERY_2:
+      SetFXTextureReplacement("thomas_main0_albedo",textureSet,m_copySkin);
+      SetFXTextureReplacement("thomas_main0_normal",textureSet,m_copySkin + 1);
+      SetFXTextureReplacement("thomas_main0_parameter",textureSet,m_copySkin + 2);
+      SetFXTextureReplacement("thomas_main1_albedo",textureSet,m_copySkin + 3);
+      SetFXTextureReplacement("thomas_main1_normal",textureSet,m_copySkin + 4);
+      SetFXTextureReplacement("thomas_main1_parameter",textureSet,m_copySkin + 5);
+      SetFXTextureReplacement("thomas_main2_albedo",textureSet,m_copySkin + 6);
+      SetFXTextureReplacement("thomas_main2_normal",textureSet,m_copySkin + 7);
+      SetFXTextureReplacement("thomas_main2_parameter",textureSet,m_copySkin + 8);
+      SetFXTextureReplacement("thomas_main3_albedo",textureSet,m_copySkin + 9);
+      SetFXTextureReplacement("thomas_main3_normal",textureSet,m_copySkin + 10);
+      SetFXTextureReplacement("thomas_main3_parameter",textureSet,m_copySkin + 11);
+      SetFXTextureReplacement("thomas_main4_albedo",textureSet,m_copySkin + 12);
+      SetFXTextureReplacement("thomas_main4_normal",textureSet,m_copySkin + 13);
+      SetFXTextureReplacement("thomas_main4_parameter",textureSet,m_copySkin + 14);
 
-      break;
-
-      case LIVERY_3:
+      myBogies[2].SetFXTextureReplacement("thomas_rod_albedo",textureSet,m_copySkinBogey);
+      myBogies[2].SetFXTextureReplacement("thomas_rod_normal",textureSet,m_copySkinBogey + 1);
+      myBogies[2].SetFXTextureReplacement("thomas_rod_parameter",textureSet,m_copySkinBogey + 2);
+      myBogies[2].SetFXTextureReplacement("thomas_wheel_albedo",textureSet,m_copySkinBogey + 3);
+      myBogies[2].SetFXTextureReplacement("thomas_wheel_normal",textureSet,m_copySkinBogey + 4);
+      myBogies[2].SetFXTextureReplacement("thomas_wheel_parameter",textureSet,m_copySkinBogey + 5);
 
       break;
 
       default:
-      //SetFXTextureReplacement("stack_albedo",textureset,m_copySkin);
+      //SetFXTextureReplacement("stack_albedo",textureSet,m_copySkin);
 
-      //myBogies[0].SetFXTextureReplacement("drive_albedo",textureset,m_copySkinBogey);
+      //myBogies[0].SetFXTextureReplacement("drive_albedo",textureSet,m_copySkinBogey);
 
       break;
 
     }
-  }
 
+
+  }
 
   // ============================================================================
   // Name: ConfigureFaces()
@@ -775,8 +824,9 @@ class tttelocomotive isclass Locomotive
       string classFaceStr = "<a href=live://property/faces>" + FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection)) + "</a>";
       html = html + "<p>" + strTable.GetString1("faces_desc", classFaceStr) + "</p>";
 
-      string classSkinStr = "<a href=live://property/skin>" + strTable.GetString("skin_" + skinSelection) + "</a>";
+      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
       html = html + "<p>" + strTable.GetString1("skin_desc", classSkinStr) + "</p>";
+
 
       // Let's post the current Trainz version for debugging purposes.
       string trainzVerStr = "The Trainz Build number is: " + trainzVersion;
@@ -899,9 +949,9 @@ class tttelocomotive isclass Locomotive
     }
     else if (p_propertyID == "skin")
     {
-      for(i = 0; i < 2; i++) // Let us loop through the entire possible skins and list them all.
+      for(i = 0; i < LiveryContainer.CountTags(); i++) // Let us loop through the entire possible skins and list them all.
       {
-        result[i] = strTable.GetString("skin_" +i);
+          result[i] = LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(i));
       }
     }
     else
@@ -942,7 +992,7 @@ class tttelocomotive isclass Locomotive
     }
     else if (p_propertyID == "skin")
     {
-      if (p_index > -1 and p_index < 2)
+      if (p_index > -1 and p_index < LiveryContainer.CountTags())
       {
         skinSelection = p_index;
         ConfigureSkins();
