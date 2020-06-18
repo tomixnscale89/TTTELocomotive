@@ -87,10 +87,6 @@ class tttelocomotive isclass Locomotive
 
   // LIVERY SWAPPING Variables
   Asset textureSet; // Texture asset we will use to grab the textures
-  define int LIVERY_0 = 0;
-  define int LIVERY_1 = 1;
-  define int LIVERY_2 = 2;
-  define int LIVERY_3 = 3; // temporary livery Options. This will change from asset to asset...
 
   int skinSelection; // Integer used to store the current skin of the asset. This will default to zero, unless forced in Init().
   int m_copySkin; // May not be needed..
@@ -103,6 +99,8 @@ class tttelocomotive isclass Locomotive
   Soup ExtensionsContainer;
   Soup FacesContainer;
   Soup LiveryContainer;
+  Soup LiveryTextureOptions;
+  Soup BogeyLiveryTextureOptions;
   Soup SmokeboxContainer;
 
   Soup SmokeEdits;
@@ -221,6 +219,11 @@ class tttelocomotive isclass Locomotive
   ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
   FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
   LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
+  LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
+  BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
+  //liverytextureoptions defines the texture autofill behavior
+  //SUPPORTED OPTIONS: none, diffusenormal, pbrstandard
+
   SmokeboxContainer = ExtensionsContainer.GetNamedSoup("smokeboxes");
 
   SmokeEdits = Constructors.NewSoup();
@@ -247,8 +250,6 @@ class tttelocomotive isclass Locomotive
       ParticleCount = ParticleCount + 1;
     }
   }
-
-  TrainzScript.Log((string)ParticleCount + " particles found.");
 
   //typical extensions container example
   //faces
@@ -390,80 +391,120 @@ class tttelocomotive isclass Locomotive
 
   void ConfigureSkins()
   {
-    //TrainzScript.Log("Entered ConfigureSkins");
     TrainzScript.Log("Setting skin to " + (string)skinSelection);
 
-    switch(skinSelection)
+    int MainTextureGroupSize = 0;
+    int BogeyTextureGroupSize = 0;
+    //determine texturegroup offset
+    int i;
+
+    for(i = 0; i < LiveryTextureOptions.CountTags(); i++)
     {
-      //TrainzScript.Log("Entered switch of ConfigureSkins, "+ m_skinSelection);
+      string TextureName = LiveryTextureOptions.GetIndexedTagName(i);
+      string TextureMode = LiveryTextureOptions.GetNamedTag(TextureName);
+      if(TextureMode == "none")
+      {
+        MainTextureGroupSize = MainTextureGroupSize + 1;
+      }
+      else if(TextureMode == "diffusenormal")
+      {
+        MainTextureGroupSize = MainTextureGroupSize + 2;
+      }
+      else if(TextureMode == "pbrstandard")
+      {
+        MainTextureGroupSize = MainTextureGroupSize + 3;
+      }
+    }
+    for(i = 0; i < BogeyLiveryTextureOptions.CountTags(); i++)
+    {
+      string TextureName = BogeyLiveryTextureOptions.GetIndexedTagName(i);
+      string TextureMode = BogeyLiveryTextureOptions.GetNamedTag(TextureName);
+      if(TextureMode == "none")
+      {
+        BogeyTextureGroupSize = BogeyTextureGroupSize + 1;
+      }
+      else if(TextureMode == "diffusenormal")
+      {
+        BogeyTextureGroupSize = BogeyTextureGroupSize + 2;
+      }
+      else if(TextureMode == "pbrstandard")
+      {
+        BogeyTextureGroupSize = BogeyTextureGroupSize + 3;
+      }
+    }
 
-      case LIVERY_0:
+    TrainzScript.Log("Found texturegroup size of " + (string)MainTextureGroupSize + " and bogey texturegroup size of " + (string)BogeyTextureGroupSize);
 
-      m_copySkin = 0;
-      m_copySkinBogey = 15;
+    //increment this value for each texture, to loop along
+    //use texturegroup offset
+    m_copySkin = skinSelection * (MainTextureGroupSize + BogeyTextureGroupSize);
 
-      SetFXTextureReplacement("thomas_main0_albedo",textureSet,m_copySkin);
-      SetFXTextureReplacement("thomas_main0_normal",textureSet,m_copySkin + 1);
-      SetFXTextureReplacement("thomas_main0_parameter",textureSet,m_copySkin + 2);
-      SetFXTextureReplacement("thomas_main1_albedo",textureSet,m_copySkin + 3);
-      SetFXTextureReplacement("thomas_main1_normal",textureSet,m_copySkin + 4);
-      SetFXTextureReplacement("thomas_main1_parameter",textureSet,m_copySkin + 5);
-      SetFXTextureReplacement("thomas_main2_albedo",textureSet,m_copySkin + 6);
-      SetFXTextureReplacement("thomas_main2_normal",textureSet,m_copySkin + 7);
-      SetFXTextureReplacement("thomas_main2_parameter",textureSet,m_copySkin + 8);
-      SetFXTextureReplacement("thomas_main3_albedo",textureSet,m_copySkin + 9);
-      SetFXTextureReplacement("thomas_main3_normal",textureSet,m_copySkin + 10);
-      SetFXTextureReplacement("thomas_main3_parameter",textureSet,m_copySkin + 11);
-      SetFXTextureReplacement("thomas_main4_albedo",textureSet,m_copySkin + 12);
-      SetFXTextureReplacement("thomas_main4_normal",textureSet,m_copySkin + 13);
-      SetFXTextureReplacement("thomas_main4_parameter",textureSet,m_copySkin + 14);
+    for(i = 0; i < LiveryTextureOptions.CountTags(); i++)
+    {
+      string TextureName = LiveryTextureOptions.GetIndexedTagName(i);
+      string TextureMode = LiveryTextureOptions.GetNamedTag(TextureName);
+      if(TextureMode == "none")
+      {
+        SetFXTextureReplacement(TextureName,textureSet,m_copySkin);
+        m_copySkin = m_copySkin + 1;
+      }
+      else if(TextureMode == "diffusenormal")
+      {
+        SetFXTextureReplacement(TextureName + "_diffuse",textureSet,m_copySkin);
+        SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkin + 1);
+        m_copySkin = m_copySkin + 2;
+      }
+      else if(TextureMode == "pbrstandard")
+      {
+        SetFXTextureReplacement(TextureName + "_albedo",textureSet,m_copySkin);
+        SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkin + 1);
+        SetFXTextureReplacement(TextureName + "_parameter",textureSet,m_copySkin + 2);
+        m_copySkin = m_copySkin + 3;
+      }
+      else
+      {
+        TrainzScript.Log("Livery mode " + TextureMode + " is not supported!");
+      }
+    }
 
-      myBogies[2].SetFXTextureReplacement("thomas_rod_albedo",textureSet,m_copySkinBogey);
-      myBogies[2].SetFXTextureReplacement("thomas_rod_normal",textureSet,m_copySkinBogey + 1);
-      myBogies[2].SetFXTextureReplacement("thomas_rod_parameter",textureSet,m_copySkinBogey + 2);
-      myBogies[2].SetFXTextureReplacement("thomas_wheel_albedo",textureSet,m_copySkinBogey + 3);
-      myBogies[2].SetFXTextureReplacement("thomas_wheel_normal",textureSet,m_copySkinBogey + 4);
-      myBogies[2].SetFXTextureReplacement("thomas_wheel_parameter",textureSet,m_copySkinBogey + 5);
+    //bogey liveries
 
-      break;
+    int currentBogey;
+    for(currentBogey = 0; currentBogey < myBogies.size(); currentBogey++)
+    {
+      if(myBogies[currentBogey])
+      {
+        m_copySkinBogey = m_copySkin;
+        Bogey ActiveBogey = myBogies[currentBogey];
 
-      case LIVERY_1:
-
-      m_copySkin = 21;
-      m_copySkinBogey = 36;
-
-      SetFXTextureReplacement("thomas_main0_albedo",textureSet,m_copySkin);
-      SetFXTextureReplacement("thomas_main0_normal",textureSet,m_copySkin + 1);
-      SetFXTextureReplacement("thomas_main0_parameter",textureSet,m_copySkin + 2);
-      SetFXTextureReplacement("thomas_main1_albedo",textureSet,m_copySkin + 3);
-      SetFXTextureReplacement("thomas_main1_normal",textureSet,m_copySkin + 4);
-      SetFXTextureReplacement("thomas_main1_parameter",textureSet,m_copySkin + 5);
-      SetFXTextureReplacement("thomas_main2_albedo",textureSet,m_copySkin + 6);
-      SetFXTextureReplacement("thomas_main2_normal",textureSet,m_copySkin + 7);
-      SetFXTextureReplacement("thomas_main2_parameter",textureSet,m_copySkin + 8);
-      SetFXTextureReplacement("thomas_main3_albedo",textureSet,m_copySkin + 9);
-      SetFXTextureReplacement("thomas_main3_normal",textureSet,m_copySkin + 10);
-      SetFXTextureReplacement("thomas_main3_parameter",textureSet,m_copySkin + 11);
-      SetFXTextureReplacement("thomas_main4_albedo",textureSet,m_copySkin + 12);
-      SetFXTextureReplacement("thomas_main4_normal",textureSet,m_copySkin + 13);
-      SetFXTextureReplacement("thomas_main4_parameter",textureSet,m_copySkin + 14);
-
-      myBogies[2].SetFXTextureReplacement("thomas_rod_albedo",textureSet,m_copySkinBogey);
-      myBogies[2].SetFXTextureReplacement("thomas_rod_normal",textureSet,m_copySkinBogey + 1);
-      myBogies[2].SetFXTextureReplacement("thomas_rod_parameter",textureSet,m_copySkinBogey + 2);
-      myBogies[2].SetFXTextureReplacement("thomas_wheel_albedo",textureSet,m_copySkinBogey + 3);
-      myBogies[2].SetFXTextureReplacement("thomas_wheel_normal",textureSet,m_copySkinBogey + 4);
-      myBogies[2].SetFXTextureReplacement("thomas_wheel_parameter",textureSet,m_copySkinBogey + 5);
-
-      break;
-
-      default:
-      //SetFXTextureReplacement("stack_albedo",textureSet,m_copySkin);
-
-      //myBogies[0].SetFXTextureReplacement("drive_albedo",textureSet,m_copySkinBogey);
-
-      break;
-
+        for(i = 0; i < BogeyLiveryTextureOptions.CountTags(); i++)
+        {
+          string TextureName = BogeyLiveryTextureOptions.GetIndexedTagName(i);
+          string TextureMode = BogeyLiveryTextureOptions.GetNamedTag(TextureName);
+          if(TextureMode == "none")
+          {
+            ActiveBogey.SetFXTextureReplacement(TextureName,textureSet,m_copySkinBogey);
+            m_copySkinBogey = m_copySkinBogey + 1;
+          }
+          else if(TextureMode == "diffusenormal")
+          {
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_diffuse",textureSet,m_copySkinBogey);
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkinBogey + 1);
+            m_copySkinBogey = m_copySkinBogey + 2;
+          }
+          else if(TextureMode == "pbrstandard")
+          {
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_albedo",textureSet,m_copySkinBogey);
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkinBogey + 1);
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_parameter",textureSet,m_copySkinBogey + 2);
+            m_copySkinBogey = m_copySkinBogey + 3;
+          }
+          else
+          {
+            TrainzScript.Log("Livery mode " + TextureMode + " is not supported!");
+          }
+        }
+      }
     }
 
 
