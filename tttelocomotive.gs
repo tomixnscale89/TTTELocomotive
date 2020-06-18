@@ -55,6 +55,7 @@ class tttelocomotive isclass Locomotive
   public string[] GetPropertyElementList(string p_propertyID);
   void SetPropertyValue(string p_propertyID, string p_value, int p_index);
   void SetNamedFloatFromExisting(Soup in, Soup out, string tagName);
+  bool SoupHasTag(Soup testSoup, string tagName);
 
   thread void EyeScriptCheckThread(void);
   void SetEyeMeshOrientation(float x, float y, float z);
@@ -311,14 +312,16 @@ class tttelocomotive isclass Locomotive
   createMenuWindow();
   ScanBrowser();
   BrowserThread();
-  // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
-  coupler_idle = GetAsset().FindAsset("coupler_idle");
-  coupler_coupled = GetAsset().FindAsset("coupler_coupled");
 
-  headlight_asset = GetAsset().FindAsset("lamp");
+  Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
+  // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
+  if(SoupHasTag(KUIDTable, "coupler_idle")) coupler_idle = GetAsset().FindAsset("coupler_idle");
+  if(SoupHasTag(KUIDTable, "coupler_coupled")) coupler_coupled = GetAsset().FindAsset("coupler_coupled");
+
+  if(SoupHasTag(KUIDTable, "lamp")) headlight_asset = GetAsset().FindAsset("lamp");
   m_carPosition = DetermineCarPosition();
 
-  textureSet = GetAsset().FindAsset("liveries"); // Grab the textures we need for the livery swapping
+  if(SoupHasTag(KUIDTable, "liveries")) textureSet = GetAsset().FindAsset("liveries"); // Grab the textures we need for the livery swapping
 
 
    // message handlers for ACS entry points and tail lights
@@ -351,6 +354,20 @@ class tttelocomotive isclass Locomotive
   void SetNamedFloatFromExisting(Soup in, Soup out, string tagName)
   {
     if(in.GetIndexForNamedTag(tagName) != -1) out.SetNamedTag(tagName, Str.UnpackFloat(in.GetNamedTag(tagName)));
+  }
+
+  // ============================================================================
+  // Name: SoupHasTag()
+  // Desc: Determine if a Soup contains a tag.
+  // ============================================================================
+  bool SoupHasTag(Soup testSoup, string tagName)
+  {
+    if(testSoup.GetIndexForNamedTag(tagName) == -1)
+    {
+      return false;
+    }
+    //return false if it doesnt exist, otherwise return true
+    return true;
   }
 
   // ============================================================================
