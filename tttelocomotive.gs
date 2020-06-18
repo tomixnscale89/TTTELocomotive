@@ -1416,8 +1416,12 @@ class tttelocomotive isclass Locomotive
     float LastShakeTargetZ = 0;
     while(b_ShakeEnabled)
     {
-      b_ShakeIntensity = Str.UnpackFloat(browser.GetElementProperty("shakeintensity", "value"));
-      b_ShakePeriod = Str.UnpackFloat(browser.GetElementProperty("shakeperiod", "text")); //seconds to tenths
+      if(browser and CurrentMenu == BROWSER_LOCOMENU)
+      {
+        b_ShakeIntensity = Str.UnpackFloat(browser.GetElementProperty("shakeintensity", "value"));
+        b_ShakePeriod = Str.UnpackFloat(browser.GetElementProperty("shakeperiod", "text")); //seconds to tenths
+      }
+
       //prevent divide by zero
       int localPeriod = (b_ShakePeriod * 100.0);
       if(localPeriod < 2) localPeriod = 2;
@@ -1694,6 +1698,7 @@ class tttelocomotive isclass Locomotive
     {
       if (!HasFocus)
       {
+        CurrentMenu = BROWSER_MAINMENU;
         browser = null;
         BrowserClosed = true;
       }
