@@ -148,6 +148,9 @@ class tttelocomotive isclass Locomotive
 
   //tab specific Options
   bool b_WheelslipEnabled = false;
+  bool b_ShakeEnabled = false;
+  float b_ShakeIntensity = 0.02;
+  float b_ShakePeriod = 0.04;
   float normal_maxtractiveeffort;
   float normal_traction;
   float normal_momentum;
@@ -1310,6 +1313,47 @@ class tttelocomotive isclass Locomotive
     }
   }
 
+  float Lerp(float from, float to, float t)
+	{
+		return (from + (to - from)*t);
+	}
+
+  thread void ShakeThread()
+  {
+    int ShakeTime = 0;
+    float ShakeTargetX = 0;
+    float ShakeTargetY = 0;
+    float ShakeTargetZ = 0;
+    float LastShakeTargetX = 0;
+    float LastShakeTargetY = 0;
+    float LastShakeTargetZ = 0;
+    while(b_ShakeEnabled)
+    {
+      b_ShakeIntensity = Str.UnpackFloat(browser.GetElementProperty("shakeintensity", "value"));
+      b_ShakePeriod = (int)(Str.UnpackFloat(browser.GetElementProperty("shakeperiod", "text")) * 100); //seconds to tenths
+
+      float Along = (float)ShakeTime/(float)b_ShakePeriod;
+      float InterpX = Lerp(LastShakeTargetX, ShakeTargetX, Along);
+      float InterpY = Lerp(LastShakeTargetY, ShakeTargetY, Along);
+      float InterpZ = Lerp(LastShakeTargetZ, ShakeTargetZ, Along);
+      SetMeshOrientation("default", InterpX, InterpY, InterpZ);
+
+      if(ShakeTime == b_ShakePeriod)
+			{
+				ShakeTime = 0;
+				LastShakeTargetX = ShakeTargetX;
+				LastShakeTargetY = ShakeTargetY;
+				LastShakeTargetZ = ShakeTargetZ;
+				ShakeTargetX = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
+				ShakeTargetY = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
+				ShakeTargetZ = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
+			}
+
+      ShakeTime++;
+      Sleep(0.01);
+    }
+  }
+
   // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
@@ -1394,6 +1438,22 @@ class tttelocomotive isclass Locomotive
     output.Print(HTMLWindow.CheckBox("live://property/loco-wheelslip", b_WheelslipEnabled));
     output.Print(" Wheelslip");
     output.Print("</tr></td>");
+
+    output.Print("<tr><td>");
+    output.Print(HTMLWindow.CheckBox("live://property/loco-shake", b_ShakeEnabled));
+    output.Print(" Shake");
+    if(b_ShakeEnabled)
+    {
+      output.Print("<br>");
+      output.Print("Shake Intensity: ");
+      output.Print("<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='shakeintensity' min=0.0 max=0.2 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<br>");
+      output.Print("Shake Period: ");
+      output.Print("<trainz-object style=edit-box link-on-focus-loss id=shakeperiod width=60 height=16></trainz-object>");
+    }
+    output.Print("</tr></td>");
+
     output.Print("</table>");
     output.Print("</body></html>");
 
@@ -1501,6 +1561,8 @@ class tttelocomotive isclass Locomotive
       break;
       case BROWSER_LOCOMENU:
       browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
+      browser.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
+      browser.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
       break;
       case BROWSER_SMOKEMENU:
       browser.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
@@ -1583,6 +1645,23 @@ class tttelocomotive isclass Locomotive
             SetMaximumTractiveEffort(normal_maxtractiveeffort);
             SetWheelslipTractionMultiplier(normal_traction);
             SetWheelslipMomentumMultiplier(normal_momentum);
+          }
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://property/loco-shake", msg:
+      if ( browser and msg.src == browser )
+      {
+          b_ShakeEnabled = !b_ShakeEnabled;
+          if(b_ShakeEnabled)
+          {
+            ShakeThread();
+          }
+          else
+          {
+            SetMeshOrientation("default", 0.0, 0.0, 0.0);
           }
           RefreshBrowser();
       }
