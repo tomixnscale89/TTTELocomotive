@@ -1330,15 +1330,18 @@ class tttelocomotive isclass Locomotive
     while(b_ShakeEnabled)
     {
       b_ShakeIntensity = Str.UnpackFloat(browser.GetElementProperty("shakeintensity", "value"));
-      b_ShakePeriod = (int)(Str.UnpackFloat(browser.GetElementProperty("shakeperiod", "text")) * 100); //seconds to tenths
+      b_ShakePeriod = Str.UnpackFloat(browser.GetElementProperty("shakeperiod", "text")); //seconds to tenths
+      //prevent divide by zero
+      int localPeriod = (b_ShakePeriod * 100.0);
+      if(localPeriod < 2) localPeriod = 2;
 
-      float Along = (float)ShakeTime/(float)b_ShakePeriod;
+      float Along = (float)ShakeTime/(float)localPeriod;
       float InterpX = Lerp(LastShakeTargetX, ShakeTargetX, Along);
       float InterpY = Lerp(LastShakeTargetY, ShakeTargetY, Along);
       float InterpZ = Lerp(LastShakeTargetZ, ShakeTargetZ, Along);
       SetMeshOrientation("default", InterpX, InterpY, InterpZ);
 
-      if(ShakeTime == b_ShakePeriod)
+      if(ShakeTime == localPeriod)
 			{
 				ShakeTime = 0;
 				LastShakeTargetX = ShakeTargetX;
