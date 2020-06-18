@@ -1454,11 +1454,31 @@ class tttelocomotive isclass Locomotive
   	//StringTable strTable = GetAsset().GetStringTable();
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
-    output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=500 height=30></a>");
-    output.Print("<br>");
-    output.Print("<a href='live://open_loco'>Locomotive Window</a>");
-    output.Print("<br>");
-    output.Print("<a href='live://open_smoke'>Smoke Controllers</a>");
+    output.Print("<table cellspacing=5>");
+    //eye window
+    output.Print("<tr><td>");
+    output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=300 height=20></a>");
+    output.Print("</tr></td>");
+    //lamp window
+    output.Print("<tr><td>");
+    output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=300 height=20></a>");
+    output.Print("</tr></td>");
+
+    //livery window
+    output.Print("<tr><td>");
+    output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=300 height=20></a>");
+    output.Print("</tr></td>");
+
+    //loco window
+    output.Print("<tr><td>");
+    output.Print("<a href='live://open_loco'><img kuid='<kuid:414976:103611>' width=300 height=20></a>");
+    output.Print("</tr></td>");
+
+    //smoke window
+    output.Print("<tr><td>");
+    output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=300 height=20></a>");
+    output.Print("</tr></td>");
+    output.Print("</table>");
   	output.Print("</body></html>");
 
   	return output.AsString();
