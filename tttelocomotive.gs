@@ -278,8 +278,7 @@ class tttelocomotive isclass Locomotive
 
   AddHandler(me, "ControlSet", "eye-faceleft", "HandleKeyFLeft");
   AddHandler(me, "ControlSet", "eye-faceright", "HandleKeyFRight");
-  AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh");
-  AddHandler(me, "ControlSet", "eye-wheesh-up", "HandleWheeshUp");
+  AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh"); //now analog
 
 
   //Multiplayer Message! Important!
@@ -1121,15 +1120,12 @@ class tttelocomotive isclass Locomotive
   //wheeshing, currently disabled
   public void HandleWheesh(Message msg)
   {
-    //PostMessage(me, "pfx", "+4",0.0);
-    //Wheeshing = true;
+    Soup parameters = msg.paramSoup;
+    float Intensity = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 100;
+    TrainzScript.Log("Wheesh intensity " + (string)Intensity);
+    SetPFXEmitterRate(BoundWheesh, 0, Intensity);
   }
 
-  public void HandleWheeshUp(Message msg)
-  {
-    //PostMessage(me, "pfx", "-4",0.0);
-    //Wheeshing = false;
-  }
   // ============================================================================
   // Name: EyeScriptCheckThread()
   // Desc: A thread that manages eye movement.
