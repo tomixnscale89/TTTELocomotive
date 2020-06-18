@@ -248,7 +248,7 @@ class tttelocomotive isclass Locomotive
 
       TrainzScript.Log(NewContainer.AsString());
       SmokeEdits.SetNamedSoup((string)ParticleCount, NewContainer);
-      ParticleCount = ParticleCount + 1;
+      ParticleCount++;
     }
   }
 
@@ -1104,7 +1104,7 @@ class tttelocomotive isclass Locomotive
   {
     if (faceSelection > 0)
     {
-      faceSelection = faceSelection - 1;
+      faceSelection--;
     }
     ConfigureFaces();
   }
@@ -1113,7 +1113,7 @@ class tttelocomotive isclass Locomotive
   {
     if (faceSelection < FacesContainer.CountTags() - 1)
     {
-      faceSelection = faceSelection + 1;
+      faceSelection++;
     }
     ConfigureFaces();
   }
@@ -1144,7 +1144,7 @@ class tttelocomotive isclass Locomotive
         eyeY = eye_Angdeconstruct.ry;
         eyeZ = eye_Angdeconstruct.rz;
 
-        eye_animframe = eye_animframe + 1;
+        eye_animframe++;
 
       } else {
         eye_animframe = 0;
