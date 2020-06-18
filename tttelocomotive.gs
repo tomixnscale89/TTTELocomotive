@@ -63,11 +63,15 @@ class tttelocomotive isclass Locomotive
   void createMenuWindow();
   thread void BrowserThread();
   thread void ScanBrowser(void);
+
+  void WhistleMonitor(Message msg);
+  thread void HeadlightMonitor();
    // ****************************************************************************/
   // Define Variables
   // ****************************************************************************/
   StringTable strTable; // This asset's string table, saved for convenient fast access
 
+  MeshObject headlightMeshObject;
 
   Asset headlight_asset;      // headlight asset used by the loco
   Asset rear_headlight_asset; // Backup headlight (not sure if we want this)
@@ -345,9 +349,92 @@ class tttelocomotive isclass Locomotive
 	train = me.GetMyTrain(); // Get the train
 	SniffMyTrain(); // Then sniff it
 
-
+    HeadlightMonitor();
 
   }
+
+  // ============================================================================
+  // Name: void ConfigureHeadLightCorona(bool headlighton, bool highbeam_state)
+  // Desc: Sets the vehicle up for the required light state
+  // ============================================================================
+  void ConfigureHeadLightCorona(bool headlighton, bool highbeam_state)
+  {
+    //TrainzScript.Log("Headlight is :" + headlighton);
+    //TrainzScript.Log("Headlight beam is :" + highbeam_state);
+
+    headlightMeshObject = GetFXAttachment("lamp_br");
+
+    if (me == me.GetMyTrain().GetFrontmostLocomotive())
+    {
+      if(headlighton == true)
+      {
+        if(highbeam_state == true)
+        {
+          headlightMeshObject.SetFXTextureReplacementTexture("lights_parameter", "marklin_frontlamp_handle_emissive/lamp_on_parameter.texture");
+        }
+        if(highbeam_state == false)
+        {
+          headlightMeshObject.SetFXTextureReplacementTexture("lights_parameter", "marklin_frontlamp_handle_emissive/lamp_on_parameter.texture");
+        }
+      }
+      else
+      {
+        headlightMeshObject.SetFXTextureReplacementTexture("lights_parameter", "marklin_frontlamp_handle_emissive/lamp_parameter.texture");
+      }
+    }
+  }
+
+
+    // ============================================================================
+    // Name: HeadlightMonitor()
+    // Desc: Sets the vehicle up for the required headlight
+    // ============================================================================
+    thread void HeadlightMonitor()
+    {
+      // Start off with legacy mode assumed. If we get a modern message we cancel it.
+      bool bIsLegacyModeActive = true;
+      PostMessage(me, "Updater", "LegacyTick", 1.0);
+      wait()
+      {
+        on "Updater", "LegacyTick":
+        // Legacy polling logic. Updates lights every second.
+        ConfigureHeadLightCorona(me.GetMyTrain().GetHeadlightState(), me.GetHighBeams());
+        PostMessage(me, "Updater", "LegacyTick", 1.0);
+        continue;
+
+        on "Train", "NotifyHeadlights":
+        // Modern reactive logic. Updates lights only when changed.
+        ConfigureHeadLightCorona(me.GetMyTrain().GetHeadlightState(), me.GetHighBeams());
+
+        // Cancel legacy logic if still active
+        if (bIsLegacyModeActive)
+        {
+          ClearMessages("Updater", "LegacyTick");
+          bIsLegacyModeActive = false;
+        }
+        continue;
+      }
+    }
+
+
+    // ============================================================================
+    // Name: WhistleMonitor()
+    // Desc: Watches Whistle interactions specifically when the message NotifyHorn is posted.
+    // ============================================================================
+    void WhistleMonitor(Message msg)
+    {
+      if(msg.src == me)
+      {
+        if(msg.minor == "NotifyHorn")
+        {
+          PostMessage(me, "pfx", "+6",0.0); // Blow extra whistle
+        }
+        else
+        {
+          PostMessage(me, "pfx", "-6",0.0); // No longer in wait, so stop blowing whistle.
+        }
+      }
+    }
 
   // ============================================================================
   // Name: SetNamedFloatFromExisting()
