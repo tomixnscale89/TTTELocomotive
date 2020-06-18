@@ -1444,7 +1444,7 @@ class tttelocomotive isclass Locomotive
             output.Print(curTagName);
             output.Print("<br>");
             output.Print("<a href='live://smoke-update/" + (string)i + curTagName + "'>");
-            output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=16 id='" + (string)i + curTagName + "' min=0.0 max=50.0 value=0.0 page-size=0.5 draw-marks=1 draw-lines=1></trainz-object>");
+            output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=16 id='" + (string)i + curTagName + "' min=0.0 max=50.0 value=0.0 page-size=0.1 draw-marks=0 draw-lines=0></trainz-object>");
             output.Print("</a>");
             output.Print("<br>");
             output.Print("<trainz-text id='" + (string)i + curTagName + "-text" + "' text='" + (string)CurrentSmoke.GetNamedTagAsFloat(curTagName) + "'></trainz-text>");
