@@ -58,6 +58,7 @@ class tttelocomotive isclass Locomotive
   bool SoupHasTag(Soup testSoup, string tagName);
 
   thread void EyeScriptCheckThread(void);
+  thread void BufferThread();
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
   void createMenuWindow();
@@ -107,6 +108,8 @@ class tttelocomotive isclass Locomotive
   Soup LiveryTextureOptions;
   Soup BogeyLiveryTextureOptions;
   Soup SmokeboxContainer;
+  Soup BuffersContainer;
+
 
   Soup SmokeEdits;
   int BoundWheesh = -1;
@@ -225,6 +228,11 @@ class tttelocomotive isclass Locomotive
 
   myConfig = me.GetAsset().GetConfigSoup();
   ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
+  BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
+  if(BuffersContainer.CountTags() > 0)
+  {
+    BufferThread();
+  }
   FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
   LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
   LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
@@ -435,6 +443,87 @@ class tttelocomotive isclass Locomotive
         }
       }
     }
+
+  // ============================================================================
+  // Name: BufferThread()
+  // Desc: Manages buffer interaction.
+  // ============================================================================
+
+  Vehicle GetNextVehicle(GSTrackSearch Search)
+  {
+    Vehicle foundVehicle;
+    while (Search.SearchNextObject())
+    {
+      foundVehicle = cast<Vehicle>Search.GetObject();
+      if (foundVehicle != null)
+        return foundVehicle;
+    }
+    return null;
+  }
+
+  thread void BufferThread()
+  {
+    bool useFront = false;
+    bool useBack = false;
+    float FrontExtensionDistance = 0.0;
+    float BackExtensionDistance = 0.0;
+    string FrontMesh;
+    string BackMesh;
+    Soup FrontContainer = BuffersContainer.GetNamedSoup("front");
+    Soup BackContainer = BuffersContainer.GetNamedSoup("back");
+    if(FrontContainer.CountTags() > 0)
+    {
+      useFront = true;
+      FrontExtensionDistance = Str.UnpackFloat(FrontContainer.GetNamedTag("extension-distance"));
+      FrontMesh = FrontContainer.GetNamedTag("mesh");
+    }
+    if(BackContainer.CountTags() > 0)
+    {
+      useBack = true;
+      BackExtensionDistance = Str.UnpackFloat(BackContainer.GetNamedTag("extension-distance"));
+      BackMesh = BackContainer.GetNamedTag("mesh");
+    }
+
+    float HalfLength = GetLength() / 2;
+    while(true)
+    {
+      if(useFront)
+      {
+        float TargetDistance = FrontExtensionDistance;
+
+        GSTrackSearch Search = BeginTrackSearch(true);
+        Vehicle FrontVehicle = GetNextVehicle(Search);
+        if(FrontVehicle)
+        {
+          float NextHalfLength = FrontVehicle.GetLength() / 2;
+          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) / 1 + FrontExtensionDistance / 2;
+
+          if(CoupleDistance < FrontExtensionDistance) TargetDistance = CoupleDistance;
+        }
+        TrainzScript.Log("Positive target distance is " + (string)TargetDistance);
+        SetMeshTranslation(FrontMesh, 0.0, -TargetDistance, 0.0);
+      }
+
+      if(useBack)
+      {
+        float TargetDistance = BackExtensionDistance;
+
+        GSTrackSearch Search = BeginTrackSearch(false);
+        Vehicle BackVehicle = GetNextVehicle(Search);
+        if(BackVehicle)
+        {
+          float NextHalfLength = BackVehicle.GetLength() / 2;
+          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) / 1 + BackExtensionDistance / 2;
+
+          if(CoupleDistance < BackExtensionDistance) TargetDistance = CoupleDistance;
+        }
+
+        SetMeshTranslation(BackMesh, 0.0, TargetDistance, 0.0);
+      }
+
+      Sleep(0.03);
+    }
+  }
 
   // ============================================================================
   // Name: SetNamedFloatFromExisting()
