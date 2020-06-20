@@ -484,6 +484,10 @@ class tttelocomotive isclass Locomotive
       BackMesh = BackContainer.GetNamedTag("mesh");
     }
 
+    Vehicle CachedFrontVehicle;
+    Vehicle CachedBackVehicle;
+    bool IsFrontSprung = false;
+    bool IsBackSprung = false;
     float HalfLength = GetLength() / 2;
     while(true)
     {
@@ -495,13 +499,26 @@ class tttelocomotive isclass Locomotive
         Vehicle FrontVehicle = GetNextVehicle(Search);
         if(FrontVehicle)
         {
+          if(FrontVehicle != CachedFrontVehicle)
+          {
+            //new vehicle detected
+            Asset vehicleasset = FrontVehicle.GetAsset();
+            AsyncQueryHelper configcache = vehicleasset.CacheConfigSoup();
+            configcache.SynchronouslyWaitForResults();
+            Soup vehicleBufferContainer = vehicleasset.GetConfigSoup().GetNamedSoup("extensions").GetNamedSoup("buffers");
+            if(vehicleBufferContainer.CountTags() > 0) IsFrontSprung = true;
+            else IsFrontSprung = false;
+          }
           float NextHalfLength = FrontVehicle.GetLength() / 2;
-          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) / 1 + FrontExtensionDistance / 2;
+          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) + FrontExtensionDistance / 4;
+          if(IsFrontSprung) CoupleDistance = CoupleDistance / 2;
 
           if(CoupleDistance < FrontExtensionDistance) TargetDistance = CoupleDistance;
         }
-        TrainzScript.Log("Positive target distance is " + (string)TargetDistance);
+
+        //TrainzScript.Log("Positive target distance is " + (string)TargetDistance);
         SetMeshTranslation(FrontMesh, 0.0, -TargetDistance, 0.0);
+        CachedFrontVehicle = FrontVehicle;
       }
 
       if(useBack)
@@ -512,13 +529,25 @@ class tttelocomotive isclass Locomotive
         Vehicle BackVehicle = GetNextVehicle(Search);
         if(BackVehicle)
         {
+          if(BackVehicle != CachedBackVehicle)
+          {
+            //new vehicle detected
+            Asset vehicleasset = BackVehicle.GetAsset();
+            AsyncQueryHelper configcache = vehicleasset.CacheConfigSoup();
+            configcache.SynchronouslyWaitForResults();
+            Soup vehicleBufferContainer = vehicleasset.GetConfigSoup().GetNamedSoup("extensions").GetNamedSoup("buffers");
+            if(vehicleBufferContainer.CountTags() > 0) IsBackSprung = true;
+            else IsBackSprung = false;
+          }
           float NextHalfLength = BackVehicle.GetLength() / 2;
-          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) / 1 + BackExtensionDistance / 2;
+          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) + BackExtensionDistance / 4;
+          if(IsBackSprung) CoupleDistance = CoupleDistance / 2;
 
           if(CoupleDistance < BackExtensionDistance) TargetDistance = CoupleDistance;
         }
 
         SetMeshTranslation(BackMesh, 0.0, TargetDistance, 0.0);
+        CachedBackVehicle = BackVehicle;
       }
 
       Sleep(0.03);
