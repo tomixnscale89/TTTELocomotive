@@ -510,7 +510,7 @@ class tttelocomotive isclass Locomotive
             else IsFrontSprung = false;
           }
           float NextHalfLength = FrontVehicle.GetLength() / 2;
-          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) + FrontExtensionDistance / 4;
+          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength));
           if(IsFrontSprung) CoupleDistance = CoupleDistance / 2;
 
           if(CoupleDistance < FrontExtensionDistance) TargetDistance = CoupleDistance;
@@ -540,7 +540,7 @@ class tttelocomotive isclass Locomotive
             else IsBackSprung = false;
           }
           float NextHalfLength = BackVehicle.GetLength() / 2;
-          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength)) + BackExtensionDistance / 4;
+          float CoupleDistance = (Search.GetDistance() - (HalfLength + NextHalfLength));
           if(IsBackSprung) CoupleDistance = CoupleDistance / 2;
 
           if(CoupleDistance < BackExtensionDistance) TargetDistance = CoupleDistance;
