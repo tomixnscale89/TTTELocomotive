@@ -42,6 +42,9 @@ class tttelocomotive isclass Locomotive
    // ****************************************************************************/
   // Define Functions
   // ****************************************************************************/
+
+  Soup GlobalTTTESettings;
+
   int DetermineCarPosition(void);
   void SniffMyTrain(void);
   void ConfigureHeadcodeLamps(int headcode);
@@ -158,6 +161,7 @@ class tttelocomotive isclass Locomotive
   bool b_ShakeEnabled = false;
   float b_ShakeIntensity = 0.02;
   float b_ShakePeriod = 0.04;
+  bool b_CoupleLockEnabled = false;
   float normal_maxtractiveeffort;
   float normal_traction;
   float normal_momentum;
@@ -218,6 +222,18 @@ class tttelocomotive isclass Locomotive
   {
     // call the parent
     inherited();
+
+
+    //TrainzScript.Log("searching for ttte settings lib");
+    //tttelib TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
+
+    //if(TTTELocoLibrary)
+    //{
+      //TrainzScript.Log("Found TTTE settings library!");
+      //GlobalTTTESettings = TTTELocoLibrary.GetSettings();
+      //TrainzScript.Log("settings library is " + GlobalTTTESettings.AsString());
+    //}
+
     // ****************************************************************************/
    // Grab assets from the Locomotive
    // ****************************************************************************/
@@ -821,6 +837,12 @@ class tttelocomotive isclass Locomotive
     }
 
     SniffMyTrain();
+
+    //Couple lock
+    if(b_CoupleLockEnabled)
+    {
+      Uncouple(cast<Vehicle>msg.src);
+    }
   }
 
 
@@ -1686,6 +1708,11 @@ class tttelocomotive isclass Locomotive
     }
     output.Print("</tr></td>");
 
+    output.Print("<tr><td>");
+    output.Print(HTMLWindow.CheckBox("live://property/loco-couple", b_CoupleLockEnabled));
+    output.Print(" Disable Coupling");
+    output.Print("</tr></td>");
+
     output.Print("</table>");
     output.Print("</body></html>");
 
@@ -1896,6 +1923,15 @@ class tttelocomotive isclass Locomotive
           {
             SetMeshOrientation("default", 0.0, 0.0, 0.0);
           }
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://property/loco-couple", msg:
+      if ( browser and msg.src == browser )
+      {
+          b_CoupleLockEnabled = !b_CoupleLockEnabled;
           RefreshBrowser();
       }
       msg.src = null;
