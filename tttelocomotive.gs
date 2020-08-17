@@ -19,6 +19,7 @@ include "interface.gs"
 include "orientation.gs"
 include "multiplayergame.gs"
 include "soup.gs"
+include "couple.gs" //procedural coupler
 // ============================================================================
 // Style of code:
 // Use lmssteam for reference until our code is strong enough to use on it's own.
@@ -120,7 +121,11 @@ class tttelocomotive isclass Locomotive
   Library     ACSlib;   // reference to the Advanced Coupling System Library
   GSObject[] ACSParams; // not sure what this is
 
-
+  IKCoupler FrontCoupler;
+  IKCoupler BackCoupler;
+  //Vehicle FrontCoupledVehicle;
+  //Vehicle BackCoupledVehicle;
+  Vehicle LastCoupleInteraction;
   //Eyescript Variables
 
 
@@ -338,6 +343,17 @@ class tttelocomotive isclass Locomotive
   ACSParams = new GSObject[1];
   ACSParams[0] = me;
 
+  //Procedural Coupler System
+  FrontCoupler = cast<IKCoupler>(GetFXAttachment("couple_front"));
+  BackCoupler = cast<IKCoupler>(GetFXAttachment("couple_back"));
+  //important
+  FrontCoupler.ParentVehicle = me;
+  BackCoupler.ParentVehicle = me;
+  FrontCoupler.Position = "front";
+  BackCoupler.Position = "back";
+  //FrontCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
+  //BackCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
+
   //create the browser menu - this could be changed later to link to a pantograph or keybind
   createMenuWindow();
   ScanBrowser();
@@ -459,6 +475,67 @@ class tttelocomotive isclass Locomotive
         }
       }
     }
+
+
+  string GetRelativeDirectionString(Vehicle targetvehicle, string location)
+  {
+    //front and same - back
+    //front and different - front
+    //back and same - front
+    //back and different - back
+    bool SameDirection = (GetDirectionRelativeToTrain() == targetvehicle.GetDirectionRelativeToTrain());
+    if(location == "front")
+    {
+      if(SameDirection) return "back";
+      else return "front";
+    }
+    else if (location == "back")
+    {
+      if(SameDirection) return "front";
+      else return "back";
+    }
+    return "front";
+  }
+
+  void PlayCoupleAnimation(string direction)
+  {
+    //cache the most recent coupled vehicle in case another couple operation occurs
+    Vehicle TargetVehicle = LastCoupleInteraction;
+    if(TargetVehicle)
+    {
+      string OppositeDirection = GetRelativeDirectionString(TargetVehicle, direction);
+      IKCoupler OppositeCoupler = cast<IKCoupler>(TargetVehicle.GetFXAttachment("couple_" + OppositeDirection));
+
+      if(direction == "front")
+      {
+        FrontCoupler.CoupleTo(OppositeCoupler);
+      }
+      else if(direction == "back")
+      {
+        BackCoupler.CoupleTo(OppositeCoupler);
+      }
+    }
+  }
+
+  void PlayDecoupleAnimation(string direction)
+  {
+    //cache the most recent coupled vehicle in case another couple operation occurs
+    Vehicle TargetVehicle = LastCoupleInteraction;
+    if(TargetVehicle)
+    {
+      string OppositeDirection = GetRelativeDirectionString(TargetVehicle, direction);
+      IKCoupler OppositeCoupler = cast<IKCoupler>(TargetVehicle.GetFXAttachment("couple_" + OppositeDirection));
+
+      if(direction == "front")
+      {
+        FrontCoupler.DecoupleFrom(OppositeCoupler);
+      }
+      else if(direction == "back")
+      {
+        BackCoupler.DecoupleFrom(OppositeCoupler);
+      }
+    }
+  }
 
   // ============================================================================
   // Name: BufferThread()
@@ -803,12 +880,14 @@ class tttelocomotive isclass Locomotive
         if(callback[2] == "screwlink")
         {
 		      // couple is the name referenced inside the CONFIG of the Locomotive
-          SetFXAttachment("couple_" + callback[1], coupler_coupled);
+          PlayCoupleAnimation(callback[1]);
+          //SetFXAttachment("couple_" + callback[1], coupler_coupled);
         }
         else
         {
 		      // couple is the name referenced inside the CONFIG of the Locomotive
-          SetFXAttachment("couple_" + callback[1], coupler_idle);
+          PlayDecoupleAnimation(callback[1]);
+          //SetFXAttachment("couple_" + callback[1], coupler_idle);
         }
       }
     }
@@ -818,6 +897,8 @@ class tttelocomotive isclass Locomotive
     }
   }
 
+
+
     // ============================================================================
   // Name: VehicleCoupleHandler()
   // Parm: msg - Message to handle
@@ -826,9 +907,9 @@ class tttelocomotive isclass Locomotive
   void VehicleCoupleHandler(Message msg)
   {
   	//Interface.Print("I entered the ACS Couple Handler");
-
     m_carPosition = DetermineCarPosition();
 
+    if (msg.src != me) LastCoupleInteraction = cast<Vehicle>msg.src;
     // two vehicles that couple generate two couple events, one from each
     // so we can just act on ones that come from ourself
     if (msg.src == me)
@@ -857,6 +938,7 @@ class tttelocomotive isclass Locomotive
 
     m_carPosition = DetermineCarPosition();
 
+    if (msg.src != me) LastCoupleInteraction = cast<Vehicle>msg.src;
     // only one decouple event is generated for each decouple,
     // not one for each half of train, so in this case have to check anyway
     // this is still reasonably efficient, as we can at least be confident
