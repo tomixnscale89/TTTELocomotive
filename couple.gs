@@ -6,6 +6,19 @@ include "WorldCoordinate.gs"
 include "Orientation.gs"
 include "Vehicle.gs"
 
+class Coordinate2D
+{
+  public float x = 0.0;
+  public float y = 0.0;
+  public Coordinate2D Rotate(float rotateangle)
+  {
+    Coordinate2D newpoint = new Coordinate2D();
+    newpoint.x = x * IKMath.fast_cos(rotateangle) - y * IKMath.fast_sin(rotateangle);
+    newpoint.y = x * IKMath.fast_sin(rotateangle) + y * IKMath.fast_cos(rotateangle);
+    return newpoint;
+  }
+};
+
 class Coordinate
 {
   public float x = 0.0;
@@ -23,20 +36,42 @@ class Coordinate
     y = y - othercoord.y;
     z = z - othercoord.z;
   }
-  public void Rotate(float r_x, float r_y, float r_z) //more or less verified
+
+  Coordinate2D RotateAxis(float in_x, float in_y, float angle)
+  {
+    Coordinate2D AxisRotation = new Coordinate2D();
+    AxisRotation.x = in_x;
+    AxisRotation.y = in_y;
+    return AxisRotation.Rotate(angle);
+  }
+
+  public Coordinate Rotate(float r_x, float r_y, float r_z) //more or less verified
   {
     //float newx;
     //float newy;
     //float newz;
+    Coordinate OutCoord = new Coordinate();
 
-    x = x*IKMath.fast_cos(r_z) - y*IKMath.fast_sin(r_z);
-    y = x*IKMath.fast_sin(r_z) + y*IKMath.fast_cos(r_z);
+    Coordinate2D ZRotation = RotateAxis(x, y, r_z);
+    OutCoord.x = ZRotation.x;
+    OutCoord.y = ZRotation.y;
 
-    x = x*IKMath.fast_cos(r_y) - z*IKMath.fast_sin(r_y);
-    z = x*IKMath.fast_sin(r_y) + z*IKMath.fast_cos(r_y);
+    Coordinate2D YRotation = RotateAxis(OutCoord.x, z, r_y);
+    OutCoord.x = YRotation.x;
+    OutCoord.z = YRotation.y;
 
-    y = y*IKMath.fast_cos(r_x) - z*IKMath.fast_sin(r_x);
-    z = y*IKMath.fast_sin(r_x) + z*IKMath.fast_cos(r_x);
+    Coordinate2D XRotation = RotateAxis(OutCoord.y, OutCoord.z, r_x);
+    OutCoord.y = XRotation.x;
+    OutCoord.z = XRotation.y;
+    //OutCoord.x = x*IKMath.fast_cos(r_z) - y*IKMath.fast_sin(r_z);
+    //OutCoord.y = x*IKMath.fast_sin(r_z) + y*IKMath.fast_cos(r_z);
+
+    //OutCoord.x = x*IKMath.fast_cos(r_y) - z*IKMath.fast_sin(r_y);
+    //OutCoord.z = x*IKMath.fast_sin(r_y) + z*IKMath.fast_cos(r_y);
+
+    //OutCoord.y = y*IKMath.fast_cos(r_x) - z*IKMath.fast_sin(r_x);
+    //OutCoord.z = y*IKMath.fast_sin(r_x) + z*IKMath.fast_cos(r_x);
+    return OutCoord;
   }
   public string AsString()
   {
@@ -148,7 +183,7 @@ class IKCoupler isclass MeshObject
     //Coordinate RelativeLocation = GetAttachmentRelativeLocation(TargetAttachment);
     Coordinate RelativeLocation = CopyCoordinate(TargetAttachment.CachedRelativeLocation);
     //TrainzScript.Log("relative start " + RelativeLocation.AsString() + " around " + (string)ParentRotation.rx + " " + (string)ParentRotation.ry + " " + (string)ParentRotation.rz);
-    RelativeLocation.Rotate(ParentRotation.rx, ParentRotation.ry, ParentRotation.rz);
+    RelativeLocation = RelativeLocation.Rotate(ParentRotation.rx, ParentRotation.ry, ParentRotation.rz);
     //TrainzScript.Log("relative rotated " + RelativeLocation.AsString());
     ParentLocation.Add(RelativeLocation);
     return ParentLocation;
@@ -164,7 +199,7 @@ class IKCoupler isclass MeshObject
 
     //rotate back into our local coordinate space
     Orientation MyRotation = ParentVehicle.GetMapObjectOrientation();
-    RelativeLocation.Rotate(-MyRotation.rx, -MyRotation.ry, -MyRotation.rz);
+    RelativeLocation = RelativeLocation.Rotate(-MyRotation.rx, -MyRotation.ry, -MyRotation.rz);
 
     return RelativeLocation;
   }
@@ -216,9 +251,15 @@ class IKCoupler isclass MeshObject
       {
         Coordinate RelativeLocation = GetRelativeCoordinates(coupled);
         CoupleTarget.x = RelativeLocation.x;
-        CoupleTarget.y = (RelativeLocation.y - 0.2 - 0.01); //0.02
-        if(Position == "back") CoupleTarget.y = -CoupleTarget.y;
-        CoupleTarget.z = RelativeLocation.z + 0.04;
+        CoupleTarget.y = RelativeLocation.y;
+        if(Position == "back")
+        {
+          CoupleTarget.y = -CoupleTarget.y;
+        }
+        CoupleTarget.y = CoupleTarget.y + 0.28;
+
+        CoupleTarget.z = RelativeLocation.z; // + 0.028
+        TrainzScript.Log("target location " + CoupleTarget.AsString());
       }
       SetCoupleTarget(CoupleTarget.x, CoupleTarget.y, CoupleTarget.z, 0.0);
       Sleep(0.02);
