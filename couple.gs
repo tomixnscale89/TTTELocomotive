@@ -92,11 +92,7 @@ class Coordinate
   }
   public Coordinate RotateBack(float r_x, float r_y, float r_z) //more or less verified
   {
-    //float newx;
-    //float newy;
-    //float newz;
     Coordinate OutCoord = new Coordinate();
-    //tried xyz, zyx, yxz
 
     Coordinate2D ZRotation = RotateAxis(x, y, r_z);
     OutCoord.x = ZRotation.x;
@@ -128,6 +124,9 @@ class IKCoupler isclass MeshObject
   public IKCoupler coupled;
   public Coordinate CachedRelativeLocation;
   Coordinate CoupleTarget = new Coordinate();
+
+  float MidLength = 0.0;
+  bool Animating = false;
 
   //definitions
   void ConstructBrowser();
@@ -165,6 +164,15 @@ class IKCoupler isclass MeshObject
     return (end - start) * along + start;
   }
 
+  Coordinate lerpCoordinate(Coordinate start, Coordinate end, float along)
+  {
+    Coordinate NewCoord = new Coordinate();
+    NewCoord.x = lerp(start.x, end.x, along);
+    NewCoord.y = lerp(start.y, end.y, along);
+    NewCoord.z = lerp(start.z, end.z, along);
+    return NewCoord;
+  }
+
   void SetMidLength(float inframe)
   {
     float defaultlength = Str.ToFloat(Lengths.GetNamedTag("link1"));
@@ -188,7 +196,6 @@ class IKCoupler isclass MeshObject
     SetMeshTranslation("target", TargetX, TargetY, TargetZ);
     IKSystem.UpdateIKTransforms(TargetX, TargetY, TargetZ);
   }
-
 
   Coordinate WorldCoordinateToCoordinate(WorldCoordinate convert)
   {
@@ -243,9 +250,25 @@ class IKCoupler isclass MeshObject
     return RelativeLocation;
   }
 
-  public void CoupleTo(IKCoupler OtherAttachment)
+  Coordinate GetFinalTarget()
+  {
+    Coordinate RelativeLocation = GetRelativeCoordinates(coupled);
+    if(Position == "back")
+    {
+      RelativeLocation.y = -RelativeLocation.y;
+    }
+    RelativeLocation.y = RelativeLocation.y + 0.28;
+    return RelativeLocation;
+  }
+
+define float ANIMATION_HEIGHT_OFFSET = 0.1;
+define float UP_LENGTH = 20.0;
+define float ALONG_LENGTH = 40.0;
+define float SPIN_LENGTH = 100.0;
+  public thread void CoupleTo(IKCoupler OtherAttachment)
   {
     TrainzScript.Log("COUPLING TO");
+    Coordinate StartCoordinate = CopyCoordinate(CoupleTarget);
     if(OtherAttachment)
     {
       coupled = OtherAttachment;
@@ -260,22 +283,107 @@ class IKCoupler isclass MeshObject
       CoupleTarget.y = -1.0;
       CoupleTarget.z = 0.0;
     }
-  }
-
-  public void DecoupleFrom(IKCoupler OtherAttachment)
-  {
-    TrainzScript.Log("COUPLING FROM");
-    coupled = null;
     if(OtherAttachment)
     {
-      CoupleTarget.y = -0.1;
-      CoupleTarget.z = 0.0;
+      //Animation
+      //200 frames
+      Animating = true;
+      float StartLength = MidLength;
+      int i;
+
+      Coordinate MidCoordinate = CopyCoordinate(StartCoordinate);
+      MidCoordinate.z = MidCoordinate.z + ANIMATION_HEIGHT_OFFSET;
+      for(i = 0; i < UP_LENGTH; i++)
+      {
+        CoupleTarget = lerpCoordinate(StartCoordinate, MidCoordinate, ((float)i / UP_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
+      Sleep(0.4);
+      Coordinate EndCoordinate;
+      for(i = 0; i < ALONG_LENGTH; i++)
+      {
+        EndCoordinate = GetFinalTarget(); //refine each frame
+        EndCoordinate.z = EndCoordinate.z + ANIMATION_HEIGHT_OFFSET;
+        CoupleTarget = lerpCoordinate(MidCoordinate, EndCoordinate, ((float)i / ALONG_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
+      for(i = 0; i < UP_LENGTH; i++)
+      {
+        Coordinate EndDownCoordinate = GetFinalTarget(); //refine each frame
+        CoupleTarget = lerpCoordinate(EndCoordinate, EndDownCoordinate, ((float)i / UP_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
+      for(i = 0; i < SPIN_LENGTH; i++)
+      {
+        MidLength = lerp(StartLength, 0.5, ((float)i / SPIN_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
+      Animating = false;
     }
-    else
+  }
+
+  public thread void DecoupleFrom(IKCoupler OtherAttachment)
+  {
+    TrainzScript.Log("COUPLING FROM");
+    Coordinate StartCoordinate = CopyCoordinate(CoupleTarget);
+    bool WasCoupled = (coupled != null);
+    coupled = null;
+    //if(OtherAttachment)
+    //{
+      //CoupleTarget.y = -0.1;
+      //CoupleTarget.z = 0.0;
+    //}
+    //else
+    //{
+      //CoupleTarget.y = -0.1;
+      //CoupleTarget.z = 0.0;
+    //}
+
+    if(OtherAttachment and WasCoupled)
     {
+      //Animation
+      //200 frames
+      Animating = true;
+      float StartLength = MidLength;
+      int i;
+
+      Coordinate MidCoordinate = CopyCoordinate(StartCoordinate);
+      MidCoordinate.z = MidCoordinate.z + ANIMATION_HEIGHT_OFFSET;
+      for(i = 0; i < SPIN_LENGTH; i++)
+      {
+        MidLength = lerp(StartLength, 0.0, ((float)i / SPIN_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
+      for(i = 0; i < UP_LENGTH; i++)
+      {
+        CoupleTarget = lerpCoordinate(StartCoordinate, MidCoordinate, ((float)i / UP_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
+      //Sleep(0.4);
+      //Coordinate EndCoordinate = CopyCoordinate(CoupleTarget);
+      Coordinate EndCoordinate = new Coordinate();
+      EndCoordinate.x = 0.0;
+      EndCoordinate.y = -0.1;
+      EndCoordinate.z = ANIMATION_HEIGHT_OFFSET;
+      for(i = 0; i < ALONG_LENGTH; i++)
+      {
+        CoupleTarget = lerpCoordinate(MidCoordinate, EndCoordinate, ((float)i / ALONG_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
+      Coordinate EndDownCoordinate = new Coordinate();
+      EndDownCoordinate.x = 0.0;
+      EndDownCoordinate.y = -0.1;
+      EndDownCoordinate.z = 0.0;
+      for(i = 0; i < UP_LENGTH; i++)
+      {
+        CoupleTarget = lerpCoordinate(EndCoordinate, EndDownCoordinate, ((float)i / UP_LENGTH));
+        Sleep(1.0 / 60.0);
+      }
       CoupleTarget.y = -0.1;
       CoupleTarget.z = 0.0;
+      Animating = false;
     }
+
   }
 
   // ============================================================================
@@ -286,21 +394,15 @@ class IKCoupler isclass MeshObject
   {
     while(true)
     {
-      if(coupled != null)
+      if(!Animating and coupled != null)
       {
-        Coordinate RelativeLocation = GetRelativeCoordinates(coupled);
+        Coordinate RelativeLocation = GetFinalTarget();
         CoupleTarget.x = RelativeLocation.x;
         CoupleTarget.y = RelativeLocation.y;
-        if(Position == "back")
-        {
-          CoupleTarget.y = -CoupleTarget.y;
-        }
-        CoupleTarget.y = CoupleTarget.y + 0.28;
-
         CoupleTarget.z = RelativeLocation.z; // + 0.028
         TrainzScript.Log("target location " + CoupleTarget.AsString());
       }
-      SetCoupleTarget(CoupleTarget.x, CoupleTarget.y, CoupleTarget.z, 0.0);
+      SetCoupleTarget(CoupleTarget.x, CoupleTarget.y, CoupleTarget.z, MidLength * 100.0);
       Sleep(0.02);
     }
   }
