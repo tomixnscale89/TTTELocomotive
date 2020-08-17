@@ -347,10 +347,12 @@ class tttelocomotive isclass Locomotive
   FrontCoupler = cast<IKCoupler>(GetFXAttachment("couple_front"));
   BackCoupler = cast<IKCoupler>(GetFXAttachment("couple_back"));
   //important
-  FrontCoupler.ParentVehicle = me;
-  BackCoupler.ParentVehicle = me;
-  FrontCoupler.Position = "front";
-  BackCoupler.Position = "back";
+  FrontCoupler.PostInit(me, "front");
+  BackCoupler.PostInit(me, "back");
+  //FrontCoupler.ParentVehicle = me;
+  //BackCoupler.ParentVehicle = me;
+  //FrontCoupler.Position = "front";
+  //BackCoupler.Position = "back";
   //FrontCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
   //BackCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
 

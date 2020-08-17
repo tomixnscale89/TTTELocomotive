@@ -51,6 +51,8 @@ class IKCoupler isclass MeshObject
   Soup Lengths;
   public Vehicle ParentVehicle;
   public string Position;
+  public IKCoupler coupled;
+  public Coordinate CachedRelativeLocation;
   Coordinate CoupleTarget = new Coordinate();
 
   //definitions
@@ -58,6 +60,7 @@ class IKCoupler isclass MeshObject
   string GetWindowHTML();
   thread void IKThread();
   thread void CoupleThread();
+  Coordinate GetAttachmentRelativeLocation();
   public void Init()
   {
     inherited();
@@ -74,6 +77,15 @@ class IKCoupler isclass MeshObject
     CoupleThread();
   }
 
+  public void PostInit(Vehicle in_parent, string in_position)
+  {
+    //called from the loco to initialize attachment settings
+    ParentVehicle = in_parent;
+    Position = in_position;
+    CachedRelativeLocation = GetAttachmentRelativeLocation();
+    TrainzScript.Log("cached location " + CachedRelativeLocation.AsString());
+  }
+
   float lerp(float start, float end, float along)
   {
     return (end - start) * along + start;
@@ -84,6 +96,15 @@ class IKCoupler isclass MeshObject
     float defaultlength = Str.ToFloat(Lengths.GetNamedTag("link1"));
     float offset = lerp(0.0, 0.2, inframe / 100.0);
     IKSystem.SetLinkLength(1, defaultlength + offset);
+  }
+
+  Coordinate CopyCoordinate(Coordinate in_coord)
+  {
+    Coordinate NewCoord = new Coordinate();
+    NewCoord.x = in_coord.x;
+    NewCoord.y = in_coord.y;
+    NewCoord.z = in_coord.z;
+    return NewCoord;
   }
 
   public void SetCoupleTarget(float TargetX, float TargetY, float TargetZ, float Midframe)
@@ -104,26 +125,28 @@ class IKCoupler isclass MeshObject
     return converted;
   }
 
-  Coordinate GetAttachmentRelativeLocation(IKCoupler TargetAttachment) //verified working
+  Coordinate GetAttachmentRelativeLocation() //verified working
   {
-    Asset vehicleasset = TargetAttachment.ParentVehicle.GetAsset();
+    Asset vehicleasset = ParentVehicle.GetAsset();
     //AsyncQueryHelper configcache = vehicleasset.CacheConfigSoup();
     //configcache.SynchronouslyWaitForResults();
     Soup dataContainer = vehicleasset.GetConfigSoup().GetNamedSoup("extensions").GetNamedSoup("coupler-locations");
     Coordinate RelativeLocation = new Coordinate();
-    string[] Coords = Str.Tokens(dataContainer.GetNamedTag(TargetAttachment.Position), ",");
+    string[] Coords = Str.Tokens(dataContainer.GetNamedTag(Position), ",");
     RelativeLocation.x = Str.ToFloat(Coords[0]);
     RelativeLocation.y = Str.ToFloat(Coords[1]);
     RelativeLocation.z = Str.ToFloat(Coords[2]);
     return RelativeLocation;
   }
 
+
   Coordinate GetAttachmentAbsoluteLocation(IKCoupler TargetAttachment)
   {
     Coordinate ParentLocation = WorldCoordinateToCoordinate(TargetAttachment.ParentVehicle.GetMapObjectPosition());
     Orientation ParentRotation = TargetAttachment.ParentVehicle.GetMapObjectOrientation();
 
-    Coordinate RelativeLocation = GetAttachmentRelativeLocation(TargetAttachment);
+    //Coordinate RelativeLocation = GetAttachmentRelativeLocation(TargetAttachment);
+    Coordinate RelativeLocation = CopyCoordinate(TargetAttachment.CachedRelativeLocation);
     //TrainzScript.Log("relative start " + RelativeLocation.AsString() + " around " + (string)ParentRotation.rx + " " + (string)ParentRotation.ry + " " + (string)ParentRotation.rz);
     RelativeLocation.Rotate(ParentRotation.rx, ParentRotation.ry, ParentRotation.rz);
     //TrainzScript.Log("relative rotated " + RelativeLocation.AsString());
@@ -151,25 +174,33 @@ class IKCoupler isclass MeshObject
     TrainzScript.Log("COUPLING TO");
     if(OtherAttachment)
     {
-      Coordinate RelativeLocation = GetRelativeCoordinates(OtherAttachment);
-      TrainzScript.Log("relative location " + RelativeLocation.AsString());
+      coupled = OtherAttachment;
+      //Coordinate RelativeLocation = GetRelativeCoordinates(OtherAttachment);
+      //CoupleTarget.x = RelativeLocation.x;
+      //CoupleTarget.y = -RelativeLocation.y + 0.2;
+      //CoupleTarget.z = RelativeLocation.z;
+      //TrainzScript.Log("relative location " + RelativeLocation.AsString());
     }
     else
     {
       CoupleTarget.y = -1.0;
+      CoupleTarget.z = 0.0;
     }
   }
 
   public void DecoupleFrom(IKCoupler OtherAttachment)
   {
     TrainzScript.Log("COUPLING FROM");
+    coupled = null;
     if(OtherAttachment)
     {
-
+      CoupleTarget.y = -0.1;
+      CoupleTarget.z = 0.0;
     }
     else
     {
       CoupleTarget.y = -0.1;
+      CoupleTarget.z = 0.0;
     }
   }
 
@@ -181,6 +212,14 @@ class IKCoupler isclass MeshObject
   {
     while(true)
     {
+      if(coupled != null)
+      {
+        Coordinate RelativeLocation = GetRelativeCoordinates(coupled);
+        CoupleTarget.x = RelativeLocation.x;
+        CoupleTarget.y = (RelativeLocation.y - 0.2 - 0.01); //0.02
+        if(Position == "back") CoupleTarget.y = -CoupleTarget.y;
+        CoupleTarget.z = RelativeLocation.z + 0.04;
+      }
       SetCoupleTarget(CoupleTarget.x, CoupleTarget.y, CoupleTarget.z, 0.0);
       Sleep(0.02);
     }
