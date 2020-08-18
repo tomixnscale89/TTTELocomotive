@@ -315,7 +315,7 @@ define float SPIN_LENGTH = 100.0;
       }
       for(i = 0; i < SPIN_LENGTH; i++)
       {
-        MidLength = lerp(StartLength, 0.5, ((float)i / SPIN_LENGTH));
+        MidLength = lerp(StartLength, 0.8, ((float)i / SPIN_LENGTH));
         Sleep(1.0 / 60.0);
       }
       Animating = false;
