@@ -1731,12 +1731,20 @@ define float Joystick_Range = 44.0;
       if(JoystickRight > BrowserRight) Joystick.SetWindowPosition(BrowserRight - Joystick_Size, JoystickTop);
       if(JoystickBottom > BrowserBottom) Joystick.SetWindowPosition(JoystickLeft, BrowserBottom - Joystick_Size);
 
-      float OffsetX = ((float)RelativeX / (float)HalfBrowserWidth) * Joystick_Range;
-      float OffsetY = ((float)RelativeY / (float)HalfBrowserHeight) * Joystick_Range;
-      OffsetX = Math.Fmax(Math.Fmin(OffsetX, Joystick_Range), -Joystick_Range);
-      OffsetY = Math.Fmax(Math.Fmin(OffsetY, Joystick_Range), -Joystick_Range);
-      eyeX = OffsetX * Math.PI / 180;
-      eyeY = OffsetY * Math.PI / 180;
+      float OffsetX = ((float)RelativeX / (float)HalfBrowserWidth);
+      float OffsetY = ((float)RelativeY / (float)HalfBrowserWidth); // HalfBrowserHeight different browser dimensions
+      //OffsetX = Math.Fmax(Math.Fmin(OffsetX, Joystick_Range), -Joystick_Range);
+      //OffsetY = Math.Fmax(Math.Fmin(OffsetY, Joystick_Range), -Joystick_Range);
+      //normalize the offset
+      float length = Math.Sqrt(OffsetX * OffsetX + OffsetY * OffsetY) + 0.001; //prevent divide by zero
+      if(length > 1.0)
+      {
+        OffsetX = OffsetX / length;
+        OffsetY = OffsetY / length;
+      }
+
+      eyeX = (OffsetX * Joystick_Range) * Math.PI / 180;
+      eyeY = (OffsetY * Joystick_Range) * Math.PI / 180;
 
       //TrainzScript.Log("Browser offset is " + (string)OffsetX + " " + (string)OffsetY);
       Sleep(0.01);
@@ -1762,7 +1770,7 @@ define float Joystick_Range = 44.0;
     output.Print("</tr></td>");
     //joystick window
     output.Print("<tr><td>");
-    output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:103313>' width=300 height=20></a>");
+    output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=300 height=20></a>");
     output.Print("</tr></td>");
     //lamp window
     output.Print("<tr><td>");
