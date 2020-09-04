@@ -62,6 +62,7 @@ class tttelocomotive isclass Locomotive
   bool SoupHasTag(Soup testSoup, string tagName);
 
   thread void EyeScriptCheckThread(void);
+  thread void JoystickThread(void);
   thread void BufferThread();
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
@@ -154,8 +155,9 @@ class tttelocomotive isclass Locomotive
   Browser browser;
   define int BROWSER_MAINMENU = 0;
   define int BROWSER_EYEMENU = 1;
-  define int BROWSER_LOCOMENU = 2;
-  define int BROWSER_SMOKEMENU = 3;
+  define int BROWSER_JOYSTICKMENU = 2;
+  define int BROWSER_LOCOMENU = 3;
+  define int BROWSER_SMOKEMENU = 4;
 
   int CurrentMenu = BROWSER_MAINMENU;
   bool HasFocus = false;
@@ -1672,6 +1674,77 @@ class tttelocomotive isclass Locomotive
     }
   }
 
+
+
+define int Joystick_Size = 75;
+define float Joystick_Range = 44.0;
+  string GetJoystickContentHTML()
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+    output.Print("<html><body>");
+    output.Print("<img kuid='<kuid:414976:104990>' width=" + (string)Joystick_Size + " height=" + (string)Joystick_Size + ">");
+    output.Print("</body></html>");
+
+    return output.AsString();
+  }
+  thread void JoystickThread()
+  {
+    int BrowserCenterX = browser.GetWindowLeft() + (browser.GetWindowWidth() / 2);
+    int BrowserCenterY = browser.GetWindowTop() + (browser.GetWindowHeight() / 2);
+    int HalfSize = Joystick_Size / 2;
+    Browser Joystick = Constructors.NewBrowser();
+    Joystick.SetCloseEnabled(false);
+    Joystick.LoadHTMLString(GetAsset(), GetJoystickContentHTML());
+    //Joystick.SetWindowStyle(Browser.STYLE_NO_FRAME);
+    Joystick.SetWindowStyle(Browser.STYLE_POPOVER);
+    Joystick.SetWindowPriority(Browser.BP_Window); //must be called after style
+    //Joystick.SetWindowStyle(Browser.STYLE_SLIM_FRAME);
+    Joystick.SetMovableByDraggingBackground(true);
+  	Joystick.SetWindowPosition(BrowserCenterX - HalfSize, BrowserCenterY - HalfSize);
+  	Joystick.SetWindowSize(Joystick_Size, Joystick_Size);
+  	Joystick.SetWindowVisible(true);
+    while(CurrentMenu == BROWSER_JOYSTICKMENU)
+    {
+      Joystick.BringToFront();
+      int BrowserTop = browser.GetWindowTop();
+      int BrowserBottom = browser.GetWindowBottom();
+      int BrowserLeft = browser.GetWindowLeft();
+      int BrowserRight = browser.GetWindowRight();
+      int JoystickTop = Joystick.GetWindowTop();
+      int JoystickBottom = Joystick.GetWindowBottom();
+      int JoystickLeft = Joystick.GetWindowLeft();
+      int JoystickRight = Joystick.GetWindowRight();
+
+      //update center position
+      int HalfBrowserWidth = browser.GetWindowWidth() / 2;
+      int HalfBrowserHeight = browser.GetWindowHeight() / 2;
+      BrowserCenterX = BrowserLeft + HalfBrowserWidth;
+      BrowserCenterY = BrowserTop + HalfBrowserHeight;
+      //get relative
+      int CenterLeft = BrowserCenterX - HalfSize;
+      int CenterTop = BrowserCenterY - HalfSize;
+      int RelativeX = JoystickLeft - CenterLeft;
+      int RelativeY = JoystickTop - CenterTop;
+
+      if(JoystickLeft < BrowserLeft) Joystick.SetWindowPosition(BrowserLeft, JoystickTop);
+      if(JoystickTop < BrowserTop) Joystick.SetWindowPosition(JoystickLeft, BrowserTop);
+      if(JoystickRight > BrowserRight) Joystick.SetWindowPosition(BrowserRight - Joystick_Size, JoystickTop);
+      if(JoystickBottom > BrowserBottom) Joystick.SetWindowPosition(JoystickLeft, BrowserBottom - Joystick_Size);
+
+      float OffsetX = ((float)RelativeX / (float)HalfBrowserWidth) * Joystick_Range;
+      float OffsetY = ((float)RelativeY / (float)HalfBrowserHeight) * Joystick_Range;
+      OffsetX = Math.Fmax(Math.Fmin(OffsetX, Joystick_Range), -Joystick_Range);
+      OffsetY = Math.Fmax(Math.Fmin(OffsetY, Joystick_Range), -Joystick_Range);
+      eyeX = OffsetX * Math.PI / 180;
+      eyeY = OffsetY * Math.PI / 180;
+
+      //TrainzScript.Log("Browser offset is " + (string)OffsetX + " " + (string)OffsetY);
+      Sleep(0.01);
+    }
+    //clear when menu exits
+    Joystick = null;
+  }
+
   // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
@@ -1686,6 +1759,10 @@ class tttelocomotive isclass Locomotive
     //eye window
     output.Print("<tr><td>");
     output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=300 height=20></a>");
+    output.Print("</tr></td>");
+    //joystick window
+    output.Print("<tr><td>");
+    output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:103313>' width=300 height=20></a>");
     output.Print("</tr></td>");
     //lamp window
     output.Print("<tr><td>");
@@ -1757,6 +1834,17 @@ class tttelocomotive isclass Locomotive
     output.Print("</tr></td>");
 
     output.Print("</table>");
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
+  string GetJoystickWindowHTML()
+  {
+  	HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+
   	output.Print("</body></html>");
 
   	return output.AsString();
@@ -1902,6 +1990,10 @@ class tttelocomotive isclass Locomotive
       case BROWSER_EYEMENU:
       browser.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
       break;
+      case BROWSER_JOYSTICKMENU:
+      browser.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
+      JoystickThread();
+      break;
       case BROWSER_LOCOMENU:
       browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
       browser.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
@@ -1955,6 +2047,16 @@ class tttelocomotive isclass Locomotive
       if ( browser and msg.src == browser )
       {
           CurrentMenu = BROWSER_EYEMENU;
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      //Joystick Window
+      on "Browser-URL", "live://open_joystick", msg:
+      if ( browser and msg.src == browser )
+      {
+          CurrentMenu = BROWSER_JOYSTICKMENU;
           RefreshBrowser();
       }
       msg.src = null;
