@@ -19,7 +19,9 @@ include "interface.gs"
 include "orientation.gs"
 include "multiplayergame.gs"
 include "soup.gs"
+include "ObjectList.gs"
 include "couple.gs" //procedural coupler
+
 // ============================================================================
 // Style of code:
 // Use lmssteam for reference until our code is strong enough to use on it's own.
@@ -156,8 +158,10 @@ class tttelocomotive isclass Locomotive
   define int BROWSER_MAINMENU = 0;
   define int BROWSER_EYEMENU = 1;
   define int BROWSER_JOYSTICKMENU = 2;
-  define int BROWSER_LOCOMENU = 3;
-  define int BROWSER_SMOKEMENU = 4;
+  define int BROWSER_LAMPMENU = 3;
+  define int BROWSER_LIVERYMENU = 4;
+  define int BROWSER_LOCOMENU = 5;
+  define int BROWSER_SMOKEMENU = 6;
 
   int CurrentMenu = BROWSER_MAINMENU;
   bool HasFocus = false;
@@ -173,7 +177,7 @@ class tttelocomotive isclass Locomotive
   float normal_traction;
   float normal_momentum;
 
-
+  ObjectListPrompt LockTargetWindow;
   //bitwise flags
   define int HEADCODE_BL = 1;
   define int HEADCODE_BC = 2;
@@ -1842,6 +1846,10 @@ define float Joystick_Range = 44.0;
     output.Print("</tr></td>");
 
     output.Print("</table>");
+
+    output.Print("<br>");
+    output.Print("<a href='live://eye-lock'>Set Lock Target</a>");
+
   	output.Print("</body></html>");
 
   	return output.AsString();
@@ -1852,6 +1860,99 @@ define float Joystick_Range = 44.0;
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
     output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
+  string GetLampWindowHTML()
+  {
+  	HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<br>");
+    output.Print("<table>");
+      output.Print("<tr>");
+        output.Print("<td></td>");
+        output.Print("<td rowspan=2><img kuid='<kuid:414976:105416>' width=256 height=256></td>");
+        //output.Print("<td rowspan=2><img kuid='<kuid:414976:105423>' width=48 height=48></td>");
+      output.Print("</tr>");
+      output.Print("<tr>");
+        //overlay
+        output.Print("<td colspan=2>");
+          //output.Print("<img kuid='<kuid:414976:105423>' width=48 height=48>");
+
+          //output.Print("<img kuid='<kuid:414976:105416>' width=256 height=256>");
+          //upper row
+          output.Print("<table>");
+            output.Print("<tr height=10></tr>");
+            output.Print("<tr height=48>");
+              output.Print("<td width='98'></td>"); //spacing
+              output.Print("<td>");
+
+                output.Print("<a href='live://lamp_tc'><img kuid='");
+                if ((m_headCode & HEADCODE_TC) == 0)
+                  output.Print("<kuid:414976:105456>");
+                else
+                  output.Print("<kuid:414976:105423>");
+                output.Print("' width=48 height=48></a>");
+
+              output.Print("</td>");
+            output.Print("</tr>");
+          output.Print("</table>");
+          output.Print("<br>");
+          //bottom row
+          output.Print("<table>");
+            output.Print("<tr height=90></tr>"); //spacing
+            output.Print("<tr height=48>");
+              output.Print("<td width='32'></td>"); //spacing
+              output.Print("<td>");
+
+                output.Print("<a href='live://lamp_br'><img kuid='");
+                if ((m_headCode & HEADCODE_BR) == 0)
+                  output.Print("<kuid:414976:105456>");
+                else
+                  output.Print("<kuid:414976:105423>");
+                output.Print("' width=48 height=48></a>");
+
+              output.Print("</td>");
+              output.Print("<td width='5'></td>"); //spacing
+              output.Print("<td>");
+
+                output.Print("<a href='live://lamp_bc'><img kuid='");
+                if ((m_headCode & HEADCODE_BC) == 0)
+                  output.Print("<kuid:414976:105456>");
+                else
+                  output.Print("<kuid:414976:105423>");
+                output.Print("' width=48 height=48></a>");
+
+              output.Print("</td>");
+              output.Print("<td width='5'></td>"); //spacing
+              output.Print("<td>");
+
+                output.Print("<a href='live://lamp_bl'><img kuid='");
+                if ((m_headCode & HEADCODE_BL) == 0)
+                  output.Print("<kuid:414976:105456>");
+                else
+                  output.Print("<kuid:414976:105423>");
+                output.Print("' width=48 height=48></a>");
+
+              output.Print("</td>");
+            output.Print("</tr>");
+          output.Print("</table>");
+
+        //end overlay
+        output.Print("</td>");
+      output.Print("</tr>");
+    output.Print("</table>");
+
+
+    //output.Print("<nowrap>");
+    //output.Print("lamp");
+    //output.Print("<img kuid='<kuid:414976:105416>' width=256 height=256>");
+    //output.Print("overlay");
+    //output.Print("</nowrap>");
 
   	output.Print("</body></html>");
 
@@ -1993,26 +2094,29 @@ define float Joystick_Range = 44.0;
     switch(CurrentMenu)
     {
       case BROWSER_MAINMENU:
-      browser.LoadHTMLString(GetAsset(), GetMenuHTML());
-      break;
+        browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+        break;
       case BROWSER_EYEMENU:
-      browser.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
-      break;
+        browser.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
+        break;
       case BROWSER_JOYSTICKMENU:
-      browser.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
-      JoystickThread();
-      break;
+        browser.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
+        JoystickThread();
+        break;
+      case BROWSER_LAMPMENU:
+        browser.LoadHTMLString(GetAsset(), GetLampWindowHTML());
+        break;
       case BROWSER_LOCOMENU:
-      browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
-      browser.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
-      browser.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
-      break;
+        browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
+        browser.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
+        browser.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
+        break;
       case BROWSER_SMOKEMENU:
-      browser.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
-      RefreshSmokeTags();
-      break;
+        browser.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
+        RefreshSmokeTags();
+        break;
       default:
-      browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+        browser.LoadHTMLString(GetAsset(), GetMenuHTML());
     }
   }
 
@@ -2038,6 +2142,10 @@ define float Joystick_Range = 44.0;
         BrowserClosed = false;
       }
 
+      if(LockTargetWindow != null)
+      {
+        LockTargetWindow.SearchTick();
+      }
       Sleep(0.1);
     }
   }
@@ -2065,6 +2173,56 @@ define float Joystick_Range = 44.0;
       if ( browser and msg.src == browser )
       {
           CurrentMenu = BROWSER_JOYSTICKMENU;
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      //Lamp Window
+      on "Browser-URL", "live://open_lamp", msg:
+      if ( browser and msg.src == browser )
+      {
+          CurrentMenu = BROWSER_LAMPMENU;
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://lamp_tc", msg:
+      if ( browser and msg.src == browser )
+      {
+          m_headCode = m_headCode ^ HEADCODE_TC;
+          ConfigureHeadcodeLamps(m_headCode);
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://lamp_bl", msg:
+      if ( browser and msg.src == browser )
+      {
+          m_headCode = m_headCode ^ HEADCODE_BL;
+          ConfigureHeadcodeLamps(m_headCode);
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://lamp_bc", msg:
+      if ( browser and msg.src == browser )
+      {
+          m_headCode = m_headCode ^ HEADCODE_BC;
+          ConfigureHeadcodeLamps(m_headCode);
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://lamp_br", msg:
+      if ( browser and msg.src == browser )
+      {
+          m_headCode = m_headCode ^ HEADCODE_BR;
+          ConfigureHeadcodeLamps(m_headCode);
           RefreshBrowser();
       }
       msg.src = null;
@@ -2182,6 +2340,15 @@ define float Joystick_Range = 44.0;
       if ( browser and msg.src == browser )
       {
 		       //playanim();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://eye-lock", msg:
+      if ( browser and msg.src == browser )
+      {
+        if(LockTargetWindow == null) LockTargetWindow = new ObjectListPrompt();
+        LockTargetWindow.Init(me);
       }
       msg.src = null;
       continue;
