@@ -2142,10 +2142,10 @@ define float Joystick_Range = 44.0;
         BrowserClosed = false;
       }
 
-      if(LockTargetWindow != null)
-      {
-        LockTargetWindow.SearchTick();
-      }
+      //if(LockTargetWindow != null)
+      //{
+        //LockTargetWindow.SearchTick();
+      //}
       Sleep(0.1);
     }
   }

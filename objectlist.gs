@@ -25,6 +25,7 @@ class ObjectListPrompt
   void RefreshBrowser()
   {
     browser.LoadHTMLString(LocoRef.GetAsset(), GetPromptHTML());
+    //browser.SetElementProperty("search", "text", searchQuery);
   }
 
   string GetPromptHTML()
@@ -33,17 +34,17 @@ class ObjectListPrompt
     output.Print("<html><body>");
     output.Print("Select an asset.");
 
-    AsyncObjectSearchResult WorldObjectsSearch = World.GetNamedObjectList("", searchQuery);
+    AsyncObjectSearchResult WorldObjectsSearch = World.GetNamedObjectList("", "");
     WorldObjectsSearch.SynchronouslyWaitForResults();
     WorldObjects = WorldObjectsSearch.GetResults();
-
+    TrainzScript.Log("found " + (string)WorldObjects.size() + " objects");
     output.Print("<table>");
       //selection
-      output.Print("<tr>");
-        output.Print("<td width=280>"); // bgcolor=#757575
-          output.Print("<trainz-object width=280 height=20 id=search style=edit-box></trainz-object>");
-        output.Print("</td>");
-      output.Print("</tr>");
+      //output.Print("<tr>");
+        //output.Print("<td width=280>"); // bgcolor=#757575
+          //output.Print("<trainz-object width=280 height=20 id=search style=edit-box></trainz-object>");
+        //output.Print("</td>");
+      //output.Print("</tr>");
       int i;
       for(i = 0; i < WorldObjects.size(); i++)
       {
@@ -52,15 +53,15 @@ class ObjectListPrompt
         if(selectedObject != null)
           Selected = Obj.objectId.DoesMatch(selectedObject);
 
-        output.Print("<a href='live://select_" + (string)i + "'><tr bgcolor=");
+        output.Print("<tr bgcolor=");
         if(Selected)
           output.Print("#757575");
         else
           output.Print("#1a1a1a");
-        output.Print("><td>");
-
+        output.Print("><a href='live://select_" + (string)i + "'>");
+        output.Print("<td width=280>");
             output.Print(Obj.localisedUsername);
-        output.Print("</td></tr></a>");
+        output.Print("</td></a></tr>");
       }
     output.Print("</table>");
     output.Print("</body></html>");
@@ -73,8 +74,8 @@ class ObjectListPrompt
     string tempSearchQuery = browser.GetElementProperty("search", "text");
     if(tempSearchQuery != searchQuery)
     {
-      RefreshBrowser();
       searchQuery = tempSearchQuery;
+      RefreshBrowser();
     }
   }
 
