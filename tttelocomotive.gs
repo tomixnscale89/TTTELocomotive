@@ -24,13 +24,10 @@ include "couple.gs" //procedural coupler
 
 // ============================================================================
 // Style of code:
-// Use lmssteam for reference until our code is strong enough to use on it's own.
 // ============================================================================
 
 // ============================================================================
 // TO DO:
-// 1. Update all eyescript code to reflect the latest version on github.
-// 2. Begin implementing a GUI for the Lamps, and make the interface overall a bit more pretty.
 // ============================================================================
 
 
@@ -62,6 +59,7 @@ class tttelocomotive isclass Locomotive
   void SetPropertyValue(string p_propertyID, string p_value, int p_index);
   void SetNamedFloatFromExisting(Soup in, Soup out, string tagName);
   bool SoupHasTag(Soup testSoup, string tagName);
+  void SetLampEffects(MeshObject headlightMeshObject,bool headlighton, bool highbeam_state);
 
   thread void EyeScriptCheckThread(void);
   thread void JoystickThread(void);
@@ -79,7 +77,6 @@ class tttelocomotive isclass Locomotive
   // ****************************************************************************/
   StringTable strTable; // This asset's string table, saved for convenient fast access
 
-  MeshObject headlightMeshObject;
 
   Asset headlight_asset;      // headlight asset used by the loco
   Asset rear_headlight_asset; // Backup headlight (not sure if we want this)
@@ -393,6 +390,9 @@ class tttelocomotive isclass Locomotive
   // handler necessary for tail lights
   AddHandler(me, "Train", "Turnaround", "TrainTurnaroundHandler");
 
+  // Handler for Secondary Whistle PFX
+  // AddHandler(me.GetMyTrain(), "Train", "NotifyHorn", "WhistleMonitor");
+
 
 	train = me.GetMyTrain(); // Get the train
 	SniffMyTrain(); // Then sniff it
@@ -402,34 +402,48 @@ class tttelocomotive isclass Locomotive
   }
 
   // ============================================================================
-  // Name: void ConfigureHeadLightCorona(bool headlighton, bool highbeam_state)
-  // Desc: Sets the vehicle up for the required light state
+  // Name: SetLampEffects(MeshObject headlightMeshObject, bool headlighton, bool highbeam_state)
+  // Desc: SetLampEffects will check the current state of the headlight/highbeam and set the lamp to emit light with the HDR bloom trick.
   // ============================================================================
-  void ConfigureHeadLightCorona(bool headlighton, bool highbeam_state)
+  void SetLampEffects(MeshObject headlightMeshObject, bool headlighton, bool highbeam_state)
   {
-    //TrainzScript.Log("Headlight is :" + headlighton);
-    //TrainzScript.Log("Headlight beam is :" + highbeam_state);
-
-    headlightMeshObject = GetFXAttachment("lamp_br");
-
+    // Will probably change this to a mesh to save on performance (if any impact)
+    // It would be better if we can change the texture based on the Mesh Library asset itself, rather than the Lamp MeshObject directory.
     if (me == me.GetMyTrain().GetFrontmostLocomotive())
     {
-      if(headlighton == true)
+      if(headlighton) // Headlights are on
       {
-        if(highbeam_state == true)
+        if(highbeam_state) // Highbeams are on
         {
           headlightMeshObject.SetFXTextureReplacementTexture("lights_parameter", "marklin_frontlamp_handle_emissive/lamp_on_parameter.texture");
         }
-        if(highbeam_state == false)
+        else // Highbeams are off
         {
           headlightMeshObject.SetFXTextureReplacementTexture("lights_parameter", "marklin_frontlamp_handle_emissive/lamp_on_parameter.texture");
         }
       }
-      else
+      else // Headlights are off
       {
         headlightMeshObject.SetFXTextureReplacementTexture("lights_parameter", "marklin_frontlamp_handle_emissive/lamp_parameter.texture");
       }
     }
+    else // We may be another train in the consist. Since we aren't the head unit, shut off any lights that may exist.
+    {
+      headlightMeshObject.SetFXTextureReplacementTexture("lights_parameter", "marklin_frontlamp_handle_emissive/lamp_parameter.texture");
+    }
+  }
+
+  // ============================================================================
+  // Name: ConfigureHeadLightCorona(bool headlighton, bool highbeam_state)
+  // Desc: Sets up the Lamp meshes for the required state.Here we will compare the current values of the headcode to determine
+  // which lamps will actually need to be changed. These will update based on the polling logic from HeadlightMonitor.
+  // ============================================================================
+  void ConfigureHeadLightCorona(bool headlighton, bool highbeam_state)
+  {
+    if ((m_headCode & HEADCODE_BL) != 0) SetLampEffects(GetFXAttachment("lamp_bl"), headlighton, highbeam_state);
+    if ((m_headCode & HEADCODE_BC) != 0) SetLampEffects(GetFXAttachment("lamp_bc"), headlighton, highbeam_state);
+    if ((m_headCode & HEADCODE_BR) != 0) SetLampEffects(GetFXAttachment("lamp_br"), headlighton, highbeam_state);
+    if ((m_headCode & HEADCODE_TC) != 0) SetLampEffects(GetFXAttachment("lamp_tc"), headlighton, highbeam_state);
   }
 
 
@@ -468,23 +482,28 @@ class tttelocomotive isclass Locomotive
     // ============================================================================
     // Name: WhistleMonitor()
     // Desc: Watches Whistle interactions specifically when the message NotifyHorn is posted.
+    //       Currently not working. Not sure of a way to obtain the Horn state.
     // ============================================================================
     void WhistleMonitor(Message msg)
     {
+      // Interface.Print("Entered WhistleMonitor" + "GetEngineParam HORN is: " + GetEngineParam("horn"));
       if(msg.src == me)
       {
-        if(msg.minor == "NotifyHorn")
+        if(GetEngineParam("horn") == 1)
         {
-          PostMessage(me, "pfx", "+6",0.0); // Blow extra whistle
+          PostMessage(me, "pfx", "+5",0.0); // Blow extra whistle
         }
         else
         {
-          PostMessage(me, "pfx", "-6",0.0); // No longer in wait, so stop blowing whistle.
+          PostMessage(me, "pfx", "-5",0.0); // No longer in wait, so stop blowing whistle.
         }
       }
     }
 
-
+    // ============================================================================
+    // Name: GetRelativeDirectionString(Vehicle targetvehicle, string location)
+    // Desc:
+    // ============================================================================
   string GetRelativeDirectionString(Vehicle targetvehicle, string location)
   {
     //front and same - back
@@ -505,6 +524,10 @@ class tttelocomotive isclass Locomotive
     return "front";
   }
 
+  // ============================================================================
+  // Name: PlayCoupleAnimation(string direction)
+  // Desc:
+  // ============================================================================
   void PlayCoupleAnimation(string direction)
   {
     //cache the most recent coupled vehicle in case another couple operation occurs
@@ -524,6 +547,11 @@ class tttelocomotive isclass Locomotive
       }
     }
   }
+
+  // ============================================================================
+  // Name: PlayDecoupleAnimation(string direction)
+  // Desc:
+  // ============================================================================
 
   void PlayDecoupleAnimation(string direction)
   {
@@ -546,8 +574,8 @@ class tttelocomotive isclass Locomotive
   }
 
   // ============================================================================
-  // Name: BufferThread()
-  // Desc: Manages buffer interaction.
+  // Name: GetNextVehicle(GSTrackSearch Search)
+  // Desc:
   // ============================================================================
 
   Vehicle GetNextVehicle(GSTrackSearch Search)
@@ -561,6 +589,11 @@ class tttelocomotive isclass Locomotive
     }
     return null;
   }
+
+  // ============================================================================
+  // Name: BufferThread()
+  // Desc: Manages buffer interaction.
+  // ============================================================================
 
   thread void BufferThread()
   {
@@ -697,7 +730,11 @@ class tttelocomotive isclass Locomotive
     }
   }
 
-
+  // ============================================================================
+  // Name: CameraInternalViewHandler(Message msg)
+  // Parm:  Message msg
+  // Desc:
+  // ============================================================================
   void CameraInternalViewHandler(Message msg)
   {
     m_cameraViewpoint = (msg.minor == "Internal-View");
@@ -705,6 +742,11 @@ class tttelocomotive isclass Locomotive
     SetCabmesh();
   }
 
+  // ============================================================================
+  // Name: CameraTargetChangedHandler(Message msg)
+  // Parm:  Message msg
+  // Desc:
+  // ============================================================================
   void CameraTargetChangedHandler(Message msg)
   {
     m_cameraTarget = (msg.src == me);
@@ -713,7 +755,11 @@ class tttelocomotive isclass Locomotive
   }
 
 
-
+  // ============================================================================
+  // Name: ConfigureSkins()
+  // Parm:  None
+  // Desc:
+  // ============================================================================
   void ConfigureSkins()
   {
     TrainzScript.Log("Setting skin to " + (string)skinSelection);
