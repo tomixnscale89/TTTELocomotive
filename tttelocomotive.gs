@@ -19,7 +19,6 @@ include "interface.gs"
 include "orientation.gs"
 include "multiplayergame.gs"
 include "soup.gs"
-include "ObjectList.gs"
 include "couple.gs" //procedural coupler
 
 // ============================================================================
@@ -69,9 +68,18 @@ class tttelocomotive isclass Locomotive
   void createMenuWindow();
   thread void BrowserThread();
   thread void ScanBrowser(void);
+  void RefreshBrowser();
 
   void WhistleMonitor(Message msg);
   thread void HeadlightMonitor();
+
+  //Math
+  float ApproxAtan2(float y, float x);
+  WorldCoordinate RotatePoint(WorldCoordinate point, float rotateangle);
+  Orientation LookAt(WorldCoordinate A, WorldCoordinate B);
+  Orientation DeltaRot(Orientation From, Orientation To);
+  float rad_range(float in_x);
+  float clamp(float x, float lower, float upper);
    // ****************************************************************************/
   // Define Variables
   // ****************************************************************************/
@@ -123,9 +131,8 @@ class tttelocomotive isclass Locomotive
 
   IKCoupler FrontCoupler;
   IKCoupler BackCoupler;
-  //Vehicle FrontCoupledVehicle;
-  //Vehicle BackCoupledVehicle;
   Vehicle LastCoupleInteraction;
+
   //Eyescript Variables
 
 
@@ -144,6 +151,10 @@ class tttelocomotive isclass Locomotive
   Orientation[] eye_anim; //eye animation data
   bool eye_isrecording = false;
   bool eye_isanimating = false;
+
+  bool useLockTarget = false;
+  bool selectingTarget = false;
+  MapObject eyeLockTarget;
 
   //unimplemented keyboard control vars
   define bool eye_ControllerAbsolute = true; //unimplemented
@@ -174,7 +185,6 @@ class tttelocomotive isclass Locomotive
   float normal_traction;
   float normal_momentum;
 
-  ObjectListPrompt LockTargetWindow;
   //bitwise flags
   define int HEADCODE_BL = 1;
   define int HEADCODE_BC = 2;
@@ -319,6 +329,7 @@ class tttelocomotive isclass Locomotive
   AddHandler(me, "ControlSet", "eye-faceright", "HandleKeyFRight");
   AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh"); //now analog
 
+  AddHandler(me, "Interface-Event", "Left-Click", "EyeTargetChanged");
 
   //Multiplayer Message! Important!
   AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
@@ -1498,37 +1509,52 @@ class tttelocomotive isclass Locomotive
   // ============================================================================
 
 	thread void EyeScriptCheckThread() {
-		while(true) {
-      //Animation setup
-      if(eye_isanimating and (eye_animframe <= (eye_anim.size()-1))){ // check if the eye should be currently animating and the animation isnt over
-        Orientation eye_Angdeconstruct = eye_anim[eye_animframe];
-        eyeX = eye_Angdeconstruct.rx;
-        eyeY = eye_Angdeconstruct.ry;
-        eyeZ = eye_Angdeconstruct.rz;
-
-        eye_animframe++;
-
-      } else {
-        eye_animframe = 0;
-        eye_isanimating = false;
-      }
-
-      if(eye_isrecording){
-
-        Orientation eye_Angbuilder;
-
-        eye_Angbuilder.rx = eyeX;
-        eye_Angbuilder.ry = eyeY;
-        eye_Angbuilder.rz = eyeZ;
-        eye_anim[eye_anim.size()] = eye_Angbuilder; //Append animation frame to array
-      }
-
-      //Get rotation from Menu
-      if (CurrentMenu == BROWSER_EYEMENU and !BrowserClosed and browser)
+		while(true)
+    {
+      if(!useLockTarget)
       {
-        eyeX = Str.ToFloat(browser.GetElementProperty("eyeX", "value")) * Math.PI / 180;
-        eyeY = Str.ToFloat(browser.GetElementProperty("eyeY", "value")) * Math.PI / 180;
-        eyeZ = Str.ToFloat(browser.GetElementProperty("eyeZ", "value")) * Math.PI / 180;
+        //Animation setup
+        if(eye_isanimating and (eye_animframe <= (eye_anim.size()-1))){ // check if the eye should be currently animating and the animation isnt over
+          Orientation eye_Angdeconstruct = eye_anim[eye_animframe];
+          eyeX = eye_Angdeconstruct.rx;
+          eyeY = eye_Angdeconstruct.ry;
+          eyeZ = eye_Angdeconstruct.rz;
+
+          eye_animframe++;
+
+        } else {
+          eye_animframe = 0;
+          eye_isanimating = false;
+        }
+
+        if(eye_isrecording){
+
+          Orientation eye_Angbuilder;
+
+          eye_Angbuilder.rx = eyeX;
+          eye_Angbuilder.ry = eyeY;
+          eye_Angbuilder.rz = eyeZ;
+          eye_anim[eye_anim.size()] = eye_Angbuilder; //Append animation frame to array
+        }
+
+        //Get rotation from Menu
+        if (CurrentMenu == BROWSER_EYEMENU and !BrowserClosed and browser)
+        {
+          eyeX = Str.ToFloat(browser.GetElementProperty("eyeX", "value")) * Math.PI / 180;
+          eyeY = Str.ToFloat(browser.GetElementProperty("eyeY", "value")) * Math.PI / 180;
+          eyeZ = Str.ToFloat(browser.GetElementProperty("eyeZ", "value")) * Math.PI / 180;
+        }
+      }
+      else if(eyeLockTarget != null)
+      {
+        Orientation lookAng = LookAt(GetMapObjectPosition(), eyeLockTarget.GetMapObjectPosition());
+        Orientation finalAng = DeltaRot(GetMapObjectOrientation(), lookAng);
+        eyeX = rad_range(finalAng.rz - (Math.PI / 2.0));
+        eyeX = clamp(eyeX, -38.0 * (Math.PI / 180.0), 38.0 * (Math.PI / 180.0));
+
+        //eyeY = finalAng.ry - (Math.PI / 4.0);
+        //eyeY = lookAng.ry - (Math.PI / 4.0);
+        TrainzScript.Log("rot x " + eyeX);
       }
 
 			//final orientation apply ================================================
@@ -1537,6 +1563,18 @@ class tttelocomotive isclass Locomotive
 			Sleep(eye_UpdatePeriod);
 		}
 	}
+
+  // ============================================================================
+  // Name: EyeTargetChanged()
+  // Desc: A handler for left click selection events, used for eye lock targeting.
+  // ============================================================================
+  void EyeTargetChanged(Message msg)
+  {
+    eyeLockTarget = msg.src;
+    selectingTarget = false;
+    World.SetTargetObserver(null);
+    RefreshBrowser();
+  }
 
 
   // ============================================================================
@@ -1894,7 +1932,18 @@ define float Joystick_Range = 44.0;
     output.Print("</table>");
 
     output.Print("<br>");
-    output.Print("<a href='live://eye-lock'>Set Lock Target</a>");
+    output.Print(HTMLWindow.CheckBox("live://eye-lock", useLockTarget));
+  	output.Print(" Lock Target</tr></td>");
+    if(useLockTarget)
+  	{
+      string targetText = "Select Target";
+      if(selectingTarget)
+        targetText = "Select an object...";
+      else if(eyeLockTarget != null)
+        targetText = eyeLockTarget.GetAsset().GetLocalisedName();
+  		output.Print("<br>");
+  		output.Print("<a href='live://eye-lock-select' tooltip='Select Eye Target'>" + targetText + "</a>");
+  	}
 
   	output.Print("</body></html>");
 
@@ -2003,6 +2052,42 @@ define float Joystick_Range = 44.0;
   	output.Print("</body></html>");
 
   	return output.AsString();
+  }
+
+  string GetLiveryWindowHTML()
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+    output.Print("<html><body>");
+    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<br>");
+    output.Print("Please select a livery.");
+
+    output.Print("<table>");
+    output.Print("<tr> <td width='300'></td> </tr>");
+    bool rowParity = false;
+    int i;
+    for(i = 0; i < LiveryContainer.CountTags(); i++)
+    {
+      rowParity = !rowParity;
+      string liveryName = LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(i));
+      if (rowParity)
+        output.Print("<tr bgcolor=#0E2A35>");
+      else
+        output.Print("<tr bgcolor=#05171E>");
+
+      output.Print("<td>");
+      if(i != skinSelection)
+        output.Print("<a href='live://livery_set/" + i + "'>");
+      output.Print(liveryName);
+      if(i != skinSelection)
+        output.Print("</a>");
+
+      output.Print("</td>");
+      output.Print("</tr>");
+    }
+    output.Print("</table>");
+    output.Print("</body></html>");
+    return output.AsString();
   }
 
   string GetLocoWindowHTML()
@@ -2152,6 +2237,9 @@ define float Joystick_Range = 44.0;
       case BROWSER_LAMPMENU:
         browser.LoadHTMLString(GetAsset(), GetLampWindowHTML());
         break;
+      case BROWSER_LIVERYMENU:
+        browser.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
+        break;
       case BROWSER_LOCOMENU:
         browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
         browser.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
@@ -2229,6 +2317,16 @@ define float Joystick_Range = 44.0;
       if ( browser and msg.src == browser )
       {
           CurrentMenu = BROWSER_LAMPMENU;
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      //Livery Window
+      on "Browser-URL", "live://open_livery", msg:
+      if ( browser and msg.src == browser )
+      {
+          CurrentMenu = BROWSER_LIVERYMENU;
           RefreshBrowser();
       }
       msg.src = null;
@@ -2393,8 +2491,18 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://eye-lock", msg:
       if ( browser and msg.src == browser )
       {
-        if(LockTargetWindow == null) LockTargetWindow = new ObjectListPrompt();
-        LockTargetWindow.Init(me);
+        useLockTarget = !useLockTarget;
+        RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      on "Browser-URL", "live://eye-lock-select", msg:
+      if ( browser and msg.src == browser )
+      {
+        World.SetTargetObserver(me);
+        selectingTarget = true;
+        RefreshBrowser();
       }
       msg.src = null;
       continue;
@@ -2426,17 +2534,17 @@ define float Joystick_Range = 44.0;
             UpdateSmoke();
           }
         }
-       if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
-       {
-         string command = Str.Tokens(msg.minor, "live://contract/")[0];
-         if(command)
-         {
-           Soup smoke = SmokeEdits.GetNamedSoup(command);
-           smoke.SetNamedTag("expanded", false);
-           RefreshBrowser();
-         }
-       }
-       if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
+        else if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://contract/")[0];
+          if(command)
+          {
+            Soup smoke = SmokeEdits.GetNamedSoup(command);
+            smoke.SetNamedTag("expanded", false);
+            RefreshBrowser();
+          }
+        }
+        else if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
         {
           string command = Str.Tokens(msg.minor, "live://expand/")[0];
           if(command)
@@ -2446,15 +2554,25 @@ define float Joystick_Range = 44.0;
             RefreshBrowser();
           }
         }
-        if(TrainUtil.HasPrefix(msg.minor, "live://smoke-bind/"))
-         {
-           string command = Str.Tokens(msg.minor, "live://smoke-bind/")[0];
-           if(command)
-           {
+        else if(TrainUtil.HasPrefix(msg.minor, "live://smoke-bind/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://smoke-bind/")[0];
+          if(command)
+          {
              BoundWheesh = Str.UnpackInt(command);
              RefreshBrowser();
-           }
-         }
+          }
+        }
+        else if(TrainUtil.HasPrefix(msg.minor, "live://livery_set/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://livery_set/")[0];
+          if(command)
+          {
+             skinSelection = Str.UnpackInt(command);
+             ConfigureSkins();
+             RefreshBrowser();
+          }
+        }
       }
       msg.src = null;
       continue;
@@ -2478,6 +2596,187 @@ define float Joystick_Range = 44.0;
 		}
 	}
 
+  // ============================================================================
+  // Math Utility Functions
+  // Desc: Trig functions and stuff.
+  // ============================================================================
 
+  public define float PI_2 = 3.14159265/2.0;
 
+  float ApproxAtan(float z)
+  {
+      float n1 = 0.97239411;
+      float n2 = -0.19194795;
+      return (n1 + n2 * z * z) * z;
+  }
+
+  float ApproxAtan2(float y, float x)
+  {
+      if (x != 0.0)
+      {
+          if (Math.Fabs(x) > Math.Fabs(y))
+          {
+              float z = y / x;
+              if (x > 0.0)
+              {
+                  // atan2(y,x) = atan(y/x) if x > 0
+                  return ApproxAtan(z);
+              }
+              else if (y >= 0.0)
+              {
+                  // atan2(y,x) = atan(y/x) + PI if x < 0, y >= 0
+                  return ApproxAtan(z) + Math.PI;
+              }
+              else
+              {
+                  // atan2(y,x) = atan(y/x) - PI if x < 0, y < 0
+                  return ApproxAtan(z) - Math.PI;
+              }
+          }
+          else // Use property atan(y/x) = PI/2 - atan(x/y) if |y/x| > 1.
+          {
+              float z = x / y;
+              if (y > 0.0)
+              {
+                  // atan2(y,x) = PI/2 - atan(x/y) if |y/x| > 1, y > 0
+                  return -ApproxAtan(z) + PI_2;
+              }
+              else
+              {
+                  // atan2(y,x) = -PI/2 - atan(x/y) if |y/x| > 1, y < 0
+                  return -ApproxAtan(z) - PI_2;
+              }
+          }
+      }
+      else
+      {
+          if (y > 0.0) // x = 0, y > 0
+          {
+              return PI_2;
+          }
+          else if (y < 0.0) // x = 0, y < 0
+          {
+              return -PI_2;
+          }
+      }
+      return 0.0; // x,y = 0. Could return NaN instead.
+  }
+  define int SINETIMEOUT = 512;
+
+  float rad_range(float in_x)
+  {
+    float x = in_x;
+    if(x and x != 0.0)
+    {
+      int Timeout = 0;
+      if (x < -(float)Math.PI)
+          while(Timeout < SINETIMEOUT and x < -(float)Math.PI)
+          {
+            x = x + (float)Math.PI * 2;
+            Timeout++;
+          }
+      if (x > (float)Math.PI)
+          while(Timeout < SINETIMEOUT and x > (float)Math.PI)
+          {
+            x = x - (float)Math.PI * 2;
+            Timeout++;
+          }
+    }
+    return x;
+  }
+
+  float fast_sin(float in_x)
+  {
+    float x = in_x;
+    //always wrap input angle to -PI..PI
+    if(x and x != 0.0)
+    {
+      int Timeout = 0;
+      if (x < -(float)Math.PI)
+          while(Timeout < SINETIMEOUT and x < -(float)Math.PI)
+          {
+            x = x + (float)Math.PI * 2;
+            Timeout++;
+          }
+      if (x > (float)Math.PI)
+          while(Timeout < SINETIMEOUT and x > (float)Math.PI)
+          {
+            x = x - (float)Math.PI * 2;
+            Timeout++;
+          }
+    }
+
+    if (x < 0)
+    {
+        float sin = (4 / (float)Math.PI) * x + (4 / (float)(Math.PI * Math.PI)) * x * x;
+
+        if (sin < 0)
+            return .225 * (sin * -sin - sin) + sin;
+
+        return .225 * (sin * sin - sin) + sin;
+    }
+    else
+    {
+        float sin = (4 / (float)Math.PI) * x - (4 / (float)(Math.PI * Math.PI)) * x * x;
+
+        if (sin < 0)
+            return .225 * (sin * -sin - sin) + sin;
+
+        return .225 * (sin * sin - sin) + sin;
+    }
+    return 0.0;
+  }
+
+  float fast_cos(float x)
+  {
+    return fast_sin((Math.PI / 2.0) - x);
+  }
+
+  WorldCoordinate RotatePoint(WorldCoordinate point, float rotateangle)
+  {
+    WorldCoordinate newpoint = new WorldCoordinate();
+    float s = fast_sin(rotateangle);
+    float c = fast_cos(rotateangle);
+    newpoint.x = point.x * c - point.y * s;
+    newpoint.y = point.x * s + point.y * c;
+    newpoint.z = point.z;
+    return newpoint;
+  }
+
+  Orientation LookAt(WorldCoordinate A, WorldCoordinate B)
+  {
+    float d_x = B.x - A.x;
+    float d_y = B.y - A.y;
+    float d_z = B.z - A.z;
+    WorldCoordinate delta = new WorldCoordinate();
+    delta.x = d_x;
+    delta.y = d_y;
+    delta.z = d_z;
+
+    Orientation ang = new Orientation();
+    float rot_z = ApproxAtan2(d_y, d_x);
+    ang.rz = rot_z- Math.PI; // - Math.PI
+    WorldCoordinate relative = RotatePoint(delta, -rot_z);
+    ang.ry = ApproxAtan2(relative.z, relative.x);
+    return ang;
+  }
+
+  Orientation DeltaRot(Orientation From, Orientation To)
+  {
+    Orientation ang = new Orientation();
+    ang.rx = To.rx - From.rx;
+    ang.ry = To.ry - From.ry;
+    ang.rz = To.rz - From.rz;
+    return ang;
+  }
+
+  float clamp(float x, float lower, float upper)
+  {
+    float ret = x;
+    if(ret < lower)
+      ret = lower;
+    else if(ret > upper)
+      ret = upper;
+    return ret;
+  }
 };
