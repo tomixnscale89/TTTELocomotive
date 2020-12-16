@@ -361,8 +361,11 @@ class tttelocomotive isclass Locomotive
   FrontCoupler = cast<IKCoupler>(GetFXAttachment("couple_front"));
   BackCoupler = cast<IKCoupler>(GetFXAttachment("couple_back"));
   //important
-  FrontCoupler.PostInit(me, "front");
-  BackCoupler.PostInit(me, "back");
+  if(FrontCoupler)
+    FrontCoupler.PostInit(me, "front");
+  if(BackCoupler)
+    BackCoupler.PostInit(me, "back");
+    
   //FrontCoupler.ParentVehicle = me;
   //BackCoupler.ParentVehicle = me;
   //FrontCoupler.Position = "front";
@@ -724,7 +727,7 @@ class tttelocomotive isclass Locomotive
 
   // ============================================================================
   // OBSOLETE. We are not using this function in the locomotive anymore, as it's a better idea
-  // to have this check be done in the cabin for specific cases. 
+  // to have this check be done in the cabin for specific cases.
   // ============================================================================
   // Name: SetCabmesh()
   // Parm:  None
