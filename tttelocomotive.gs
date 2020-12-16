@@ -723,6 +723,9 @@ class tttelocomotive isclass Locomotive
   }
 
   // ============================================================================
+  // OBSOLETE. We are not using this function in the locomotive anymore, as it's a better idea
+  // to have this check be done in the cabin for specific cases. 
+  // ============================================================================
   // Name: SetCabmesh()
   // Parm:  None
   // Desc: Sets the Cabin mesh and driver/fireman meshes to be visible if we are in the correct camera state.
@@ -749,8 +752,6 @@ class tttelocomotive isclass Locomotive
   void CameraInternalViewHandler(Message msg)
   {
     m_cameraViewpoint = (msg.minor == "Internal-View");
-
-    SetCabmesh();
   }
 
   // ============================================================================
@@ -761,8 +762,6 @@ class tttelocomotive isclass Locomotive
   void CameraTargetChangedHandler(Message msg)
   {
     m_cameraTarget = (msg.src == me);
-
-    SetCabmesh();
   }
 
 
