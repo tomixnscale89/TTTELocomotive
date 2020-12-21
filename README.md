@@ -20,7 +20,7 @@ Real Time Smoke Editor
 TODO
 
 ## Credits
-[Rileyzzz](https://github.com/rileyzzz) :page_with_curl: Code
-[Tomix](https://github.com/tomixnscale89) :page_with_curl: Code
-[Ermelber](https://github.com/Ermelber) :page_with_curl: Italian Localization
-[Gericom](https://github.com/Gericom) :page_with_curl: Dutch Localization
+* [Rileyzzz](https://github.com/rileyzzz) :page_with_curl: Code
+* [Tomix](https://github.com/tomixnscale89) :page_with_curl: Code
+* [Ermelber](https://github.com/Ermelber)  Italian Localization
+* [Gericom](https://github.com/Gericom)  Dutch Localization
