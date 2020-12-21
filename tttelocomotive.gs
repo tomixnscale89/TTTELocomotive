@@ -12,6 +12,11 @@
 // GDennish (Tomix)
 // Rileyzzz
 // ============================================================================
+// Localization:
+// Ermelber / SkyArcher - Italian
+// Gericom - Dutch
+// ILIOS - Russian
+// ============================================================================
 
 include "locomotive.gs"
 include	"meshobject.gs"
@@ -19,14 +24,80 @@ include "interface.gs"
 include "orientation.gs"
 include "multiplayergame.gs"
 include "soup.gs"
-include "couple.gs" //procedural coupler
+include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 
 // ============================================================================
-// Style of code:
+// IMPORTANT INFORMATION:
 // ============================================================================
+// In order to use this script, a string-table MUST be present in the locomotive/wagon config.
+// If the string-table is NOT present, then most of the text shown in this script will not be visible and will be broken.
+// We use string-tables to support custom languages if need be.
+// For information on custom languages with string-table, see: http://online.ts2009.com/mediaWiki/index.php/%22String-table%22_container
+
+//
+// Version 1.0 Languages:
+// English
+// Dutch
+// Spanish
+// Italian
+
+//
+// The standard, required, ENGLISH string-table is as follows:
+//
+// string-table
+// {
+// trainz_ver_debug                      "The Trainz-Build number is: "
+// headcode_none                         "None"
+// headcode_all                          "All Lamps"
+// headcode_tail                         "Tail Lights"
+// headcode_branch                       "Branchline"
+// headcode_express                      "Express Passenger"
+// headcode_express_f1                   "Express Freight 1"
+// headcode_express_f2                   "Express Freight 2"
+// headcode_express_f3                   "Express Freight 3"
+// headcode_goods                        "Goods"
+// headcode_light                        "Light"
+// headcode_thru_freight                 "Through Freight"
+// headcode_tvs                          "TV Series Configuration"
+// headcode_name                         "Headcodes"
+// headcode_select                       "Currently equipped headcode: $0."
+// headcode_description                  "Select a Headcode from the following options:"
+// skin_name                             "Liveries"
+// skin_select                           "Currently selected Livery: $0."
+// skin_description                      "Select a Livery from the following options:"
+// faces_name                            "Faces"
+// faces_select                          "Currently selected face: $0."
+// faces_description                     "Select a Face from the following options:"
+// menu                                  "Menu"
+// tooltip_return                        "Return to the main menu."
+// tooltip_reset                         "Reset Eye Controls"
+// eye_menu                              "Eye Controls"
+// eye_rotation_h                        "Eye Rotation Left/Right:"
+// eye_rotation_v                        "Eye Rotation Up/Down:"
+// reset_controls                        "Reset Controls"
+// recording_start                       "Start Recording"
+// recording_stop                        "Stop Recording"
+// recording_anim                        "Play Animation"
+// target_lock                           "Eye Tracking"
+// target_select                         "Start Eye Tracking"
+// target_select_eye                     "Select Object for Eyes to Follow"
+// target_looking                        "Select a Train, Wagon, or Automobile...."
+// wheelslip                             "Wheelslip (Only active in Realistic Mode)"
+// shake                                 "Shake"
+// shake_intensity                       "Shake Intensity: "
+// shake_period                          "Shake Period: "
+// couple_disable                        "Disable Coupling"
+// couple_disable_desc                   "Disable couplers to allow shunting operations."
+// bind_wheesh                           "(bind to wheesh)"
+// }
+
+
 
 // ============================================================================
 // TO DO:
+// Work on a more efficient Livery system.
+// Make sure coupler support works with non-Pro Coupler assets.
+// Add more Tooltips for some options on the Menus to make the options clearer.
 // ============================================================================
 
 
@@ -1136,19 +1207,18 @@ class tttelocomotive isclass Locomotive
   {
     string temp = "xxx"; // Create a temporary scratch string to use
 
-    //temporary, move to string table later
-    if (FlagTest(headcode, HEADCODE_NONE)) temp = "None";
-    if (FlagTest(headcode, HEADCODE_ALL_LAMPS)) temp = "All Lamps";
-    if (FlagTest(headcode, HEADCODE_TAIL_LIGHTS)) temp = "Tail Lights";
-    if (FlagTest(headcode, HEADCODE_BRANCH)) temp = "Branch Headcode";
-    if (FlagTest(headcode, HEADCODE_EXPRESS)) temp = "Express Headcode";
-    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT)) temp = "Express Freight 1";
-    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_2)) temp = "Express Freight 2";
-    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_3)) temp = "Express Freight 3";
-    if (FlagTest(headcode, HEADCODE_GOODS)) temp = "Goods";
-    if (FlagTest(headcode, HEADCODE_LIGHT)) temp = "Light";
-    if (FlagTest(headcode, HEADCODE_THROUGH_FREIGHT)) temp = "Through Freight";
-    if (FlagTest(headcode, HEADCODE_TVS)) temp = "TVS Lamp Headcode";
+    if (FlagTest(headcode, HEADCODE_NONE)) temp = strTable.GetString("headcode_none");
+    if (FlagTest(headcode, HEADCODE_ALL_LAMPS)) temp = strTable.GetString("headcode_all");
+    if (FlagTest(headcode, HEADCODE_TAIL_LIGHTS)) temp = strTable.GetString("headcode_tail");
+    if (FlagTest(headcode, HEADCODE_BRANCH)) temp = strTable.GetString("headcode_branch");
+    if (FlagTest(headcode, HEADCODE_EXPRESS)) temp = strTable.GetString("headcode_express");
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT)) temp = strTable.GetString("headcode_express_f1");
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_2)) temp = strTable.GetString("headcode_express_f2");
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_3)) temp = strTable.GetString("headcode_express_f3");
+    if (FlagTest(headcode, HEADCODE_GOODS)) temp = strTable.GetString("headcode_goods");
+    if (FlagTest(headcode, HEADCODE_LIGHT)) temp = strTable.GetString("headcode_light");
+    if (FlagTest(headcode, HEADCODE_THROUGH_FREIGHT)) temp = strTable.GetString("headcode_thru_freight");
+    if (FlagTest(headcode, HEADCODE_TVS)) temp = strTable.GetString("headcode_tvs");
     return temp;
   }
 
@@ -1250,27 +1320,50 @@ class tttelocomotive isclass Locomotive
     // ============================================================================
     public string GetDescriptionHTML(void)
     {
-  //    TrainzScript.Log("GetDescriptionHTML Called!");
-
       string html = inherited();
 
-      // option to change headcode, this displays inside the ? HTML window in surveyor.
-      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
-      html = html + "<p>" + headcodeLampStr + "</p>";
+      //StringTable strTable = GetAsset().GetStringTable();
+      html = html + "<html><body>";
+      html = html + "<table cellspacing=2>";
 
-      string classFaceStr = "<a href=live://property/faces>" + FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection)) + "</a>";
-      html = html + "<p>" + strTable.GetString1("faces_desc", classFaceStr) + "</p>";
-
-      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
-      html = html + "<p>" + strTable.GetString1("skin_desc", classSkinStr) + "</p>";
-
-
+      // debugging
       // Let's post the current Trainz version for debugging purposes.
-      string trainzVerStr = "The Trainz Build number is: " + trainzVersion;
+      html = html + "<tr><td>";
+      html = html + strTable.GetString("trainz_ver_debug") + trainzVersion;
+      html = html + "</tr></td>";
 
-  //    TrainzScript.Log("HTML Is: " + html);
+      //lamp icon
+      // // option to change headcode, this displays inside the ? HTML window in surveyor.
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=300 height=20></a>";
+      html = html + "</tr></td>";
+      //lamp status
+      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("headcode_select", headcodeLampStr);
+      html = html + "</tr></td>";
 
-      return html + trainzVerStr;
+      //livery window
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=300 height=20></a>";
+      html = html + "</tr></td>";
+      //livery status
+      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("skin_select", classSkinStr);
+      html = html + "</tr></td>";
+
+      //face window
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=300 height=20></a>";
+      html = html + "</tr></td>";
+      //face status
+      string classFaceStr = "<a href=live://property/faces>" + FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection)) + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("faces_select", classFaceStr);
+      html = html + "</tr></td>";
+
+      return html;
     }
 
   // ============================================================================
@@ -1312,8 +1405,7 @@ class tttelocomotive isclass Locomotive
   {
     if (p_propertyID == "headcode_lamps")
     {
-      //Interface.Print(" I entered GetPropertyName looking for something");
-      return "hello";
+      return strTable.GetString("headcode_name");
     }
     if (p_propertyID == "faces")
     {
@@ -1341,8 +1433,7 @@ class tttelocomotive isclass Locomotive
   {
     if (p_propertyID == "headcode_lamps")
     {
-      Interface.Print(" I entered GetPropertyDescription looking for something");
-      return "Please select a lamp headcode you would like to use:";
+      return strTable.GetString("headcode_description");
     }
     else if(p_propertyID == "faces")
     {
@@ -1901,25 +1992,25 @@ define float Joystick_Range = 44.0;
   	output.Print("<table>");
 
     output.Print("<tr><td>");
-    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("</tr></td>");
 
     //Options
     output.Print("<tr><td>");
-    output.Print("<font><b>Eye Controls</font>");
+    output.Print("<font><b>" + strTable.GetString("eye_menu") + "</font>");
     output.Print("<br>");
-    output.Print("<a href='live://eye-reset' tooltip='reset'><font>Reset Controls</font></a>");
+    output.Print("<a href='live://eye-reset' tooltip='" + strTable.GetString("tooltip_reset") + "'><font>" + strTable.GetString("reset_controls") + "</font></a>");
     output.Print("</tr></td>");
 
     //controls
     output.Print("<tr><td>");
-    output.Print("Eye Rotation Left/Right:");
+    output.Print(strTable.GetString("eye_rotation_h"));
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
     output.Print("</tr></td>");
 
     output.Print("<tr><td>");
-    output.Print("Eye Rotation Up/Down:");
+    output.Print(strTable.GetString("eye_rotation_v"));
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
     output.Print("</tr></td>");
@@ -1930,27 +2021,27 @@ define float Joystick_Range = 44.0;
     output.Print("</tr></td>");
 
     output.Print("<tr><td>");
-    output.Print("<a href='live://record'><font>Start Recording</font></a>");
+    output.Print("<a href='live://record'><font>" + strTable.GetString("recording_start") + "</font></a>");
     output.Print("<br>");
-    output.Print("<a href='live://record-stop'><font>Stop Recording</font></a>");
+    output.Print("<a href='live://record-stop'><font>" + strTable.GetString("recording_stop") + "</font></a>");
     output.Print("<br>");
-    output.Print("<a href='live://play'><font>Play Animation</font></a>");
+    output.Print("<a href='live://play'><font>" + strTable.GetString("recording_anim") + "</font></a>");
     output.Print("</tr></td>");
 
     output.Print("</table>");
 
     output.Print("<br>");
     output.Print(HTMLWindow.CheckBox("live://eye-lock", useLockTarget));
-  	output.Print(" Lock Target</tr></td>");
+  	output.Print(strTable.GetString("target_lock") + "</tr></td>");
     if(useLockTarget)
   	{
-      string targetText = "Select Target";
+      string targetText = strTable.GetString("target_select");
       if(selectingTarget)
-        targetText = "Select an object...";
+        targetText = strTable.GetString("target_looking");
       else if(eyeLockTarget != null)
         targetText = eyeLockTarget.GetAsset().GetLocalisedName();
   		output.Print("<br>");
-  		output.Print("<a href='live://eye-lock-select' tooltip='Select Eye Target'>" + targetText + "</a>");
+  		output.Print("<a href='live://eye-lock-select' tooltip='" + strTable.GetString("target_select_eye") + "'>" + targetText + "</a>");
   	}
 
   	output.Print("</body></html>");
@@ -1962,7 +2053,7 @@ define float Joystick_Range = 44.0;
   {
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
 
   	output.Print("</body></html>");
 
@@ -1973,7 +2064,7 @@ define float Joystick_Range = 44.0;
   {
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
     output.Print("<table>");
       output.Print("<tr>");
@@ -2066,9 +2157,9 @@ define float Joystick_Range = 44.0;
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
-    output.Print("Please select a livery.");
+    output.Print(strTable.GetString("skin_description"));
 
     output.Print("<table>");
     output.Print("<tr> <td width='300'></td> </tr>");
@@ -2102,9 +2193,9 @@ define float Joystick_Range = 44.0;
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
-    output.Print("Please select a face.");
+    output.Print(strTable.GetString("faces_description"));
 
     output.Print("<table>");
     output.Print("<tr> <td width='300'></td> </tr>");
@@ -2141,32 +2232,32 @@ define float Joystick_Range = 44.0;
   	output.Print("<table>");
 
     output.Print("<tr><td>");
-    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("</tr></td>");
 
     output.Print("<tr><td>");
     output.Print(HTMLWindow.CheckBox("live://property/loco-wheelslip", b_WheelslipEnabled));
-    output.Print(" Wheelslip");
+    output.Print(" " + strTable.GetString("wheelslip"));
     output.Print("</tr></td>");
 
     output.Print("<tr><td>");
     output.Print(HTMLWindow.CheckBox("live://property/loco-shake", b_ShakeEnabled));
-    output.Print(" Shake");
+    output.Print(" " + strTable.GetString("shake"));
     if(b_ShakeEnabled)
     {
       output.Print("<br>");
-      output.Print("Shake Intensity: ");
+      output.Print(strTable.GetString("shake_intensity"));
       output.Print("<br>");
       output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='shakeintensity' min=0.0 max=0.2 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
-      output.Print("Shake Period: ");
+      output.Print(strTable.GetString("shake_period"));
       output.Print("<trainz-object style=edit-box link-on-focus-loss id=shakeperiod width=60 height=16></trainz-object>");
     }
     output.Print("</tr></td>");
 
     output.Print("<tr><td>");
     output.Print(HTMLWindow.CheckBox("live://property/loco-couple", b_CoupleLockEnabled));
-    output.Print(" Disable Coupling");
+    output.Print(" " + strTable.GetString("couple_disable"));
     output.Print("</tr></td>");
 
     output.Print("</table>");
@@ -2182,7 +2273,7 @@ define float Joystick_Range = 44.0;
     output.Print("<table>");
 
     output.Print("<tr><td>");
-    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("</tr></td>");
 
     //Generate smoke containers
@@ -2201,7 +2292,7 @@ define float Joystick_Range = 44.0;
       output.Print("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
       if(i != BoundWheesh)
       {
-        output.Print("<i><a href='live://smoke-bind/" + (string)i + "'>(bind to wheesh)</a></i>");
+        output.Print("<i><a href='live://smoke-bind/" + (string)i + "'>" + strTable.GetString("bind_wheesh") + "</a></i>");
       }
 
       output.Print("</b>");
