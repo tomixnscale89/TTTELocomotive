@@ -40,6 +40,7 @@ include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 // Dutch
 // Spanish
 // Italian
+// Russian
 
 //
 // The standard, required, ENGLISH string-table is as follows:
@@ -315,7 +316,7 @@ class tttelocomotive isclass Locomotive
 
 
     //TrainzScript.Log("searching for ttte settings lib");
-    //tttelib TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
+    // tttelib TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
 
     //if(TTTELocoLibrary)
     //{
@@ -327,7 +328,8 @@ class tttelocomotive isclass Locomotive
     // ****************************************************************************/
    // Grab assets from the Locomotive
    // ****************************************************************************/
-  strTable = GetAsset().GetStringTable(); // String table to be used for obtaining information inside the Config
+  strTable = World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive")).GetAsset().GetStringTable(); // String table to be used for obtaining information inside the Config
+
   myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
 
   faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
