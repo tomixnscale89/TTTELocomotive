@@ -1,11 +1,26 @@
-# TTTELocomotive
+##TTTELocomotive
 TTTELocomotive.gs
-Highly experimental locomotive script for Thomas and Friends Trainz locmotives. Its aim is to replicate what superscript could but on an easier down to earth solution.
+The go-to Thomas and Friends script for Trainz Simulator. With superscript breaking with each Trainz update, it was time for a new script to take its place. This is where TTTELocmotive comes into play.
 
-When released, documentation will be provided so developers can easily use the script for any asset they wish. 
+Currently only tested in TRS19. 
 
-Target features:
-Swappable liveries
-Swappable face meshes (including smokebox door support)
+##Features
+Custom Livery Support
+Configurable Faces (including smokebox door support)
 Controllable Eyes (Keyboard Support, HTML Window, and Joystick/Raildriver)
-ACS Couplings
+Eye Tracking
+Configurable Lamp Headcodes
+ACS Coupling Support
+Procedural Coupler Support
+Wheelslip (Realistic Mode Only)
+Shunting Mode
+Real Time Smoke Editor
+
+##Adding TTTELocmotive to your own Models
+TODO
+
+##Credits
+[Rileyzzz](https://github.com/rileyzzz) :page_with_curl: Code
+[Tomix](https://github.com/tomixnscale89) :page_with_curl: Code
+[Ermelber](https://github.com/Ermelber) :page_with_curl: Italian Localization
+[Gericom](https://github.com/Gericom) :page_with_curl: Dutch Localization
