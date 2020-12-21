@@ -168,8 +168,9 @@ class tttelocomotive isclass Locomotive
   define int BROWSER_JOYSTICKMENU = 2;
   define int BROWSER_LAMPMENU = 3;
   define int BROWSER_LIVERYMENU = 4;
-  define int BROWSER_LOCOMENU = 5;
-  define int BROWSER_SMOKEMENU = 6;
+  define int BROWSER_FACEMENU = 5;
+  define int BROWSER_LOCOMENU = 6;
+  define int BROWSER_SMOKEMENU = 7;
 
   int CurrentMenu = BROWSER_MAINMENU;
   bool HasFocus = false;
@@ -365,7 +366,7 @@ class tttelocomotive isclass Locomotive
     FrontCoupler.PostInit(me, "front");
   if(BackCoupler)
     BackCoupler.PostInit(me, "back");
-    
+
   //FrontCoupler.ParentVehicle = me;
   //BackCoupler.ParentVehicle = me;
   //FrontCoupler.Position = "front";
@@ -1311,7 +1312,7 @@ class tttelocomotive isclass Locomotive
   {
     if (p_propertyID == "headcode_lamps")
     {
-      Interface.Print(" I entered GetPropertyName looking for something");
+      //Interface.Print(" I entered GetPropertyName looking for something");
       return "hello";
     }
     if (p_propertyID == "faces")
@@ -1872,6 +1873,11 @@ define float Joystick_Range = 44.0;
     output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=300 height=20></a>");
     output.Print("</tr></td>");
 
+    //face window
+    output.Print("<tr><td>");
+    output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=300 height=20></a>");
+    output.Print("</tr></td>");
+
     //loco window
     output.Print("<tr><td>");
     output.Print("<a href='live://open_loco'><img kuid='<kuid:414976:103611>' width=300 height=20></a>");
@@ -2092,6 +2098,42 @@ define float Joystick_Range = 44.0;
     return output.AsString();
   }
 
+  string GetFaceWindowHTML()
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+    output.Print("<html><body>");
+    output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
+    output.Print("<br>");
+    output.Print("Please select a face.");
+
+    output.Print("<table>");
+    output.Print("<tr> <td width='300'></td> </tr>");
+    bool rowParity = false;
+    int i;
+    for(i = 0; i < FacesContainer.CountTags(); i++)
+    {
+      rowParity = !rowParity;
+      string faceName = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
+      if (rowParity)
+        output.Print("<tr bgcolor=#0E2A35>");
+      else
+        output.Print("<tr bgcolor=#05171E>");
+
+      output.Print("<td>");
+      if(i != faceSelection)
+        output.Print("<a href='live://face_set/" + i + "'>");
+      output.Print(faceName);
+      if(i != faceSelection)
+        output.Print("</a>");
+
+      output.Print("</td>");
+      output.Print("</tr>");
+    }
+    output.Print("</table>");
+    output.Print("</body></html>");
+    return output.AsString();
+  }
+
   string GetLocoWindowHTML()
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
@@ -2242,6 +2284,9 @@ define float Joystick_Range = 44.0;
       case BROWSER_LIVERYMENU:
         browser.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
         break;
+      case BROWSER_FACEMENU:
+        browser.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
+        break;
       case BROWSER_LOCOMENU:
         browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
         browser.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
@@ -2309,6 +2354,7 @@ define float Joystick_Range = 44.0;
       if ( browser and msg.src == browser )
       {
           CurrentMenu = BROWSER_JOYSTICKMENU;
+          eyeZ = 0.0; //clear any rotation beforehand
           RefreshBrowser();
       }
       msg.src = null;
@@ -2329,6 +2375,16 @@ define float Joystick_Range = 44.0;
       if ( browser and msg.src == browser )
       {
           CurrentMenu = BROWSER_LIVERYMENU;
+          RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+      //Face Window
+      on "Browser-URL", "live://open_face", msg:
+      if ( browser and msg.src == browser )
+      {
+          CurrentMenu = BROWSER_FACEMENU;
           RefreshBrowser();
       }
       msg.src = null;
@@ -2572,6 +2628,16 @@ define float Joystick_Range = 44.0;
           {
              skinSelection = Str.UnpackInt(command);
              ConfigureSkins();
+             RefreshBrowser();
+          }
+        }
+        else if(TrainUtil.HasPrefix(msg.minor, "live://face_set/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://face_set/")[0];
+          if(command)
+          {
+             faceSelection = Str.UnpackInt(command);
+             ConfigureFaces();
              RefreshBrowser();
           }
         }
