@@ -193,7 +193,9 @@ class tttelocomotive isclass Locomotive
   Soup BogeyLiveryTextureOptions;
   Soup SmokeboxContainer;
   Soup BuffersContainer;
-
+  Soup ExtraLampsContainer;
+  bool[] ExtraLampVisibility;
+  Asset[] ExtraLampAssets;
 
   Soup SmokeEdits;
   int BoundWheesh = -1;
@@ -343,10 +345,34 @@ class tttelocomotive isclass Locomotive
   }
   FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
   LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
+  ExtraLampsContainer = ExtensionsContainer.GetNamedSoup("extra-lamps");
   LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
   BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
+
   //liverytextureoptions defines the texture autofill behavior
   //SUPPORTED OPTIONS: none, diffusenormal, pbrstandard
+
+  //set initial extra lamp states to none
+  if(ExtraLampsContainer)
+  {
+    int TagCount = ExtraLampsContainer.CountTags();
+    ExtraLampAssets = new Asset[TagCount];
+    ExtraLampVisibility = new bool[TagCount];
+    int i;
+    for(i = 0; i < TagCount; i++)
+    {
+      string effectName = ExtraLampsContainer.GetIndexedTagName(i);
+      MeshObject lampMesh = GetFXAttachment(effectName);
+      ExtraLampVisibility[i] = false;
+      if(lampMesh)
+      {
+        ExtraLampAssets[i] = lampMesh.GetAsset();
+        SetFXAttachment(effectName, null);
+      }
+      else
+        ExtraLampAssets[i] = null;
+    }
+  }
 
   SmokeboxContainer = ExtensionsContainer.GetNamedSoup("smokeboxes");
 
@@ -1191,6 +1217,20 @@ class tttelocomotive isclass Locomotive
     if ((headcode & HEADCODE_TC) != 0) SetFXAttachment("lamp_tc", headlight_asset);
     else SetFXAttachment("lamp_tc", null);
 
+  }
+
+  // ============================================================================
+  // Name: ToggleExtraLamp()
+  // Desc: Toggles the state of a custom lamp effect
+  // ============================================================================
+  void ToggleExtraLamp(int TargetLamp)
+  {
+    ExtraLampVisibility[TargetLamp] = !ExtraLampVisibility[TargetLamp];
+    string effectName = ExtraLampsContainer.GetIndexedTagName(TargetLamp);
+    if(ExtraLampVisibility[TargetLamp])
+      SetFXAttachment(effectName, ExtraLampAssets[TargetLamp]);
+    else
+      SetFXAttachment(effectName, null);
   }
 
   // ============================================================================
@@ -2143,7 +2183,32 @@ define float Joystick_Range = 44.0;
       output.Print("</tr>");
     output.Print("</table>");
 
-
+    if(ExtraLampsContainer)
+    {
+      output.Print("<br>");
+      output.Print("Custom Lamps:");
+      output.Print("<br>");
+      output.Print("<table>");
+      output.Print("<tr> <td width='300'></td> </tr>");
+      bool rowParity = false;
+      int i;
+      for(i = 0; i < ExtraLampsContainer.CountTags(); i++)
+      {
+        rowParity = !rowParity;
+        string effectName = ExtraLampsContainer.GetIndexedTagName(i);
+        string nameText = ExtraLampsContainer.GetNamedTag(effectName);
+        if (rowParity)
+          output.Print("<tr bgcolor=#0E2A35>");
+        else
+          output.Print("<tr bgcolor=#05171E>");
+        
+        output.Print("<td>");
+        output.Print(HTMLWindow.CheckBox("live://extra-lamps/" + i, ExtraLampVisibility[i]));
+        output.Print(" " + nameText);
+        output.Print("</tr></td>");
+      }
+      output.Print("</table>");
+    }
     //output.Print("<nowrap>");
     //output.Print("lamp");
     //output.Print("<img kuid='<kuid:414976:105416>' width=256 height=256>");
@@ -2162,7 +2227,7 @@ define float Joystick_Range = 44.0;
     output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
     output.Print(strTable.GetString("skin_description"));
-
+    output.Print("<br>");
     output.Print("<table>");
     output.Print("<tr> <td width='300'></td> </tr>");
     bool rowParity = false;
@@ -2198,7 +2263,7 @@ define float Joystick_Range = 44.0;
     output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
     output.Print(strTable.GetString("faces_description"));
-
+    output.Print("<br>");
     output.Print("<table>");
     output.Print("<tr> <td width='300'></td> </tr>");
     bool rowParity = false;
@@ -2711,6 +2776,16 @@ define float Joystick_Range = 44.0;
           if(command)
           {
              BoundWheesh = Str.UnpackInt(command);
+             RefreshBrowser();
+          }
+        }
+        else if(TrainUtil.HasPrefix(msg.minor, "live://extra-lamps/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://extra-lamps/")[0];
+          if(command)
+          {
+             int TargetLamp = Str.UnpackInt(command);
+             ToggleExtraLamp(TargetLamp);
              RefreshBrowser();
           }
         }
