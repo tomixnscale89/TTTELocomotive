@@ -23,6 +23,7 @@ include	"meshobject.gs"
 include "interface.gs"
 include "orientation.gs"
 include "multiplayergame.gs"
+include "trainzassetsearch.gs"
 include "soup.gs"
 include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 
@@ -131,6 +132,7 @@ class tttelocomotive isclass Locomotive
   void SetNamedFloatFromExisting(Soup in, Soup out, string tagName);
   bool SoupHasTag(Soup testSoup, string tagName);
   void SetLampEffects(MeshObject headlightMeshObject,bool headlighton, bool highbeam_state);
+  thread void CheckScriptAssetObsolete();
 
   thread void EyeScriptCheckThread(void);
   thread void JoystickThread(void);
@@ -155,8 +157,10 @@ class tttelocomotive isclass Locomotive
    // ****************************************************************************/
   // Define Variables
   // ****************************************************************************/
+  Asset ScriptAsset;
   StringTable strTable; // This asset's string table, saved for convenient fast access
-
+  bool AssetObsolete = false;
+  KUID ObsoletedBy;
 
   Asset headlight_asset;      // headlight asset used by the loco
   Asset rear_headlight_asset; // Backup headlight (not sure if we want this)
@@ -316,6 +320,8 @@ class tttelocomotive isclass Locomotive
     // call the parent
     inherited();
 
+    ScriptAsset = World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive")).GetAsset();
+    CheckScriptAssetObsolete();
 
     //TrainzScript.Log("searching for ttte settings lib");
     // tttelib TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
@@ -330,7 +336,7 @@ class tttelocomotive isclass Locomotive
     // ****************************************************************************/
    // Grab assets from the Locomotive
    // ****************************************************************************/
-  strTable = World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive")).GetAsset().GetStringTable(); // String table to be used for obtaining information inside the Config
+  strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
 
   myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
 
@@ -513,6 +519,78 @@ class tttelocomotive isclass Locomotive
 
     HeadlightMonitor();
 
+  }
+
+  int[] GetKuidData(KUID FoundKUID)
+  {
+    int[] ret;
+    string kuidStr = FoundKUID.GetLogString();
+    string[] tokens = Str.Tokens(kuidStr, "<:>");
+    ret = new int[tokens.size() - 1]; //remove kuid/kuid2 token
+    int i;
+    for(i = 1; i < tokens.size(); i++)
+      ret[i - 1] = Str.ToInt(tokens[i]);
+    return ret;
+  }
+
+  void ShowUpdatePrompt()
+  {
+    TrainzScript.Log("showing update prompt for " + ObsoletedBy.GetLogString());
+    TrainzScript.OpenURL("trainz://install/" + ObsoletedBy.GetLogString());
+  }
+
+  // ============================================================================
+  // Name: IsScriptAssetObsolete()
+  // Desc: Checks if TTTELocomotive has an update available on the Download Station.
+  // ============================================================================
+  thread void CheckScriptAssetObsolete()
+  {
+    TrainzScript.Log("Checking for updates...");
+    //get all known versions of an asset
+    int[] types = new int[2];
+    string[] vals = new string[2];
+    types[0] = TrainzAssetSearch.FILTER_LOCATION;  vals[0] = "dls";
+    types[1] = TrainzAssetSearch.FILTER_KEYWORD;  vals[1] = "TTTELocomotive";
+    //FILTER_UPDATE_AVAIL
+    //FILTER_KUID
+    AsyncTrainzAssetSearchObject search = TrainzAssetSearch.NewAsyncSearchObject();
+    TrainzAssetSearch.AsyncSearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_KUID, false, search);
+    search.SynchronouslyWaitForResults();
+    Asset[] results = search.GetResults();
+
+    KUID MyKUID = ScriptAsset.GetKUID();
+    string myKuidStr = MyKUID.GetLogString();
+    int[] MyKuidData = GetKuidData(MyKUID);
+    int MyRevision = 0;
+    if(MyKuidData.size() > 2)
+      MyRevision = MyKuidData[2];
+
+    int i;
+    for(i = 0; i < results.size(); i++)
+    {
+      Asset FoundAsset = results[i];
+      KUID FoundKUID = FoundAsset.GetKUID();
+      int[] FoundKuidData = GetKuidData(FoundKUID);
+      //add user and content id checks
+
+      if(MyKuidData[0] == FoundKuidData[0] and MyKuidData[1] == FoundKuidData[1] and FoundKuidData.size() > 2)
+      {
+        int FoundRevision = FoundKuidData[2];
+        if(FoundRevision > MyRevision)
+        {
+          TrainzScript.Log("Found newer revision " + FoundRevision + ". Asset KUID " + FoundKUID.GetLogString());
+          //ShowUpdatePrompt(FoundKUID);
+          AssetObsolete = true;
+          ObsoletedBy = FoundKUID;
+          break;
+        }
+      }
+
+      //TrainzScript.Log("found " + FoundAsset.GetLocalisedName() + " " + FoundKUID.GetLogString());
+    }
+
+    if(browser) RefreshBrowser();
+    //Asset[] assets = TrainzAssetSearch.SearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true);
   }
 
   // ============================================================================
@@ -1987,6 +2065,13 @@ define float Joystick_Range = 44.0;
   	//StringTable strTable = GetAsset().GetStringTable();
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
+
+    if(AssetObsolete)
+    {
+      output.Print("<a href='live://update'>Out of date! Click here to update.</a>");
+      output.Print("<br>");
+    }
+
     output.Print("<table cellspacing=5>");
     //eye window
     output.Print("<tr><td>");
@@ -2201,7 +2286,7 @@ define float Joystick_Range = 44.0;
           output.Print("<tr bgcolor=#0E2A35>");
         else
           output.Print("<tr bgcolor=#05171E>");
-        
+
         output.Print("<td>");
         output.Print(HTMLWindow.CheckBox("live://extra-lamps/" + i, ExtraLampVisibility[i]));
         output.Print(" " + nameText);
@@ -2497,6 +2582,17 @@ define float Joystick_Range = 44.0;
   thread void ScanBrowser() {
 		Message msg;
 		wait(){
+      //Eye Window
+      on "Browser-URL", "live://update", msg:
+      if ( browser and msg.src == browser )
+      {
+        ShowUpdatePrompt();
+        AssetObsolete = false;
+        RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
       //Eye Window
       on "Browser-URL", "live://open_eye", msg:
       if ( browser and msg.src == browser )
