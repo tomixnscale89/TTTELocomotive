@@ -2266,7 +2266,7 @@ define float Joystick_Range = 44.0;
       output.Print("</tr>");
     output.Print("</table>");
 
-    if(ExtraLampsContainer)
+    if(ExtraLampsContainer and ExtraLampsContainer.CountTags())
     {
       output.Print("<br>");
       output.Print("Custom Lamps:");
