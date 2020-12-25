@@ -571,8 +571,6 @@ class tttelocomotive isclass Locomotive
       Asset FoundAsset = results[i];
       KUID FoundKUID = FoundAsset.GetKUID();
       int[] FoundKuidData = GetKuidData(FoundKUID);
-      //add user and content id checks
-
       if(MyKuidData[0] == FoundKuidData[0] and MyKuidData[1] == FoundKuidData[1] and FoundKuidData.size() > 2)
       {
         int FoundRevision = FoundKuidData[2];
