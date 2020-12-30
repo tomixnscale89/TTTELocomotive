@@ -25,6 +25,7 @@ include "orientation.gs"
 include "multiplayergame.gs"
 include "trainzassetsearch.gs"
 include "soup.gs"
+include "tttelib.gs"
 include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 
 // ============================================================================
@@ -115,7 +116,7 @@ class tttelocomotive isclass Locomotive
   // Define Functions
   // ****************************************************************************/
 
-  Soup GlobalTTTESettings;
+  tttelib TTTELocoLibrary;
 
   int DetermineCarPosition(void);
   void SniffMyTrain(void);
@@ -134,6 +135,7 @@ class tttelocomotive isclass Locomotive
   void SetLampEffects(MeshObject headlightMeshObject,bool headlighton, bool highbeam_state);
   thread void CheckScriptAssetObsolete();
   thread void CheckDLSAdditionalFaces();
+  Soup GetTTTELocomotiveSettings();
 
   thread void EyeScriptCheckThread(void);
   thread void JoystickThread(void);
@@ -219,8 +221,6 @@ class tttelocomotive isclass Locomotive
   Vehicle LastCoupleInteraction;
 
   //Eyescript Variables
-
-
   define bool eye_IsControllerSupportEnabled = true; //Is a controller currently bound and set to control the script?
 
 	//These variables keep track of the rotation of the eyes, and will be dynamically updated incrementally. Rotations are defined relative to 0, with 0 being the absolute center of each axis.
@@ -335,14 +335,13 @@ class tttelocomotive isclass Locomotive
     //CheckDLSAdditionalContent();
 
     //TrainzScript.Log("searching for ttte settings lib");
-    // tttelib TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
-
-    //if(TTTELocoLibrary)
-    //{
-      //TrainzScript.Log("Found TTTE settings library!");
+    TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
+    if(TTTELocoLibrary)
+    {
+      TrainzScript.Log("Found TTTE settings library!");
       //GlobalTTTESettings = TTTELocoLibrary.GetSettings();
       //TrainzScript.Log("settings library is " + GlobalTTTESettings.AsString());
-    //}
+    }
 
     // ****************************************************************************/
    // Grab assets from the Locomotive
@@ -529,6 +528,18 @@ class tttelocomotive isclass Locomotive
 
     HeadlightMonitor();
 
+  }
+
+  // ============================================================================
+  // Name: GetTTTELocomotiveSettings()
+  // Desc: Retrieves the settings Soup from the TTTELocomotive Settings asset.
+  // ============================================================================
+  Soup GetTTTELocomotiveSettings()
+  {
+    if(TTTELocoLibrary)
+      return TTTELocoLibrary.GetSettings();
+
+    return Constructors.NewSoup();
   }
 
   int[] GetKuidData(KUID FoundKUID)
@@ -2501,7 +2512,11 @@ define float Joystick_Range = 44.0;
       output.Print("</tr>");
     }
 
-    if(InstalledDLSFaces)
+    Soup TTTESettings = GetTTTELocomotiveSettings();
+    bool UseDLSContent = TTTESettings.GetNamedSoup("dls-content/").GetNamedTagAsBool("value", false);
+    //TrainzScript.Log("use DLS " + (string)UseDLSContent + " from soup " + TTTESettings.GetNamedSoup("dls-content/").AsString());
+    
+    if(UseDLSContent and InstalledDLSFaces)
     {
       for(i = 0; i < InstalledDLSFaces.size(); i++)
       {
@@ -2534,7 +2549,7 @@ define float Joystick_Range = 44.0;
     }
     output.Print("</table>");
 
-    if(DLSFaces)
+    if(UseDLSContent and DLSFaces and DLSFaces.size())
     {
       output.Print("<br>");
       output.Print("Download custom faces:");
@@ -2553,7 +2568,7 @@ define float Joystick_Range = 44.0;
           output.Print("<tr bgcolor=#05171E>");
 
         output.Print("<td>");
-        output.Print("<a href='live://dlc_download/" + i + "'>");//GetHTMLString()
+        output.Print("<a href='live://dlc_download/" + i + "' tooltip='" + DLSFace.GetLocalisedDescription() + "'>");//GetHTMLString()
         //output.Print("<a href='trainz://install/" + DLSFace.GetKUID().GetHTMLString() + "'>");
         output.Print(faceName);
         output.Print("</a>");
