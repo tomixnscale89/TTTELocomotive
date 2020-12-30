@@ -2513,9 +2513,9 @@ define float Joystick_Range = 44.0;
     }
 
     Soup TTTESettings = GetTTTELocomotiveSettings();
-    bool UseDLSContent = TTTESettings.GetNamedSoup("dls-content/").GetNamedTagAsBool("value", false);
+    bool UseDLSContent = TTTESettings.GetNamedSoup("dls-content/").GetNamedTagAsBool("value", false) and !World.IsAssetRestrictionInEffect();
     //TrainzScript.Log("use DLS " + (string)UseDLSContent + " from soup " + TTTESettings.GetNamedSoup("dls-content/").AsString());
-    
+
     if(UseDLSContent and InstalledDLSFaces)
     {
       for(i = 0; i < InstalledDLSFaces.size(); i++)
