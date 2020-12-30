@@ -133,7 +133,7 @@ class tttelocomotive isclass Locomotive
   bool SoupHasTag(Soup testSoup, string tagName);
   void SetLampEffects(MeshObject headlightMeshObject,bool headlighton, bool highbeam_state);
   thread void CheckScriptAssetObsolete();
-  thread void CheckDLSAdditionalContent();
+  thread void CheckDLSAdditionalFaces();
 
   thread void EyeScriptCheckThread(void);
   thread void JoystickThread(void);
@@ -332,7 +332,7 @@ class tttelocomotive isclass Locomotive
     ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
 
     CheckScriptAssetObsolete();
-    CheckDLSAdditionalContent();
+    //CheckDLSAdditionalContent();
 
     //TrainzScript.Log("searching for ttte settings lib");
     // tttelib TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
@@ -602,42 +602,47 @@ class tttelocomotive isclass Locomotive
   }
 
   // ============================================================================
-  // Name: CheckDLSAdditionalContent()
+  // Name: CheckDLSAdditionalFaces()
   // Desc: Checks for custom community liveries or skins available on the Download Station.
   // ============================================================================
-  thread void CheckDLSAdditionalContent()
+  thread void CheckDLSAdditionalFaces()
   {
     TrainzScript.Log("Checking for content...");
     string NameCategory = ExtensionsContainer.GetNamedTag("name-category");
 
-    int[] types = new int[3];
-    string[] vals = new string[3];
-    //types[0] = TrainzAssetSearch.FILTER_LOCATION;  vals[0] = "dls";
-    types[0] = TrainzAssetSearch.FILTER_OBSOLETE;  vals[0] = "false";
-    types[1] = TrainzAssetSearch.FILTER_VALID;     vals[1] = "true";
+    int[] types = new int[4];
+    string[] vals = new string[4];
+    types[0] = TrainzAssetSearch.FILTER_LOCATION;  vals[0] = "dls";
+    types[1] = TrainzAssetSearch.FILTER_OBSOLETE;  vals[1] = "false";
+    types[2] = TrainzAssetSearch.FILTER_VALID;     vals[2] = "true";
     //types[2] = TrainzAssetSearch.FILTER_KUID;     vals[2] = "<kuid2:217537:94:2>";
     //types[2] = TrainzAssetSearch.FILTER_KEYWORD;  vals[2] = "TTTE";
-    types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "#TTTEFACE";
+    types[3] = TrainzAssetSearch.FILTER_CATEGORY;  vals[3] = "#TTTEFACE";
+    //types[3] = TrainzAssetSearch.FILTER_CATEGORY;  vals[3] = "CMP;MESH";
 
     //types[0] = TrainzAssetSearch.FILTER_IN_ASSET_GROUP;  vals[0] = FaceCategory.GetHTMLString();
 
     AsyncTrainzAssetSearchObject search = TrainzAssetSearch.NewAsyncSearchObject();
     TrainzAssetSearch.AsyncSearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true, search);
     search.SynchronouslyWaitForResults();
-    Asset[] results = search.GetResults();
-    TrainzScript.Log("found " + (string)results.size() + " results");
+    Asset[] DLSAssets = search.GetResults();
 
+
+    vals[0] = "local";
+    search = TrainzAssetSearch.NewAsyncSearchObject();
+    TrainzAssetSearch.AsyncSearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true, search);
+    search.SynchronouslyWaitForResults();
+    Asset[] LocalAssets = search.GetResults();
+
+    //TrainzScript.Log("found " + (string)results.size() + " results");
+    TrainzScript.Log(LocalAssets.size() + " local, " + DLSAssets.size() + " DLS");
     DLSFaces = new Asset[0];
     InstalledDLSFaces = new Asset[0];
 
     int i;
-    for(i = 0; i < results.size(); i++)
+    for(i = 0; i < LocalAssets.size(); i++)
     {
-      Asset FoundAsset = results[i];
-      KUID FoundKUID = FoundAsset.GetKUID();
-      int[] FoundKuidData = GetKuidData(FoundKUID);
-
-      //GetDependencyList(void) contains?
+      Asset FoundAsset = LocalAssets[i];
       string category = FoundAsset.GetCategoryClass();
       string[] categories = Str.Tokens(category, ";");
 
@@ -645,26 +650,55 @@ class tttelocomotive isclass Locomotive
         (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)) //name-category
         )
       {
-        TrainzScript.Log("Found face asset " + FoundAsset.GetLocalisedName() + " " + FoundKUID.GetHTMLString());
-        //add the face
-        if(FoundAsset.IsLocal())
-        {
-          AsyncQueryHelper query = FoundAsset.CacheConfigSoup();
-          query.SynchronouslyWaitForResults();
-          InstalledDLSFaces[InstalledDLSFaces.size()] = FoundAsset;
-        }
-        else
-          DLSFaces[DLSFaces.size()] = FoundAsset;
+        AsyncQueryHelper query = FoundAsset.CacheConfigSoup();
+        query.SynchronouslyWaitForResults();
+        InstalledDLSFaces[InstalledDLSFaces.size()] = FoundAsset;
       }
-      //if(TrainUtil.AlreadyThereStr(categories,"four"))
-
-
-
-      //FaceCategory
-      //TrainzScript.Log("found DLS content " + FoundAsset.GetLocalisedName() + " " + FoundKUID.GetHTMLString());
-      //TrainzScript.Log("installed: " + (string)FoundAsset.IsLocal() + " category: " + (string)FoundAsset.GetCategoryClass());
-
+      if(i % 100 == 0) Sleep(0.01); //prevent timeout
     }
+
+    for(i = 0; i < DLSAssets.size(); i++)
+    {
+      Asset FoundAsset = DLSAssets[i];
+      string category = FoundAsset.GetCategoryClass();
+      string[] categories = Str.Tokens(category, ";");
+
+      if(categories.size() == 3 or //CMP;MESH;#TTTEFACE
+        (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)) //name-category
+        )
+      {
+        DLSFaces[DLSFaces.size()] = FoundAsset;
+      }
+      if(i % 100 == 0) Sleep(0.01); //prevent timeout
+    }
+
+
+    //for(i = 0; i < results.size(); i++)
+    //{
+      //Asset FoundAsset = results[i];
+      //KUID FoundKUID = FoundAsset.GetKUID();
+
+      //GetDependencyList(void) contains?
+      //string category = FoundAsset.GetCategoryClass();
+      //string[] categories = Str.Tokens(category, ";");
+
+      //if(categories.size() == 3 or //CMP;MESH;#TTTEFACE
+        //(NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)) //name-category
+        //)
+      //{
+        //TrainzScript.Log("Found face asset " + FoundAsset.GetLocalisedName() + " " + FoundKUID.GetHTMLString() + " installed: " + (string)FoundAsset.IsLocal());
+        //add the face
+        //if(FoundAsset.IsLocal())
+        //{
+          //AsyncQueryHelper query = FoundAsset.CacheConfigSoup();
+          //query.SynchronouslyWaitForResults();
+          //InstalledDLSFaces[InstalledDLSFaces.size()] = FoundAsset;
+        //}
+        //else
+          //DLSFaces[DLSFaces.size()] = FoundAsset;
+      //}
+      //if(i % 100 == 0) Sleep(0.01); //prevent timeout
+    //}
 
     if(browser) RefreshBrowser();
   }
@@ -2493,12 +2527,42 @@ define float Joystick_Range = 44.0;
         if(i != DLSfaceSelection)
           output.Print("</a>");
 
-        
+
         output.Print("</td>");
         output.Print("</tr>");
       }
     }
     output.Print("</table>");
+
+    if(DLSFaces)
+    {
+      output.Print("<br>");
+      output.Print("Download custom faces:");
+      output.Print("<br>");
+      rowParity = false;
+      output.Print("<table>");
+      for(i = 0; i < DLSFaces.size(); i++)
+      {
+        rowParity = !rowParity;
+        Asset DLSFace = DLSFaces[i];
+        string faceName = DLSFace.GetLocalisedName();
+
+        if (rowParity)
+          output.Print("<tr bgcolor=#0E2A35>"); // height='100'
+        else
+          output.Print("<tr bgcolor=#05171E>");
+
+        output.Print("<td>");
+        output.Print("<a href='live://dlc_download/" + i + "'>");//GetHTMLString()
+        //output.Print("<a href='trainz://install/" + DLSFace.GetKUID().GetHTMLString() + "'>");
+        output.Print(faceName);
+        output.Print("</a>");
+
+        output.Print("</td>");
+        output.Print("</tr>");
+      }
+      output.Print("</table>");
+    }
 
     output.Print("</body></html>");
     return output.AsString();
@@ -2767,6 +2831,8 @@ define float Joystick_Range = 44.0;
       {
           CurrentMenu = BROWSER_FACEMENU;
           RefreshBrowser();
+
+          CheckDLSAdditionalFaces();
       }
       msg.src = null;
       continue;
@@ -3037,11 +3103,22 @@ define float Joystick_Range = 44.0;
         {
           string command = Str.Tokens(msg.minor, "live://face_set_dls/")[0];
           if(command)
-          { //Str.UnpackInt(command)
+          {
              faceSelection = -1;
              DLSfaceSelection = Str.UnpackInt(command);
              ConfigureFaces();
              RefreshBrowser();
+          }
+        }
+        else if(TrainUtil.HasPrefix(msg.minor, "live://dlc_download/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://dlc_download/")[0];
+          if(command)
+          {
+            Asset DLSFace = DLSFaces[Str.UnpackInt(command)];
+            TrainzScript.OpenURL("trainz://install/" + DLSFace.GetKUID().GetHTMLString());
+            CurrentMenu = BROWSER_MAINMENU;
+            RefreshBrowser();
           }
         }
       }
