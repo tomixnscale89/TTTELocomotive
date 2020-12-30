@@ -133,6 +133,7 @@ class tttelocomotive isclass Locomotive
   bool SoupHasTag(Soup testSoup, string tagName);
   void SetLampEffects(MeshObject headlightMeshObject,bool headlighton, bool highbeam_state);
   thread void CheckScriptAssetObsolete();
+  thread void CheckDLSAdditionalContent();
 
   thread void EyeScriptCheckThread(void);
   thread void JoystickThread(void);
@@ -188,6 +189,7 @@ class tttelocomotive isclass Locomotive
 
   // Faces Options
   int faceSelection;
+  int DLSfaceSelection;
 
   Soup myConfig;
   Soup ExtensionsContainer;
@@ -200,6 +202,11 @@ class tttelocomotive isclass Locomotive
   Soup ExtraLampsContainer;
   bool[] ExtraLampVisibility;
   Asset[] ExtraLampAssets;
+
+  Asset[] InstalledDLSFaces;
+  Asset[] DLSFaces;
+  Asset[] InstalledDLSLiveries;
+  Asset[] DLSLiveries;
 
   Soup SmokeEdits;
   int BoundWheesh = -1;
@@ -321,7 +328,11 @@ class tttelocomotive isclass Locomotive
     inherited();
 
     ScriptAsset = World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive")).GetAsset();
+    myConfig = me.GetAsset().GetConfigSoup();
+    ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
+
     CheckScriptAssetObsolete();
+    CheckDLSAdditionalContent();
 
     //TrainzScript.Log("searching for ttte settings lib");
     // tttelib TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
@@ -341,9 +352,8 @@ class tttelocomotive isclass Locomotive
   myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
 
   faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
+  DLSfaceSelection = -1;
 
-  myConfig = me.GetAsset().GetConfigSoup();
-  ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
   BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
   if(BuffersContainer.CountTags() > 0)
   {
@@ -589,6 +599,74 @@ class tttelocomotive isclass Locomotive
 
     if(browser) RefreshBrowser();
     //Asset[] assets = TrainzAssetSearch.SearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true);
+  }
+
+  // ============================================================================
+  // Name: CheckDLSAdditionalContent()
+  // Desc: Checks for custom community liveries or skins available on the Download Station.
+  // ============================================================================
+  thread void CheckDLSAdditionalContent()
+  {
+    TrainzScript.Log("Checking for content...");
+    string NameCategory = ExtensionsContainer.GetNamedTag("name-category");
+
+    int[] types = new int[3];
+    string[] vals = new string[3];
+    //types[0] = TrainzAssetSearch.FILTER_LOCATION;  vals[0] = "dls";
+    types[0] = TrainzAssetSearch.FILTER_OBSOLETE;  vals[0] = "false";
+    types[1] = TrainzAssetSearch.FILTER_VALID;     vals[1] = "true";
+    //types[2] = TrainzAssetSearch.FILTER_KUID;     vals[2] = "<kuid2:217537:94:2>";
+    //types[2] = TrainzAssetSearch.FILTER_KEYWORD;  vals[2] = "TTTE";
+    types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "#TTTEFACE";
+
+    //types[0] = TrainzAssetSearch.FILTER_IN_ASSET_GROUP;  vals[0] = FaceCategory.GetHTMLString();
+
+    AsyncTrainzAssetSearchObject search = TrainzAssetSearch.NewAsyncSearchObject();
+    TrainzAssetSearch.AsyncSearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true, search);
+    search.SynchronouslyWaitForResults();
+    Asset[] results = search.GetResults();
+    TrainzScript.Log("found " + (string)results.size() + " results");
+
+    DLSFaces = new Asset[0];
+    InstalledDLSFaces = new Asset[0];
+
+    int i;
+    for(i = 0; i < results.size(); i++)
+    {
+      Asset FoundAsset = results[i];
+      KUID FoundKUID = FoundAsset.GetKUID();
+      int[] FoundKuidData = GetKuidData(FoundKUID);
+
+      //GetDependencyList(void) contains?
+      string category = FoundAsset.GetCategoryClass();
+      string[] categories = Str.Tokens(category, ";");
+
+      if(categories.size() == 3 or //CMP;MESH;#TTTEFACE
+        (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)) //name-category
+        )
+      {
+        TrainzScript.Log("Found face asset " + FoundAsset.GetLocalisedName() + " " + FoundKUID.GetHTMLString());
+        //add the face
+        if(FoundAsset.IsLocal())
+        {
+          AsyncQueryHelper query = FoundAsset.CacheConfigSoup();
+          query.SynchronouslyWaitForResults();
+          InstalledDLSFaces[InstalledDLSFaces.size()] = FoundAsset;
+        }
+        else
+          DLSFaces[DLSFaces.size()] = FoundAsset;
+      }
+      //if(TrainUtil.AlreadyThereStr(categories,"four"))
+
+
+
+      //FaceCategory
+      //TrainzScript.Log("found DLS content " + FoundAsset.GetLocalisedName() + " " + FoundKUID.GetHTMLString());
+      //TrainzScript.Log("installed: " + (string)FoundAsset.IsLocal() + " category: " + (string)FoundAsset.GetCategoryClass());
+
+    }
+
+    if(browser) RefreshBrowser();
   }
 
   // ============================================================================
@@ -1073,7 +1151,7 @@ class tttelocomotive isclass Locomotive
   // ============================================================================
   // Name: ConfigureFaces()
   // Parm:  None
-  // Desc: Configures the locomotive face. Uses a switch with faceSelection to determmine the correct face to display.
+  // Desc: Configures the locomotive face. Uses a switch with faceSelection to determine the correct face to display.
   // ============================================================================
   void ConfigureFaces()
   {
@@ -1085,13 +1163,29 @@ class tttelocomotive isclass Locomotive
         SetMeshVisible(FacesContainer.GetIndexedTagName(i), false, 0.0);
     }
 
-    //set our active face to be visible
-    SetMeshVisible(FacesContainer.GetIndexedTagName(faceSelection), true, 0.0);
+    //DLS faces
+    SetFXAttachment("face", null);
 
-    string activeFaceMesh = FacesContainer.GetIndexedTagName(faceSelection);
+    bool showEyes = true;
+    //set our active face to be visible
+    if(faceSelection > -1)
+    {
+      SetMeshVisible(FacesContainer.GetIndexedTagName(faceSelection), true, 0.0);
+      string activeFaceMesh = FacesContainer.GetIndexedTagName(faceSelection);
+
+      showEyes = (SmokeboxContainer.GetIndexForNamedTag(activeFaceMesh) == -1);
+    }
+    else if(DLSfaceSelection > -1)
+    {
+      Asset FaceAsset = InstalledDLSFaces[DLSfaceSelection];
+      SetFXAttachment("face", FaceAsset);
+      Soup FaceExtensions = FaceAsset.GetConfigSoup().GetNamedSoup("extensions");
+      string type = FaceExtensions.GetNamedTag("type");
+      showEyes = (type != "smokebox");
+    }
 
     //determine if this is a smokebox mesh
-    if(SmokeboxContainer.GetIndexForNamedTag(activeFaceMesh) == -1)
+    if(showEyes)
     {
       SetMeshVisible("eye_l", true, 0.0);
       SetMeshVisible("eye_r", true, 0.0);
@@ -1101,7 +1195,6 @@ class tttelocomotive isclass Locomotive
       SetMeshVisible("eye_l", false, 0.0);
       SetMeshVisible("eye_r", false, 0.0);
     }
-
   }
 
 
@@ -1402,6 +1495,7 @@ class tttelocomotive isclass Locomotive
       inherited(soup);
 
       faceSelection = soup.GetNamedTagAsInt("faces", faceSelection);
+      DLSfaceSelection = -1;
       ConfigureFaces();
 
       skinSelection = soup.GetNamedTagAsInt("skin", skinSelection);
@@ -1633,6 +1727,7 @@ class tttelocomotive isclass Locomotive
       if (p_index > -1 and p_index < FacesContainer.CountTags())
       {
         faceSelection = p_index;
+        DLSfaceSelection = -1;
         ConfigureFaces();
       }
     }
@@ -1846,6 +1941,7 @@ class tttelocomotive isclass Locomotive
 			if(faceSelection != RfaceSelection)
 			{
 				faceSelection = RfaceSelection;
+        DLSfaceSelection = -1;
         ConfigureFaces();
 			}
 
@@ -2370,7 +2466,40 @@ define float Joystick_Range = 44.0;
       output.Print("</td>");
       output.Print("</tr>");
     }
+
+    if(InstalledDLSFaces)
+    {
+      for(i = 0; i < InstalledDLSFaces.size(); i++)
+      {
+        rowParity = !rowParity;
+        Asset DLSFace = InstalledDLSFaces[i];
+        StringTable FaceStrTable = DLSFace.GetStringTable();
+        //Soup FaceExtensions = DLSFace.GetConfigSoup().GetNamedSoup("extensions");
+        string faceName = FaceStrTable.GetString("displayname");
+        if(!faceName or faceName == "")
+          faceName = DLSFace.GetLocalisedName();
+
+        if (rowParity)
+          output.Print("<tr bgcolor=#0E2A35>"); // height='100'
+        else
+          output.Print("<tr bgcolor=#05171E>");
+
+        output.Print("<td>");
+        output.Print("<trainz-object width=20 height=20 style=preview asset='" + DLSFace.GetKUID().GetHTMLString() + "'></trainz-object>");
+
+        if(i != DLSfaceSelection)
+          output.Print("<a href='live://face_set_dls/" + i + "'>");
+        output.Print(faceName);
+        if(i != DLSfaceSelection)
+          output.Print("</a>");
+
+        
+        output.Print("</td>");
+        output.Print("</tr>");
+      }
+    }
     output.Print("</table>");
+
     output.Print("</body></html>");
     return output.AsString();
   }
@@ -2899,6 +3028,18 @@ define float Joystick_Range = 44.0;
           if(command)
           {
              faceSelection = Str.UnpackInt(command);
+             DLSfaceSelection = -1;
+             ConfigureFaces();
+             RefreshBrowser();
+          }
+        }
+        else if(TrainUtil.HasPrefix(msg.minor, "live://face_set_dls/"))
+        {
+          string command = Str.Tokens(msg.minor, "live://face_set_dls/")[0];
+          if(command)
+          { //Str.UnpackInt(command)
+             faceSelection = -1;
+             DLSfaceSelection = Str.UnpackInt(command);
              ConfigureFaces();
              RefreshBrowser();
           }
