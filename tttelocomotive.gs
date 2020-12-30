@@ -2568,11 +2568,23 @@ define float Joystick_Range = 44.0;
           output.Print("<tr bgcolor=#05171E>");
 
         output.Print("<td>");
+        //output.Print(faceName);
+        //output.Print("<br>");
+
+
         output.Print("<a href='live://dlc_download/" + i + "' tooltip='" + DLSFace.GetLocalisedDescription() + "'>");//GetHTMLString()
         //output.Print("<a href='trainz://install/" + DLSFace.GetKUID().GetHTMLString() + "'>");
         output.Print(faceName);
         output.Print("</a>");
 
+        output.Print("</td>");
+
+        //output.Print("<td>");
+        //output.Print(DLSFace.GetLocalisedDescription());
+        //output.Print("</td>");
+
+        output.Print("<td align='right'>");
+        output.Print("<trainz-object width=100 height=100 style=thumbnail-downloader asset='" + DLSFace.GetKUID().GetHTMLString() + "'></trainz-object>");
         output.Print("</td>");
         output.Print("</tr>");
       }
