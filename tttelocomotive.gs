@@ -1880,8 +1880,8 @@ class tttelocomotive isclass Locomotive
 
   public void HandleXAxis(Message msg)
   {
-    Cabin Source = cast<Cabin>msg.src;
-    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    //Cabin Source = cast<Cabin>msg.src;
+    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
@@ -1891,8 +1891,8 @@ class tttelocomotive isclass Locomotive
 
   public void HandleYAxis(Message msg)
   {
-    Cabin Source = cast<Cabin>msg.src;
-    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    //Cabin Source = cast<Cabin>msg.src;
+    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
@@ -1903,8 +1903,8 @@ class tttelocomotive isclass Locomotive
   //Face handling
   public void HandleKeyFLeft(Message msg)
   {
-    Cabin Source = cast<Cabin>msg.src;
-    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    //Cabin Source = cast<Cabin>msg.src;
+    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       if (faceSelection > 0)
       {
@@ -1916,8 +1916,8 @@ class tttelocomotive isclass Locomotive
 
   public void HandleKeyFRight(Message msg)
   {
-    Cabin Source = cast<Cabin>msg.src;
-    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    //Cabin Source = cast<Cabin>msg.src;
+    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       if (faceSelection < FacesContainer.CountTags() - 1)
       {
@@ -1929,8 +1929,8 @@ class tttelocomotive isclass Locomotive
 
   public void HandleWheesh(Message msg)
   {
-    Cabin Source = cast<Cabin>msg.src;
-    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    //Cabin Source = cast<Cabin>msg.src;
+    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       float Intensity = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 100;
@@ -2344,7 +2344,7 @@ define float Joystick_Range = 44.0;
       output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=300 height=20></a>");
       output.Print("</tr></td>");
     }
-    
+
     output.Print("</table>");
   	output.Print("</body></html>");
 
