@@ -290,6 +290,18 @@ class tttelocomotive isclass Locomotive
   define int HEADCODE_THROUGH_FREIGHT = HEADCODE_TC | HEADCODE_BC;
   define int HEADCODE_TVS = HEADCODE_BR;
 
+  //Supported features
+  int SupportedFeatureset = 0;
+  int SupportedHeadcode = 0;
+
+  define int FEATURE_EYES = 1;
+  define int FEATURE_LAMPS = 1 << 1;
+  define int FEATURE_LIVERIES = 1 << 2;
+  define int FEATURE_FACES = 1 << 3;
+  define int FEATURE_SMOKE = 1 << 4;
+  define int FEATURE_BUFFERS = 1 << 5;
+
+
   // Options for headcode lights;
   //define int HEADCODE_NONE = 0;
   //define int HEADCODE_ALL_LAMPS = 1;
@@ -317,6 +329,33 @@ class tttelocomotive isclass Locomotive
   int m_carPosition; // position of car in train - one of the options above
 
   Train train;
+
+
+  //bitwise utilities
+  bool FlagTest(int flags, int mask)
+  {
+    return flags == mask;
+  }
+
+  void SetFeatureSupported(int feature)
+  {
+    SupportedFeatureset = SupportedFeatureset | feature;
+  }
+
+  void SetHeadcodeSupported(int flag)
+  {
+    SupportedHeadcode = SupportedHeadcode | flag;
+  }
+
+  bool GetFeatureSupported(int features)
+  {
+    return (SupportedFeatureset & features) == features;
+  }
+
+  bool GetHeadcodeSupported(int flags)
+  {
+    return (SupportedHeadcode & flags) == flags;
+  }
 
   // ============================================================================
   // Name: Init()
@@ -356,6 +395,7 @@ class tttelocomotive isclass Locomotive
   BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
   if(BuffersContainer.CountTags() > 0)
   {
+    SetFeatureSupported(FEATURE_BUFFERS);
     BufferThread();
   }
   FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
@@ -363,6 +403,29 @@ class tttelocomotive isclass Locomotive
   ExtraLampsContainer = ExtensionsContainer.GetNamedSoup("extra-lamps");
   LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
   BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
+
+  if(FacesContainer.CountTags()) SetFeatureSupported(FEATURE_FACES);
+  if(LiveryTextureOptions.CountTags() or BogeyLiveryTextureOptions.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
+  if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
+
+  //check lamp support, a bit hacky
+  Soup MeshTable = myConfig.GetNamedSoup("mesh-table");
+  int i;
+  for(i = 0; i < MeshTable.CountTags(); i++)
+  {
+    Soup mesh = MeshTable.GetNamedSoup(MeshTable.GetIndexedTagName(i));
+    Soup effects = mesh.GetNamedSoup("effects");
+    int j;
+    for(j = 0; j < effects.CountTags(); j++)
+    {
+      string effect = effects.GetIndexedTagName(j);
+      if(effect == "lamp_tc") SetHeadcodeSupported(HEADCODE_TC);
+      else if (effect == "lamp_bl") SetHeadcodeSupported(HEADCODE_BL);
+      else if (effect == "lamp_bc") SetHeadcodeSupported(HEADCODE_BC);
+      else if (effect == "lamp_br") SetHeadcodeSupported(HEADCODE_BR);
+    }
+  }
+  if(SupportedHeadcode != 0) SetFeatureSupported(FEATURE_LAMPS);
 
   //liverytextureoptions defines the texture autofill behavior
   //SUPPORTED OPTIONS: none, diffusenormal, pbrstandard
@@ -373,7 +436,7 @@ class tttelocomotive isclass Locomotive
     int TagCount = ExtraLampsContainer.CountTags();
     ExtraLampAssets = new Asset[TagCount];
     ExtraLampVisibility = new bool[TagCount];
-    int i;
+    //int i;
     for(i = 0; i < TagCount; i++)
     {
       string effectName = ExtraLampsContainer.GetIndexedTagName(i);
@@ -399,6 +462,7 @@ class tttelocomotive isclass Locomotive
     string tagName = myConfig.GetIndexedTagName(curTag);
     if(TrainUtil.HasPrefix(tagName, "smoke"))
     {
+      SetFeatureSupported(FEATURE_SMOKE);
       Soup curSmoke = myConfig.GetNamedSoup(tagName);
 
       Soup NewContainer = Constructors.NewSoup();
@@ -410,7 +474,7 @@ class tttelocomotive isclass Locomotive
       SetNamedFloatFromExisting(curSmoke, NewContainer, "minsize");
       SetNamedFloatFromExisting(curSmoke, NewContainer, "maxsize");
 
-      TrainzScript.Log(NewContainer.AsString());
+      //TrainzScript.Log(NewContainer.AsString());
       SmokeEdits.SetNamedSoup((string)ParticleCount, NewContainer);
       ParticleCount++;
     }
@@ -1454,10 +1518,6 @@ class tttelocomotive isclass Locomotive
   // Data the user has to put in their own creations. Plus, this will never change
   // so there is no reason for the user to specify what headcodes to use.
   // ============================================================================
-  bool FlagTest(int flags, int mask)
-  {
-    return flags == mask;
-  }
 
   string HeadcodeDescription(int headcode)
   {
@@ -2237,27 +2297,40 @@ define float Joystick_Range = 44.0;
 
     output.Print("<table cellspacing=5>");
     //eye window
-    output.Print("<tr><td>");
-    output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=300 height=20></a>");
-    output.Print("</tr></td>");
-    //joystick window
-    output.Print("<tr><td>");
-    output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=300 height=20></a>");
-    output.Print("</tr></td>");
+    if(GetFeatureSupported(FEATURE_EYES))
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=300 height=20></a>");
+      output.Print("</tr></td>");
+      //joystick window
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=300 height=20></a>");
+      output.Print("</tr></td>");
+    }
+
     //lamp window
-    output.Print("<tr><td>");
-    output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=300 height=20></a>");
-    output.Print("</tr></td>");
+    if(GetFeatureSupported(FEATURE_LAMPS))
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=300 height=20></a>");
+      output.Print("</tr></td>");
+    }
 
     //livery window
-    output.Print("<tr><td>");
-    output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=300 height=20></a>");
-    output.Print("</tr></td>");
+    if(GetFeatureSupported(FEATURE_LIVERIES))
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=300 height=20></a>");
+      output.Print("</tr></td>");
+    }
 
     //face window
-    output.Print("<tr><td>");
-    output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=300 height=20></a>");
-    output.Print("</tr></td>");
+    if(GetFeatureSupported(FEATURE_FACES))
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=300 height=20></a>");
+      output.Print("</tr></td>");
+    }
 
     //loco window
     output.Print("<tr><td>");
@@ -2265,9 +2338,13 @@ define float Joystick_Range = 44.0;
     output.Print("</tr></td>");
 
     //smoke window
-    output.Print("<tr><td>");
-    output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=300 height=20></a>");
-    output.Print("</tr></td>");
+    if(GetFeatureSupported(FEATURE_SMOKE))
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=300 height=20></a>");
+      output.Print("</tr></td>");
+    }
+    
     output.Print("</table>");
   	output.Print("</body></html>");
 
@@ -2891,9 +2968,12 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://lamp_tc", msg:
       if ( browser and msg.src == browser )
       {
+        if(GetHeadcodeSupported(HEADCODE_TC))
+        {
           m_headCode = m_headCode ^ HEADCODE_TC;
           ConfigureHeadcodeLamps(m_headCode);
           RefreshBrowser();
+        }
       }
       msg.src = null;
       continue;
@@ -2901,9 +2981,12 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://lamp_bl", msg:
       if ( browser and msg.src == browser )
       {
+        if(GetHeadcodeSupported(HEADCODE_BL))
+        {
           m_headCode = m_headCode ^ HEADCODE_BL;
           ConfigureHeadcodeLamps(m_headCode);
           RefreshBrowser();
+        }
       }
       msg.src = null;
       continue;
@@ -2911,9 +2994,12 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://lamp_bc", msg:
       if ( browser and msg.src == browser )
       {
+        if(GetHeadcodeSupported(HEADCODE_BC))
+        {
           m_headCode = m_headCode ^ HEADCODE_BC;
           ConfigureHeadcodeLamps(m_headCode);
           RefreshBrowser();
+        }
       }
       msg.src = null;
       continue;
@@ -2921,9 +3007,12 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://lamp_br", msg:
       if ( browser and msg.src == browser )
       {
+        if(GetHeadcodeSupported(HEADCODE_BR))
+        {
           m_headCode = m_headCode ^ HEADCODE_BR;
           ConfigureHeadcodeLamps(m_headCode);
           RefreshBrowser();
+        }
       }
       msg.src = null;
       continue;
