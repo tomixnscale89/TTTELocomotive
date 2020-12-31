@@ -1614,7 +1614,7 @@ class tttelocomotive isclass Locomotive
       html = html + "<tr><td>";
       html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=300 height=20></a>";
       html = html + "</tr></td>";
-      
+
       //face status
       string FaceStr = "";
       if(faceSelection > -1)
@@ -1820,52 +1820,63 @@ class tttelocomotive isclass Locomotive
 
   public void HandleXAxis(Message msg)
   {
-    //Cabin Source = cast<Cabin>msg.src;
-    //if(Source and cast<Locomotive>Source.GetParentObject() == me)
-    //{
+    Cabin Source = cast<Cabin>msg.src;
+    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    {
       Soup parameters = msg.paramSoup;
       eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
       SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
-    //}
+    }
   }
 
   public void HandleYAxis(Message msg)
   {
-    //Cabin Source = cast<Cabin>msg.src;
-    //if(Source and cast<Locomotive>Source.GetParentObject() == me)
-    //{
-    Soup parameters = msg.paramSoup;
-    eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
-    SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
-    //}
+    Cabin Source = cast<Cabin>msg.src;
+    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    {
+      Soup parameters = msg.paramSoup;
+      eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
+      SetEyeMeshOrientation(eyeY, eyeZ, eyeX);
+    }
   }
 
   //Face handling
   public void HandleKeyFLeft(Message msg)
   {
-    if (faceSelection > 0)
+    Cabin Source = cast<Cabin>msg.src;
+    if(Source and cast<Locomotive>Source.GetParentObject() == me)
     {
-      faceSelection--;
+      if (faceSelection > 0)
+      {
+        faceSelection--;
+      }
+      ConfigureFaces();
     }
-    ConfigureFaces();
   }
 
   public void HandleKeyFRight(Message msg)
   {
-    if (faceSelection < FacesContainer.CountTags() - 1)
+    Cabin Source = cast<Cabin>msg.src;
+    if(Source and cast<Locomotive>Source.GetParentObject() == me)
     {
-      faceSelection++;
+      if (faceSelection < FacesContainer.CountTags() - 1)
+      {
+        faceSelection++;
+      }
+      ConfigureFaces();
     }
-    ConfigureFaces();
   }
 
-  //wheeshing, currently disabled
   public void HandleWheesh(Message msg)
   {
-    Soup parameters = msg.paramSoup;
-    float Intensity = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 100;
-    TrainzScript.Log("Wheesh intensity " + (string)Intensity);
-    SetPFXEmitterRate(BoundWheesh, 0, Intensity);
+    Cabin Source = cast<Cabin>msg.src;
+    if(Source and cast<Locomotive>Source.GetParentObject() == me)
+    {
+      Soup parameters = msg.paramSoup;
+      float Intensity = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 100;
+      TrainzScript.Log("Wheesh intensity " + (string)Intensity);
+      SetPFXEmitterRate(BoundWheesh, 0, Intensity);
+    }
   }
 
   // ============================================================================
