@@ -1614,8 +1614,21 @@ class tttelocomotive isclass Locomotive
       html = html + "<tr><td>";
       html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=300 height=20></a>";
       html = html + "</tr></td>";
+      
       //face status
-      string classFaceStr = "<a href=live://property/faces>" + FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection)) + "</a>";
+      string FaceStr = "";
+      if(faceSelection > -1)
+        FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
+      else if(DLSfaceSelection > -1)
+      {
+        Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
+        StringTable FaceStrTable = DLSFace.GetStringTable();
+        FaceStr = FaceStrTable.GetString("displayname");
+        if(!FaceStr or FaceStr == "")
+          FaceStr = DLSFace.GetLocalisedName();
+      }
+
+      string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
       html = html + "<tr><td>";
       html = html + strTable.GetString1("faces_select", classFaceStr);
       html = html + "</tr></td>";
