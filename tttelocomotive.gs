@@ -405,7 +405,7 @@ class tttelocomotive isclass Locomotive
   BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
 
   if(FacesContainer.CountTags()) SetFeatureSupported(FEATURE_FACES);
-  if(LiveryTextureOptions.CountTags() or BogeyLiveryTextureOptions.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
+  if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
   if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
 
   //check lamp support, a bit hacky
@@ -425,7 +425,7 @@ class tttelocomotive isclass Locomotive
       else if (effect == "lamp_br") SetHeadcodeSupported(HEADCODE_BR);
     }
   }
-  if(SupportedHeadcode != 0) SetFeatureSupported(FEATURE_LAMPS);
+  if(SupportedHeadcode != 0 or ExtraLampsContainer.CountTags()) SetFeatureSupported(FEATURE_LAMPS);
 
   //liverytextureoptions defines the texture autofill behavior
   //SUPPORTED OPTIONS: none, diffusenormal, pbrstandard
