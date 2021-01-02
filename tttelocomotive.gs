@@ -667,6 +667,8 @@ class tttelocomotive isclass Locomotive
     AsyncTrainzAssetSearchObject search = TrainzAssetSearch.NewAsyncSearchObject();
     TrainzAssetSearch.AsyncSearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_KUID, false, search);
     search.SynchronouslyWaitForResults();
+    int ErrorCode = search.GetSearchErrorCode();
+    if(ErrorCode > 0) TrainzScript.Log("DLS update query failed with code " + (string)ErrorCode);
     Asset[] results = search.GetResults();
 
     KUID MyKUID = ScriptAsset.GetKUID();
@@ -712,14 +714,14 @@ class tttelocomotive isclass Locomotive
     TrainzScript.Log("Checking for content...");
     string NameCategory = ExtensionsContainer.GetNamedTag("name-category");
 
-    int[] types = new int[4];
-    string[] vals = new string[4];
+    int[] types = new int[3];
+    string[] vals = new string[3];
     types[0] = TrainzAssetSearch.FILTER_LOCATION;  vals[0] = "dls";
     types[1] = TrainzAssetSearch.FILTER_OBSOLETE;  vals[1] = "false";
-    types[2] = TrainzAssetSearch.FILTER_VALID;     vals[2] = "true";
+    //types[2] = TrainzAssetSearch.FILTER_VALID;     vals[2] = "true";
     //types[2] = TrainzAssetSearch.FILTER_KUID;     vals[2] = "<kuid2:217537:94:2>";
     //types[2] = TrainzAssetSearch.FILTER_KEYWORD;  vals[2] = "TTTE";
-    types[3] = TrainzAssetSearch.FILTER_CATEGORY;  vals[3] = "#TTTEFACE";
+    types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "#TTTEFACE";
     //types[3] = TrainzAssetSearch.FILTER_CATEGORY;  vals[3] = "CMP;MESH";
 
     //types[0] = TrainzAssetSearch.FILTER_IN_ASSET_GROUP;  vals[0] = FaceCategory.GetHTMLString();
@@ -727,13 +729,18 @@ class tttelocomotive isclass Locomotive
     AsyncTrainzAssetSearchObject search = TrainzAssetSearch.NewAsyncSearchObject();
     TrainzAssetSearch.AsyncSearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true, search);
     search.SynchronouslyWaitForResults();
+    int ErrorCode = search.GetSearchErrorCode();
+    if(ErrorCode > 0) TrainzScript.Log("DLS query failed with code " + (string)ErrorCode);
     Asset[] DLSAssets = search.GetResults();
-
+    search = null;
 
     vals[0] = "local";
+
     search = TrainzAssetSearch.NewAsyncSearchObject();
     TrainzAssetSearch.AsyncSearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true, search);
     search.SynchronouslyWaitForResults();
+    ErrorCode = search.GetSearchErrorCode();
+    if(ErrorCode > 0) TrainzScript.Log("Local query failed with code " + (string)ErrorCode);
     Asset[] LocalAssets = search.GetResults();
 
     //TrainzScript.Log("found " + (string)results.size() + " results");
