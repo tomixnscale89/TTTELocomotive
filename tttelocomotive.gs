@@ -361,20 +361,20 @@ class tttelocomotive isclass Locomotive
   // Name: Init()
   // Desc: The Init function is called when the object is created
   // ============================================================================
-  public void Init() // Let's keep the init at the top for ease of access
+  public void Init(Asset asset) // Let's keep the init at the top for ease of access
   {
     // call the parent
-    inherited();
+    inherited(asset);
 
-    ScriptAsset = World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive")).GetAsset();
-    myConfig = me.GetAsset().GetConfigSoup();
-    ExtensionsContainer = me.GetAsset().GetConfigSoup().GetNamedSoup("extensions");
+    ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
+    myConfig = asset.GetConfigSoup();
+    ExtensionsContainer = asset.GetConfigSoup().GetNamedSoup("extensions");
 
     CheckScriptAssetObsolete();
     //CheckDLSAdditionalContent();
 
     //TrainzScript.Log("searching for ttte settings lib");
-    TTTELocoLibrary = cast<tttelib>World.GetLibrary(GetAsset().LookupKUIDTable("tttelocomotive"));
+    TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
     if(TTTELocoLibrary)
     {
       TrainzScript.Log("Found TTTE settings library!");
