@@ -625,11 +625,37 @@ class tttelocomotive isclass Locomotive
   }
 
   // ============================================================================
+  // Name: ValidateDLSAccess()
+  // Desc: Checks that the Download Station is accessible.
+  // ============================================================================
+  void ValidateDLSAccess()
+  {
+    int Access = TrainzScript.QueryDownloadStationAccess();
+    if(Access == TrainzScript.DLS_ACCESS_VALID)
+    {
+      TrainzScript.Log("DLS access valid.");
+      return;
+    }
+    if(Access == TrainzScript.DLS_ACCESS_QUERYING)
+    {
+      TrainzScript.Log("Unable to query Download Station. Retrying...");
+      Sleep(1.0);
+      ValidateDLSAccess();
+    }
+    else
+    {
+      TrainzScript.Log("Unable to access DLS! Error code: " + (string)Access);
+      return;
+    }
+  }
+
+  // ============================================================================
   // Name: IsScriptAssetObsolete()
   // Desc: Checks if TTTELocomotive has an update available on the Download Station.
   // ============================================================================
   thread void CheckScriptAssetObsolete()
   {
+    ValidateDLSAccess();
     TrainzScript.Log("Checking for updates...");
     //get all known versions of an asset
     int[] types = new int[2];
@@ -682,6 +708,7 @@ class tttelocomotive isclass Locomotive
   // ============================================================================
   thread void CheckDLSAdditionalFaces()
   {
+    ValidateDLSAccess();
     TrainzScript.Log("Checking for content...");
     string NameCategory = ExtensionsContainer.GetNamedTag("name-category");
 
