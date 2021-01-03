@@ -725,8 +725,8 @@ class tttelocomotive isclass Locomotive
     //types[2] = TrainzAssetSearch.FILTER_VALID;     vals[2] = "true";
     //types[2] = TrainzAssetSearch.FILTER_KUID;     vals[2] = "<kuid2:217537:94:2>";
     //types[2] = TrainzAssetSearch.FILTER_KEYWORD;  vals[2] = "TTTE";
-    types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "#TTTEFACE";
-    //types[3] = TrainzAssetSearch.FILTER_CATEGORY;  vals[3] = "CMP;MESH";
+    //types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "#TTTEFACE";
+    types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "CMP;MESH";
 
     //types[0] = TrainzAssetSearch.FILTER_IN_ASSET_GROUP;  vals[0] = FaceCategory.GetHTMLString();
 
@@ -759,15 +759,16 @@ class tttelocomotive isclass Locomotive
       string category = FoundAsset.GetCategoryClass();
       string[] categories = Str.Tokens(category, ";");
 
-      if(categories.size() == 3 or //CMP;MESH;#TTTEFACE
-        (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)) //name-category
-        )
+      if(TrainUtil.AlreadyThereStr(categories, "#TTTEFACE"))
       {
-        AsyncQueryHelper query = FoundAsset.CacheConfigSoup();
-        query.SynchronouslyWaitForResults();
-        InstalledDLSFaces[InstalledDLSFaces.size()] = FoundAsset;
+        if(categories.size() == 3 or (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)))
+        {
+          AsyncQueryHelper query = FoundAsset.CacheConfigSoup();
+          query.SynchronouslyWaitForResults();
+          InstalledDLSFaces[InstalledDLSFaces.size()] = FoundAsset;
+        }
       }
-      if(i % 100 == 0) Sleep(0.01); //prevent timeout
+      if(i % 100 == 0) Sleep(0.001); //prevent timeout
     }
 
     for(i = 0; i < DLSAssets.size(); i++)
@@ -776,13 +777,13 @@ class tttelocomotive isclass Locomotive
       string category = FoundAsset.GetCategoryClass();
       string[] categories = Str.Tokens(category, ";");
 
-      if(categories.size() == 3 or //CMP;MESH;#TTTEFACE
-        (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)) //name-category
-        )
+      if(TrainUtil.AlreadyThereStr(categories, "#TTTEFACE"))
       {
-        DLSFaces[DLSFaces.size()] = FoundAsset;
+        if(categories.size() == 3 or (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)))
+          DLSFaces[DLSFaces.size()] = FoundAsset;
       }
-      if(i % 100 == 0) Sleep(0.01); //prevent timeout
+      
+      if(i % 100 == 0) Sleep(0.001); //prevent timeout
     }
 
 
