@@ -408,6 +408,10 @@ class tttelocomotive isclass Locomotive
   if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
   if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
 
+  Soup TTTESettings = GetTTTELocomotiveSettings();
+  bool RandomizeFaces = TTTESettings.GetNamedSoup("random-faces/").GetNamedTagAsBool("value", false);
+  if(RandomizeFaces and FacesContainer.CountTags()) faceSelection = Math.Rand(0, FacesContainer.CountTags());
+
   //check lamp support, a bit hacky
   Soup MeshTable = myConfig.GetNamedSoup("mesh-table");
   int i;
