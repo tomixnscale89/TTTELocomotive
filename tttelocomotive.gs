@@ -375,12 +375,6 @@ class tttelocomotive isclass Locomotive
 
     //TrainzScript.Log("searching for ttte settings lib");
     TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
-    if(TTTELocoLibrary)
-    {
-      TrainzScript.Log("Found TTTE settings library!");
-      //GlobalTTTESettings = TTTELocoLibrary.GetSettings();
-      //TrainzScript.Log("settings library is " + GlobalTTTESettings.AsString());
-    }
 
     // ****************************************************************************/
    // Grab assets from the Locomotive
@@ -782,7 +776,7 @@ class tttelocomotive isclass Locomotive
         if(categories.size() == 3 or (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)))
           DLSFaces[DLSFaces.size()] = FoundAsset;
       }
-      
+
       if(i % 100 == 0) Sleep(0.001); //prevent timeout
     }
 
