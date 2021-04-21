@@ -143,6 +143,8 @@ class tttelocomotive isclass Locomotive
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
   void createMenuWindow();
+  void createPopupWindow();
+  void UpdateInterfacePosition(Message msg);
   thread void BrowserThread();
   thread void ScanBrowser(void);
   void RefreshBrowser();
@@ -248,18 +250,21 @@ class tttelocomotive isclass Locomotive
 
   //Browser interface
   Browser browser;
-  define int BROWSER_MAINMENU = 0;
-  define int BROWSER_EYEMENU = 1;
+  //define int BROWSER_MAINMENU     = 0;
+  Browser popup;
+  define int BROWSER_NONE         = 0;
+  define int BROWSER_EYEMENU      = 1;
   define int BROWSER_JOYSTICKMENU = 2;
-  define int BROWSER_LAMPMENU = 3;
-  define int BROWSER_LIVERYMENU = 4;
-  define int BROWSER_FACEMENU = 5;
-  define int BROWSER_LOCOMENU = 6;
-  define int BROWSER_SMOKEMENU = 7;
+  define int BROWSER_LAMPMENU     = 3;
+  define int BROWSER_LIVERYMENU   = 4;
+  define int BROWSER_FACEMENU     = 5;
+  define int BROWSER_LOCOMENU     = 6;
+  define int BROWSER_SMOKEMENU    = 7;
 
-  int CurrentMenu = BROWSER_MAINMENU;
+  int CurrentMenu = BROWSER_NONE;
   bool HasFocus = false;
   bool BrowserClosed;
+  bool PopupClosed = true;
 
   //tab specific Options
   bool b_WheelslipEnabled = false;
@@ -294,12 +299,12 @@ class tttelocomotive isclass Locomotive
   int SupportedFeatureset = 0;
   int SupportedHeadcode = 0;
 
-  define int FEATURE_EYES = 1;
-  define int FEATURE_LAMPS = 1 << 1;
-  define int FEATURE_LIVERIES = 1 << 2;
-  define int FEATURE_FACES = 1 << 3;
-  define int FEATURE_SMOKE = 1 << 4;
-  define int FEATURE_BUFFERS = 1 << 5;
+  define int FEATURE_EYES         = 1;
+  define int FEATURE_LAMPS        = 1 << 1;
+  define int FEATURE_LIVERIES     = 1 << 2;
+  define int FEATURE_FACES        = 1 << 3;
+  define int FEATURE_SMOKE        = 1 << 4;
+  define int FEATURE_BUFFERS      = 1 << 5;
 
 
   // Options for headcode lights;
@@ -507,6 +512,7 @@ class tttelocomotive isclass Locomotive
   AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh"); //now analog
 
   AddHandler(me, "Interface-Event", "Left-Click", "EyeTargetChanged");
+  AddHandler(me, "Interface", "LayoutChanged", "UpdateInterfacePosition");
 
   //Multiplayer Message! Important!
   AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
@@ -712,15 +718,15 @@ class tttelocomotive isclass Locomotive
     TrainzScript.Log("Checking for content...");
     string NameCategory = ExtensionsContainer.GetNamedTag("name-category");
 
-    int[] types = new int[3];
-    string[] vals = new string[3];
+    int[] types = new int[4];
+    string[] vals = new string[4];
     types[0] = TrainzAssetSearch.FILTER_LOCATION;  vals[0] = "dls";
     types[1] = TrainzAssetSearch.FILTER_OBSOLETE;  vals[1] = "false";
     //types[2] = TrainzAssetSearch.FILTER_VALID;     vals[2] = "true";
     //types[2] = TrainzAssetSearch.FILTER_KUID;     vals[2] = "<kuid2:217537:94:2>";
-    //types[2] = TrainzAssetSearch.FILTER_KEYWORD;  vals[2] = "TTTE";
+    types[2] = TrainzAssetSearch.FILTER_KEYWORD;  vals[2] = "TTTE";
     //types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "#TTTEFACE";
-    types[2] = TrainzAssetSearch.FILTER_CATEGORY;  vals[2] = "CMP;MESH";
+    types[3] = TrainzAssetSearch.FILTER_CATEGORY;  vals[3] = "CMP;MESH";
 
     //types[0] = TrainzAssetSearch.FILTER_IN_ASSET_GROUP;  vals[0] = FaceCategory.GetHTMLString();
 
@@ -755,6 +761,7 @@ class tttelocomotive isclass Locomotive
 
       if(TrainUtil.AlreadyThereStr(categories, "#TTTEFACE"))
       {
+        TrainzScript.Log("Found locally installed face " + FoundAsset.GetLocalisedName());
         if(categories.size() == 3 or (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)))
         {
           AsyncQueryHelper query = FoundAsset.CacheConfigSoup();
@@ -771,8 +778,9 @@ class tttelocomotive isclass Locomotive
       string category = FoundAsset.GetCategoryClass();
       string[] categories = Str.Tokens(category, ";");
 
-      if(TrainUtil.AlreadyThereStr(categories, "#TTTEFACE"))
+      if(TrainUtil.AlreadyThereStr(categories, "#TTTEFACE") or TrainUtil.HasPrefix(FoundAsset.GetLocalisedName(), "Thomas Face - "))
       {
+        TrainzScript.Log("Found DLS face " + FoundAsset.GetLocalisedName());
         if(categories.size() == 3 or (NameCategory and NameCategory != "" and TrainUtil.AlreadyThereStr(categories, NameCategory)))
           DLSFaces[DLSFaces.size()] = FoundAsset;
       }
@@ -780,6 +788,7 @@ class tttelocomotive isclass Locomotive
       if(i % 100 == 0) Sleep(0.001); //prevent timeout
     }
 
+    TrainzScript.Log("Content iteration finished, " + (string)InstalledDLSFaces.size() + " local and " + (string)DLSFaces.size() + " DLS");
 
     //for(i = 0; i < results.size(); i++)
     //{
@@ -2009,9 +2018,9 @@ class tttelocomotive isclass Locomotive
         //Get rotation from Menu
         if (CurrentMenu == BROWSER_EYEMENU and !BrowserClosed and browser)
         {
-          eyeX = Str.ToFloat(browser.GetElementProperty("eyeX", "value")) * Math.PI / 180;
-          eyeY = Str.ToFloat(browser.GetElementProperty("eyeY", "value")) * Math.PI / 180;
-          eyeZ = Str.ToFloat(browser.GetElementProperty("eyeZ", "value")) * Math.PI / 180;
+          eyeX = Str.ToFloat(popup.GetElementProperty("eyeX", "value")) * Math.PI / 180;
+          eyeY = Str.ToFloat(popup.GetElementProperty("eyeY", "value")) * Math.PI / 180;
+          eyeZ = Str.ToFloat(popup.GetElementProperty("eyeZ", "value")) * Math.PI / 180;
         }
       }
       else if(eyeLockTarget != null)
@@ -2023,7 +2032,7 @@ class tttelocomotive isclass Locomotive
 
         //eyeY = finalAng.ry - (Math.PI / 4.0);
         //eyeY = lookAng.ry - (Math.PI / 4.0);
-        TrainzScript.Log("rot x " + eyeX);
+        //TrainzScript.Log("rot x " + eyeX);
       }
 
 			//final orientation apply ================================================
@@ -2178,7 +2187,7 @@ class tttelocomotive isclass Locomotive
         if(curTagName != "active" and curTagName != "expanded")
         {
           string id = (string)i + curTagName;
-          browser.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
+          popup.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
         }
       }
     }
@@ -2202,8 +2211,8 @@ class tttelocomotive isclass Locomotive
     {
       if(browser and CurrentMenu == BROWSER_LOCOMENU)
       {
-        b_ShakeIntensity = Str.UnpackFloat(browser.GetElementProperty("shakeintensity", "value"));
-        b_ShakePeriod = Str.UnpackFloat(browser.GetElementProperty("shakeperiod", "text")); //seconds to tenths
+        b_ShakeIntensity = Str.UnpackFloat(popup.GetElementProperty("shakeintensity", "value"));
+        b_ShakePeriod = Str.UnpackFloat(popup.GetElementProperty("shakeperiod", "text")); //seconds to tenths
       }
 
       //prevent divide by zero
@@ -2247,8 +2256,8 @@ define float Joystick_Range = 44.0;
   }
   thread void JoystickThread()
   {
-    int BrowserCenterX = browser.GetWindowLeft() + (browser.GetWindowWidth() / 2);
-    int BrowserCenterY = browser.GetWindowTop() + (browser.GetWindowHeight() / 2);
+    int BrowserCenterX = popup.GetWindowLeft() + (popup.GetWindowWidth() / 2);
+    int BrowserCenterY = popup.GetWindowTop() + (popup.GetWindowHeight() / 2);
     int HalfSize = Joystick_Size / 2;
     Browser Joystick = Constructors.NewBrowser();
     Joystick.SetCloseEnabled(false);
@@ -2264,18 +2273,18 @@ define float Joystick_Range = 44.0;
     while(CurrentMenu == BROWSER_JOYSTICKMENU)
     {
       Joystick.BringToFront();
-      int BrowserTop = browser.GetWindowTop();
-      int BrowserBottom = browser.GetWindowBottom();
-      int BrowserLeft = browser.GetWindowLeft();
-      int BrowserRight = browser.GetWindowRight();
+      int BrowserTop = popup.GetWindowTop();
+      int BrowserBottom = popup.GetWindowBottom();
+      int BrowserLeft = popup.GetWindowLeft();
+      int BrowserRight = popup.GetWindowRight();
       int JoystickTop = Joystick.GetWindowTop();
       int JoystickBottom = Joystick.GetWindowBottom();
       int JoystickLeft = Joystick.GetWindowLeft();
       int JoystickRight = Joystick.GetWindowRight();
 
       //update center position
-      int HalfBrowserWidth = browser.GetWindowWidth() / 2;
-      int HalfBrowserHeight = browser.GetWindowHeight() / 2;
+      int HalfBrowserWidth = popup.GetWindowWidth() / 2;
+      int HalfBrowserHeight = popup.GetWindowHeight() / 2;
       BrowserCenterX = BrowserLeft + HalfBrowserWidth;
       BrowserCenterY = BrowserTop + HalfBrowserHeight;
       //get relative
@@ -2324,20 +2333,22 @@ define float Joystick_Range = 44.0;
 
     if(AssetObsolete)
     {
-      output.Print("<a href='live://update'>Out of date! Click here to update.</a>");
-      output.Print("<br>");
+      //output.Print("<a href='live://update'>Out of date! Click here to update.</a>");
+      //output.Print("<br>");
     }
 
-    output.Print("<table cellspacing=5>");
+    output.Print("<table cellspacing=2>");
+
+    int icon_scale = 32;
     //eye window
     if(GetFeatureSupported(FEATURE_EYES))
     {
       output.Print("<tr><td>");
-      output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=300 height=20></a>");
+      output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
       //joystick window
       output.Print("<tr><td>");
-      output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=300 height=20></a>");
+      output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
     }
 
@@ -2345,7 +2356,7 @@ define float Joystick_Range = 44.0;
     if(GetFeatureSupported(FEATURE_LAMPS))
     {
       output.Print("<tr><td>");
-      output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=300 height=20></a>");
+      output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
     }
 
@@ -2353,7 +2364,7 @@ define float Joystick_Range = 44.0;
     if(GetFeatureSupported(FEATURE_LIVERIES))
     {
       output.Print("<tr><td>");
-      output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=300 height=20></a>");
+      output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
     }
 
@@ -2361,20 +2372,20 @@ define float Joystick_Range = 44.0;
     if(GetFeatureSupported(FEATURE_FACES))
     {
       output.Print("<tr><td>");
-      output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=300 height=20></a>");
+      output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
     }
 
     //loco window
     output.Print("<tr><td>");
-    output.Print("<a href='live://open_loco'><img kuid='<kuid:414976:103611>' width=300 height=20></a>");
+    output.Print("<a href='live://open_loco'><img kuid='<kuid:414976:103611>' width=" + icon_scale + " height=" + icon_scale + "></a>");
     output.Print("</tr></td>");
 
     //smoke window
     if(GetFeatureSupported(FEATURE_SMOKE))
     {
       output.Print("<tr><td>");
-      output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=300 height=20></a>");
+      output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
     }
 
@@ -2391,9 +2402,9 @@ define float Joystick_Range = 44.0;
   	output.Print("<html><body>");
   	output.Print("<table>");
 
-    output.Print("<tr><td>");
-    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("</tr></td>");
+    //output.Print("<tr><td>");
+    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    //output.Print("</tr></td>");
 
     //Options
     output.Print("<tr><td>");
@@ -2453,7 +2464,7 @@ define float Joystick_Range = 44.0;
   {
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
 
   	output.Print("</body></html>");
 
@@ -2464,7 +2475,7 @@ define float Joystick_Range = 44.0;
   {
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
     output.Print("<table>");
       output.Print("<tr>");
@@ -2582,7 +2593,7 @@ define float Joystick_Range = 44.0;
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
     output.Print(strTable.GetString("skin_description"));
     output.Print("<br>");
@@ -2618,7 +2629,7 @@ define float Joystick_Range = 44.0;
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
-    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
     output.Print(strTable.GetString("faces_description"));
     output.Print("<br>");
@@ -2735,9 +2746,9 @@ define float Joystick_Range = 44.0;
   	output.Print("<html><body>");
   	output.Print("<table>");
 
-    output.Print("<tr><td>");
-    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("</tr></td>");
+    //output.Print("<tr><td>");
+    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    //output.Print("</tr></td>");
 
     output.Print("<tr><td>");
     output.Print(HTMLWindow.CheckBox("live://property/loco-wheelslip", b_WheelslipEnabled));
@@ -2776,9 +2787,9 @@ define float Joystick_Range = 44.0;
     output.Print("<html><body>");
     output.Print("<table>");
 
-    output.Print("<tr><td>");
-    output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("</tr></td>");
+    //output.Print("<tr><td>");
+    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    //output.Print("</tr></td>");
 
     //Generate smoke containers
     int i;
@@ -2841,18 +2852,59 @@ define float Joystick_Range = 44.0;
   // Name: createMenuWindow()
   // Desc: Creates the browser.
   // ============================================================================
-
+public define int BROWSER_WIDTH = 40;
+public define int BROWSER_HEIGHT = 400;
   void createMenuWindow()
   {
     browser = null;
     if ( !browser )	browser = Constructors.NewBrowser();
-    browser.SetCloseEnabled(true);
-  	browser.SetWindowPosition(Interface.GetDisplayWidth()-450, Interface.GetDisplayHeight() - 625);
-  	browser.SetWindowSize(300, 350);
+    browser.SetCloseEnabled(false);
+  	//browser.SetWindowPosition(Interface.GetDisplayWidth()-450, Interface.GetDisplayHeight() - 625);
+  	browser.SetWindowSize(BROWSER_WIDTH, BROWSER_HEIGHT);
+    browser.SetWindowStyle(Browser.STYLE_NO_FRAME);
+    browser.SetMovableByDraggingBackground(false);
   	browser.SetWindowVisible(true);
   	browser.LoadHTMLString(GetAsset(), GetMenuHTML());
     BrowserClosed = false;
+
+    if(!PopupClosed)
+      createPopupWindow();
+
+    UpdateInterfacePosition(null);
   }
+
+public define int POPUP_WIDTH = 300;
+public define int POPUP_HEIGHT = 300;
+  void createPopupWindow()
+  {
+    popup = null;
+    popup = Constructors.NewBrowser();
+    popup.SetCloseEnabled(false);
+    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2));
+    popup.SetWindowSize(POPUP_WIDTH, POPUP_HEIGHT);
+    popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
+    popup.SetMovableByDraggingBackground(true);
+    popup.SetWindowVisible(true);
+    //popup.LoadHTMLString(GetAsset(), GetMenuHTML());
+  }
+
+  void closePopup()
+  {
+    CurrentMenu = BROWSER_NONE;
+    RefreshBrowser();
+  }
+
+  // ============================================================================
+  // Name: UpdateInterfacePosition()
+  // Desc: Updates the position of all UI elements
+  // ============================================================================
+
+  void UpdateInterfacePosition(Message msg)
+  {
+    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH, (Interface.GetDisplayHeight() / 2) - (BROWSER_HEIGHT / 2));
+
+  }
+
 
   // ============================================================================
   // Name: RefreshBrowser()
@@ -2863,36 +2915,38 @@ define float Joystick_Range = 44.0;
   {
     switch(CurrentMenu)
     {
-      case BROWSER_MAINMENU:
-        browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+      case BROWSER_NONE:
+        PopupClosed = true;
+        popup = null;
         break;
       case BROWSER_EYEMENU:
-        browser.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
+        popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
         break;
       case BROWSER_JOYSTICKMENU:
-        browser.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
+        popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
         JoystickThread();
         break;
       case BROWSER_LAMPMENU:
-        browser.LoadHTMLString(GetAsset(), GetLampWindowHTML());
+        popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
         break;
       case BROWSER_LIVERYMENU:
-        browser.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
+        popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
         break;
       case BROWSER_FACEMENU:
-        browser.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
+        popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
         break;
       case BROWSER_LOCOMENU:
-        browser.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
-        browser.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
-        browser.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
+        popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
+        popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
+        popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
         break;
       case BROWSER_SMOKEMENU:
-        browser.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
+        popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
         RefreshSmokeTags();
         break;
       default:
-        browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+        PopupClosed = true;
+        popup = null;
     }
   }
 
@@ -2907,8 +2961,9 @@ define float Joystick_Range = 44.0;
     {
       if (!HasFocus)
       {
-        CurrentMenu = BROWSER_MAINMENU;
+        CurrentMenu = BROWSER_NONE;
         browser = null;
+        popup = null;
         BrowserClosed = true;
       }
       if (HasFocus and BrowserClosed)
@@ -2949,8 +3004,14 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://open_eye", msg:
       if ( browser and msg.src == browser )
       {
-          CurrentMenu = BROWSER_EYEMENU;
-          RefreshBrowser();
+          if(CurrentMenu != BROWSER_EYEMENU)
+          {
+            CurrentMenu = BROWSER_EYEMENU;
+            createPopupWindow();
+            RefreshBrowser();
+          }
+          else
+            closePopup();
       }
       msg.src = null;
       continue;
@@ -2959,9 +3020,15 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://open_joystick", msg:
       if ( browser and msg.src == browser )
       {
+        if(CurrentMenu != BROWSER_JOYSTICKMENU)
+        {
           CurrentMenu = BROWSER_JOYSTICKMENU;
           eyeZ = 0.0; //clear any rotation beforehand
+          createPopupWindow();
           RefreshBrowser();
+        }
+        else
+          closePopup();
       }
       msg.src = null;
       continue;
@@ -2970,8 +3037,14 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://open_lamp", msg:
       if ( browser and msg.src == browser )
       {
+        if(CurrentMenu != BROWSER_LAMPMENU)
+        {
           CurrentMenu = BROWSER_LAMPMENU;
+          createPopupWindow();
           RefreshBrowser();
+        }
+        else
+          closePopup();
       }
       msg.src = null;
       continue;
@@ -2980,8 +3053,14 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://open_livery", msg:
       if ( browser and msg.src == browser )
       {
+        if(CurrentMenu != BROWSER_LIVERYMENU)
+        {
           CurrentMenu = BROWSER_LIVERYMENU;
+          createPopupWindow();
           RefreshBrowser();
+        }
+        else
+          closePopup();
       }
       msg.src = null;
       continue;
@@ -2990,16 +3069,22 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://open_face", msg:
       if ( browser and msg.src == browser )
       {
+        if(CurrentMenu != BROWSER_FACEMENU)
+        {
           CurrentMenu = BROWSER_FACEMENU;
+          createPopupWindow();
           RefreshBrowser();
 
           CheckDLSAdditionalFaces();
+        }
+        else
+          closePopup();
       }
       msg.src = null;
       continue;
 
       on "Browser-URL", "live://lamp_tc", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
         if(GetHeadcodeSupported(HEADCODE_TC))
         {
@@ -3012,7 +3097,7 @@ define float Joystick_Range = 44.0;
       continue;
 
       on "Browser-URL", "live://lamp_bl", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
         if(GetHeadcodeSupported(HEADCODE_BL))
         {
@@ -3025,7 +3110,7 @@ define float Joystick_Range = 44.0;
       continue;
 
       on "Browser-URL", "live://lamp_bc", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
         if(GetHeadcodeSupported(HEADCODE_BC))
         {
@@ -3038,7 +3123,7 @@ define float Joystick_Range = 44.0;
       continue;
 
       on "Browser-URL", "live://lamp_br", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
         if(GetHeadcodeSupported(HEADCODE_BR))
         {
@@ -3054,14 +3139,20 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://open_loco", msg:
       if ( browser and msg.src == browser )
       {
+        if(CurrentMenu != BROWSER_LOCOMENU)
+        {
           CurrentMenu = BROWSER_LOCOMENU;
+          createPopupWindow();
           RefreshBrowser();
+        }
+        else
+          closePopup();
       }
       msg.src = null;
       continue;
 
       on "Browser-URL", "live://property/loco-wheelslip", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
           b_WheelslipEnabled = !b_WheelslipEnabled;
           if(b_WheelslipEnabled)
@@ -3086,7 +3177,7 @@ define float Joystick_Range = 44.0;
       continue;
 
       on "Browser-URL", "live://property/loco-shake", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
           b_ShakeEnabled = !b_ShakeEnabled;
           if(b_ShakeEnabled)
@@ -3103,7 +3194,7 @@ define float Joystick_Range = 44.0;
       continue;
 
       on "Browser-URL", "live://property/loco-couple", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
           b_CoupleLockEnabled = !b_CoupleLockEnabled;
           RefreshBrowser();
@@ -3115,34 +3206,41 @@ define float Joystick_Range = 44.0;
       on "Browser-URL", "live://open_smoke", msg:
       if ( browser and msg.src == browser )
       {
+        if(CurrentMenu != BROWSER_SMOKEMENU)
+        {
           CurrentMenu = BROWSER_SMOKEMENU;
+          createPopupWindow();
           RefreshBrowser();
+        }
+        else
+          closePopup();
       }
       msg.src = null;
       continue;
 
       //Main Window
       on "Browser-URL", "live://return", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
-          CurrentMenu = BROWSER_MAINMENU;
-          RefreshBrowser();
+          //CurrentMenu = BROWSER_NONE;
+          //RefreshBrowser();
+          closePopup();
       }
       msg.src = null;
       continue;
 
       on "Browser-URL", "live://eye-reset", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
-  		  browser.SetElementProperty("eyeX","value",(string)0.0);
-  		  browser.SetElementProperty("eyeY","value",(string)0.0);
-  		  browser.SetElementProperty("eyeZ","value",(string)0.0);
+  		  popup.SetElementProperty("eyeX","value",(string)0.0);
+  		  popup.SetElementProperty("eyeY","value",(string)0.0);
+  		  popup.SetElementProperty("eyeZ","value",(string)0.0);
       }
       msg.src = null;
       continue;
 
 		  on "Browser-URL", "live://record", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
   			//recording = true;
   			//record();
@@ -3151,7 +3249,7 @@ define float Joystick_Range = 44.0;
       continue;
 
 	    on "Browser-URL", "live://record-stop", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
 			     //recording = false;
       }
@@ -3159,7 +3257,7 @@ define float Joystick_Range = 44.0;
       continue;
 
 	    on "Browser-URL", "live://play", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
 		       //playanim();
       }
@@ -3167,7 +3265,7 @@ define float Joystick_Range = 44.0;
       continue;
 
       on "Browser-URL", "live://eye-lock", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
         useLockTarget = !useLockTarget;
         RefreshBrowser();
@@ -3176,7 +3274,7 @@ define float Joystick_Range = 44.0;
       continue;
 
       on "Browser-URL", "live://eye-lock-select", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
         World.SetTargetObserver(me);
         selectingTarget = true;
@@ -3187,7 +3285,7 @@ define float Joystick_Range = 44.0;
 
       //other messages
       on "Browser-URL", "", msg:
-      if ( browser and msg.src == browser )
+      if ( popup and msg.src == popup )
       {
 
         if(TrainUtil.HasPrefix(msg.minor, "live://smoke-update/"))
@@ -3202,11 +3300,11 @@ define float Joystick_Range = 44.0;
             string smokeid = Str.UnpackInt(Str.CloneString(command));
             Soup smoke = SmokeEdits.GetNamedSoup(smokeid);
 
-            float value = Str.ToFloat(browser.GetElementProperty(command, "value"));
+            float value = Str.ToFloat(popup.GetElementProperty(command, "value"));
 
             smoke.SetNamedTag(propertyname, value);
 
-            browser.SetTrainzText(command + "-text", (string)value);
+            popup.SetTrainzText(command + "-text", (string)value);
 
             RefreshSmokeTags();
             UpdateSmoke();
@@ -3290,7 +3388,7 @@ define float Joystick_Range = 44.0;
           {
             Asset DLSFace = DLSFaces[Str.UnpackInt(command)];
             TrainzScript.OpenURL("trainz://install/" + DLSFace.GetKUID().GetHTMLString());
-            CurrentMenu = BROWSER_MAINMENU;
+            CurrentMenu = BROWSER_NONE;
             RefreshBrowser();
           }
         }
