@@ -143,6 +143,7 @@ class tttelocomotive isclass Locomotive
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
   void createMenuWindow();
+  void RefreshMenuBrowser();
   void createPopupWindow();
   void UpdateInterfacePosition(Message msg);
   thread void BrowserThread();
@@ -704,7 +705,11 @@ class tttelocomotive isclass Locomotive
       //TrainzScript.Log("found " + FoundAsset.GetLocalisedName() + " " + FoundKUID.GetLogString());
     }
 
-    if(browser) RefreshBrowser();
+    if(browser)
+    {
+      RefreshBrowser();
+      RefreshMenuBrowser();
+    }
     //Asset[] assets = TrainzAssetSearch.SearchAssetsSorted(types, vals, TrainzAssetSearch.SORT_NAME, true);
   }
 
@@ -2331,15 +2336,19 @@ define float Joystick_Range = 44.0;
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
 
+    output.Print("<table cellspacing=2>");
+
+    int icon_scale = 32;
+
     if(AssetObsolete)
     {
       //output.Print("<a href='live://update'>Out of date! Click here to update.</a>");
       //output.Print("<br>");
+      output.Print("<tr><td>");
+      output.Print("<a href='live://update'><img kuid='<kuid:414976:101435>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+      output.Print("</tr></td>");
     }
 
-    output.Print("<table cellspacing=2>");
-
-    int icon_scale = 32;
     //eye window
     if(GetFeatureSupported(FEATURE_EYES))
     {
@@ -2853,18 +2862,19 @@ define float Joystick_Range = 44.0;
   // Desc: Creates the browser.
   // ============================================================================
 public define int BROWSER_WIDTH = 40;
-public define int BROWSER_HEIGHT = 400;
+//public define int BROWSER_HEIGHT = 400;
   void createMenuWindow()
   {
     browser = null;
     if ( !browser )	browser = Constructors.NewBrowser();
     browser.SetCloseEnabled(false);
   	//browser.SetWindowPosition(Interface.GetDisplayWidth()-450, Interface.GetDisplayHeight() - 625);
-  	browser.SetWindowSize(BROWSER_WIDTH, BROWSER_HEIGHT);
+  	browser.SetWindowSize(BROWSER_WIDTH, 400);
     browser.SetWindowStyle(Browser.STYLE_NO_FRAME);
     browser.SetMovableByDraggingBackground(false);
   	browser.SetWindowVisible(true);
   	browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+    browser.ResizeHeightToFit();
     BrowserClosed = false;
 
     if(!PopupClosed)
@@ -2901,11 +2911,15 @@ public define int POPUP_HEIGHT = 300;
 
   void UpdateInterfacePosition(Message msg)
   {
-    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH, (Interface.GetDisplayHeight() / 2) - (BROWSER_HEIGHT / 2));
+    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH, (Interface.GetDisplayHeight() / 2) - (browser.GetWindowHeight() / 2));
 
   }
 
-
+  void RefreshMenuBrowser()
+  {
+    browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+    browser.ResizeHeightToFit();
+  }
   // ============================================================================
   // Name: RefreshBrowser()
   // Desc: Updates all browser parameters by reloading the HTML strings.
@@ -2948,6 +2962,9 @@ public define int POPUP_HEIGHT = 300;
         PopupClosed = true;
         popup = null;
     }
+
+    if(popup and CurrentMenu != BROWSER_JOYSTICKMENU)
+      popup.ResizeHeightToFit();
   }
 
   // ============================================================================
