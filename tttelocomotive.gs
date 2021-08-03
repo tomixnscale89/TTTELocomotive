@@ -103,7 +103,26 @@ include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 // Add more Tooltips for some options on the Menus to make the options clearer.
 // ============================================================================
 
+// ============================================================================
+// Name: CustomScriptMenu
+// Desc: Inherit this class to add custom script menu functionality.
+// ============================================================================
+class CustomScriptMenu
+{
+  public string GetMenuHTML()
+  {
+    return "";
+  }
 
+  public string GetIconKUIDString()
+  {
+    return "";
+  }
+
+  public void ProcessMessage(string cmd)
+  {
+  }
+};
 
 // ============================================================================
 // Name: tttelocomotive
@@ -117,11 +136,13 @@ class tttelocomotive isclass Locomotive
   // ****************************************************************************/
 
   tttelib TTTELocoLibrary;
+  TTTEOnline onlineLibrary;
 
   int DetermineCarPosition(void);
   void SniffMyTrain(void);
   void ConfigureHeadcodeLamps(int headcode);
   string HeadcodeDescription(int headcode);
+  void ConfigureFaces();
   public void SetProperties(Soup soup);
   public Soup GetProperties(void);
   public string GetDescriptionHTML(void);
@@ -136,6 +157,10 @@ class tttelocomotive isclass Locomotive
   thread void CheckScriptAssetObsolete();
   thread void CheckDLSAdditionalFaces();
   Soup GetTTTELocomotiveSettings();
+  TTTEOnline GetOnlineLibrary();
+  string assignedFriend;
+  int eyeQueueFrame = 0;
+  EyeFrame[] eyeQueue;
 
   thread void EyeScriptCheckThread(void);
   thread void JoystickThread(void);
@@ -145,13 +170,17 @@ class tttelocomotive isclass Locomotive
   void createMenuWindow();
   void RefreshMenuBrowser();
   void createPopupWindow();
-  void UpdateInterfacePosition(Message msg);
+  void UpdateInterfacePosition();
+  void UpdateInterfacePositionHandler(Message msg);
   thread void BrowserThread();
   thread void ScanBrowser(void);
-  void RefreshBrowser();
+  public void RefreshBrowser();
 
   void WhistleMonitor(Message msg);
   thread void HeadlightMonitor();
+
+  //Custom functionality
+  public CustomScriptMenu[] GetCustomMenus();
 
   //Math
   float ApproxAtan2(float y, float x);
@@ -167,6 +196,8 @@ class tttelocomotive isclass Locomotive
   StringTable strTable; // This asset's string table, saved for convenient fast access
   bool AssetObsolete = false;
   KUID ObsoletedBy;
+
+  CustomScriptMenu[] customMenus;
 
   Asset headlight_asset;      // headlight asset used by the loco
   Asset rear_headlight_asset; // Backup headlight (not sure if we want this)
@@ -252,7 +283,7 @@ class tttelocomotive isclass Locomotive
   //Browser interface
   Browser browser;
   //define int BROWSER_MAINMENU     = 0;
-  Browser popup;
+  public Browser popup;
   define int BROWSER_NONE         = 0;
   define int BROWSER_EYEMENU      = 1;
   define int BROWSER_JOYSTICKMENU = 2;
@@ -261,8 +292,10 @@ class tttelocomotive isclass Locomotive
   define int BROWSER_FACEMENU     = 5;
   define int BROWSER_LOCOMENU     = 6;
   define int BROWSER_SMOKEMENU    = 7;
+  define int BROWSER_SOCIALMENU   = 8;
+  define int BROWSER_CUSTOMMENU_0 = 9;
 
-  int CurrentMenu = BROWSER_NONE;
+  public int CurrentMenu = BROWSER_NONE;
   bool HasFocus = false;
   bool BrowserClosed;
   bool PopupClosed = true;
@@ -371,6 +404,7 @@ class tttelocomotive isclass Locomotive
   {
     // call the parent
     inherited(asset);
+    customMenus = GetCustomMenus();
 
     ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
     myConfig = asset.GetConfigSoup();
@@ -391,6 +425,8 @@ class tttelocomotive isclass Locomotive
 
   faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
   DLSfaceSelection = -1;
+
+  eyeQueue = new EyeFrame[0];
 
   BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
   if(BuffersContainer.CountTags() > 0)
@@ -513,7 +549,7 @@ class tttelocomotive isclass Locomotive
   AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh"); //now analog
 
   AddHandler(me, "Interface-Event", "Left-Click", "EyeTargetChanged");
-  AddHandler(me, "Interface", "LayoutChanged", "UpdateInterfacePosition");
+  AddHandler(me, "Interface", "LayoutChanged", "UpdateInterfacePositionHandler");
 
   //Multiplayer Message! Important!
   AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
@@ -579,6 +615,7 @@ class tttelocomotive isclass Locomotive
   AddHandler(me, "Vehicle", "Derailed", "VehicleDerailHandler");
   // lashed on as it happens to do the right thing
   AddHandler(me, "World", "ModuleInit", "VehicleDecoupleHandler");
+  AddHandler(me, "World", "ModuleInit", "ModuleInitHandler");
 
   // ACS callback handler
   AddHandler(me, "ACScallback", "", "ACShandler");
@@ -591,12 +628,72 @@ class tttelocomotive isclass Locomotive
   // Handler for Secondary Whistle PFX
   // AddHandler(me.GetMyTrain(), "Train", "NotifyHorn", "WhistleMonitor");
 
+  //listen for user change messages in the online group
+  //although this message is sent to OnlineGroup objects, it is forwarded to the online group library through Sniff
+  if(GetOnlineLibrary())
+  {
+    AddHandler(GetOnlineLibrary(), "TTTEOnline", "UsersChange", "UsersChangeHandler");
+    AddHandler(GetOnlineLibrary(), "TTTEOnline", "Update", "OnlineUpdateHandler");
+  }
 
 	train = me.GetMyTrain(); // Get the train
 	SniffMyTrain(); // Then sniff it
 
     HeadlightMonitor();
 
+  }
+
+  public void ModuleInitHandler(Message msg)
+  {
+    //regenerate browser
+    BrowserClosed = true;
+  }
+
+  // ============================================================================
+  // Name: IsTargetLoco()
+  // Desc: Checks if this locomotive is the target.
+  // ============================================================================
+  bool IsTargetLoco()
+  {
+    return GetMyTrain() == World.GetCurrentTrain();
+  }
+
+  int GetTTTETrainIndex()
+  {
+    //is_TTTELocomotive
+    Vehicle[] vehicles = GetMyTrain().GetVehicles();
+    int num_vehicles = 0;
+    int i;
+    for(i = 0; i < vehicles.size(); i++)
+    {
+      Soup properties = vehicles[i].GetProperties();
+      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
+
+      if(me == vehicles[i])
+        return num_vehicles;
+      
+      if(is_TTTE)
+        num_vehicles++;
+    }
+
+    return -1;
+  }
+
+  int GetTTTETrainSize()
+  {
+    //is_TTTELocomotive
+    Vehicle[] vehicles = GetMyTrain().GetVehicles();
+    int num_vehicles = 0;
+    int i;
+    for(i = 0; i < vehicles.size(); i++)
+    {
+      Soup properties = vehicles[i].GetProperties();
+      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
+      if(is_TTTE)
+        num_vehicles++;
+    }
+
+    return num_vehicles;
   }
 
   // ============================================================================
@@ -609,6 +706,80 @@ class tttelocomotive isclass Locomotive
       return TTTELocoLibrary.GetSettings();
 
     return Constructors.NewSoup();
+  }
+
+  //Online fuctions
+  TTTEOnline GetOnlineLibrary()
+  {
+    if(TTTELocoLibrary)
+      return TTTELocoLibrary.GetOnlineLibrary();
+
+    return null;
+  }
+
+  OnlineGroup GetSocialGroup()
+  {
+    TTTEOnline onlineLibrary = GetOnlineLibrary();
+    return onlineLibrary.GetPersonalGroup();
+  }
+
+  void UsersChangeHandler(Message msg)
+  {
+    RefreshBrowser();
+  }
+
+  void OnlineUpdateHandler(Message msg)
+  {
+    Soup parameters = msg.paramSoup;
+    string user = parameters.GetNamedTag("username");
+
+    if(user == assignedFriend)
+    {
+      EyeFrame[] eyeQueueTemp = new EyeFrame[0];
+      //eyeQueue
+
+      int newSelection = parameters.GetNamedTagAsInt("faceSelection", faceSelection);
+      if(newSelection != faceSelection)
+      {
+        faceSelection = newSelection;
+        if(faceSelection >= FacesContainer.CountTags())
+          faceSelection = FacesContainer.CountTags() - 1;
+        ConfigureFaces();
+      }
+
+      float dccValue = parameters.GetNamedTagAsFloat("dccValue", 0.0);
+      GetMyTrain().SetDCCThrottle(dccValue);
+
+      int packetSize = parameters.GetNamedTagAsInt("packetSize", TTTEOnline.EYEBUFFER_SIZE);
+      int i;
+      for(i = 0; i < TTTEOnline.EYEBUFFER_SIZE; i++)
+      {
+        Soup frameSoup = parameters.GetNamedSoup((string)i);
+        EyeFrame frame = new EyeFrame();
+        frame.x = frameSoup.GetNamedTagAsFloat("eyeX");
+        frame.y = frameSoup.GetNamedTagAsFloat("eyeY");
+        eyeQueueTemp[eyeQueueTemp.size()] = frame;
+      }
+      //eyeX = parameters.GetNamedTagAsFloat("eyeX");
+      //eyeY = parameters.GetNamedTagAsFloat("eyeY");
+
+      eyeQueueFrame = 0;
+      eyeQueue = eyeQueueTemp;
+    }
+  }
+
+  Soup GetOnlineDesc()
+  {
+    Soup soup = Constructors.NewSoup();
+    soup.SetNamedTag("type", "locoDesc");
+
+    //config soups are locked
+    Soup facesSoup = Constructors.NewSoup();
+    facesSoup.Copy(FacesContainer);
+
+    soup.SetNamedSoup("facesContainer", facesSoup);
+
+    return soup;
   }
 
   int[] GetKuidData(KUID FoundKUID)
@@ -988,11 +1159,13 @@ class tttelocomotive isclass Locomotive
 
       if(direction == "front")
       {
-        FrontCoupler.DecoupleFrom(OppositeCoupler);
+        if(FrontCoupler)
+          FrontCoupler.DecoupleFrom(OppositeCoupler);
       }
       else if(direction == "back")
       {
-        BackCoupler.DecoupleFrom(OppositeCoupler);
+        if(BackCoupler)
+          BackCoupler.DecoupleFrom(OppositeCoupler);
       }
     }
   }
@@ -1666,6 +1839,8 @@ class tttelocomotive isclass Locomotive
     {
       Soup soup = inherited();
 
+      soup.SetNamedTag("is_TTTELocomotive", true);
+
       // Save the headcode as a soup tag so we can access it in other locations.
       soup.SetNamedTag("headcode-lamps", m_headCode);
 
@@ -1928,7 +2103,7 @@ class tttelocomotive isclass Locomotive
   public void HandleXAxis(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
@@ -1939,7 +2114,7 @@ class tttelocomotive isclass Locomotive
   public void HandleYAxis(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
@@ -1951,7 +2126,7 @@ class tttelocomotive isclass Locomotive
   public void HandleKeyFLeft(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       if (faceSelection > 0)
       {
@@ -1964,7 +2139,7 @@ class tttelocomotive isclass Locomotive
   public void HandleKeyFRight(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       if (faceSelection < FacesContainer.CountTags() - 1)
       {
@@ -1977,7 +2152,7 @@ class tttelocomotive isclass Locomotive
   public void HandleWheesh(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       float Intensity = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 100;
@@ -2038,6 +2213,14 @@ class tttelocomotive isclass Locomotive
         //eyeY = finalAng.ry - (Math.PI / 4.0);
         //eyeY = lookAng.ry - (Math.PI / 4.0);
         //TrainzScript.Log("rot x " + eyeX);
+      }
+
+      if(eyeQueue.size() and eyeQueueFrame < eyeQueue.size())
+      {
+        EyeFrame frame = eyeQueue[eyeQueueFrame];
+        eyeX = frame.x;
+        eyeY = frame.y;
+        eyeQueueFrame++;
       }
 
 			//final orientation apply ================================================
@@ -2290,6 +2473,11 @@ define float Joystick_Range = 44.0;
       //update center position
       int HalfBrowserWidth = popup.GetWindowWidth() / 2;
       int HalfBrowserHeight = popup.GetWindowHeight() / 2;
+
+      //prevent divide by 0
+      if(HalfBrowserWidth == 0 or HalfBrowserHeight == 0)
+        continue;
+      
       BrowserCenterX = BrowserLeft + HalfBrowserWidth;
       BrowserCenterY = BrowserTop + HalfBrowserHeight;
       //get relative
@@ -2395,6 +2583,21 @@ define float Joystick_Range = 44.0;
     {
       output.Print("<tr><td>");
       output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+      output.Print("</tr></td>");
+    }
+
+    if(GetOnlineLibrary())
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_social'><img kuid='<kuid:414976:102857>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+      output.Print("</tr></td>");
+    }
+
+    int i;
+    for(i = 0; i < customMenus.size(); i++)
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
     }
 
@@ -2857,6 +3060,59 @@ define float Joystick_Range = 44.0;
     return output.AsString();
   }
 
+  string GetSocialWindowHTML()
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+    output.Print("<html><body>");
+    output.Print("Invite your friends to control this locomotive!");
+    output.Print("<br>");
+
+    OnlineGroup socialGroup = GetSocialGroup();
+
+    output.Print("<table width=200>");
+    bool rowParity = false;
+
+    int i;
+    for(i = 0; i < socialGroup.CountUsers(); i++)
+    {
+      string user = socialGroup.GetIndexedUser(i);
+      int status = socialGroup.GetUserStatus(i);
+
+      rowParity = !rowParity;
+      if (rowParity)
+        output.Print("<tr bgcolor=#0E2A35 height=20>");
+      else
+        output.Print("<tr bgcolor=#05171E height=20>");
+
+      output.Print("<td>");
+      output.Print(user);
+      output.Print("</td>");
+
+      output.Print("<td>");
+      if(user == assignedFriend)
+        output.Print("<td><a href='live://unassign_friend/" + (string)i + "'>Revoke Control</a></td>");
+      else
+        output.Print("<td><a href='live://assign_friend/" + (string)i + "'>Assign To Loco</a></td>");
+      output.Print("</td>");
+
+      
+
+        output.Print("</tr>");
+    }
+    output.Print("</table>");
+
+    output.Print("<br>");
+    output.Print("iTrainz Username: ");
+    output.Print("<trainz-object style=edit-box link-on-focus-loss id=social_user width=200 height=16></trainz-object>");
+    output.Print("<br>");
+
+    output.Print("<a href='live://invite_friend'>Invite</a>");
+    output.Print("<br>");
+
+    output.Print("</body></html>");
+    return output.AsString();
+  }
+
   // ============================================================================
   // Name: createMenuWindow()
   // Desc: Creates the browser.
@@ -2880,17 +3136,21 @@ public define int BROWSER_WIDTH = 40;
     if(!PopupClosed)
       createPopupWindow();
 
-    UpdateInterfacePosition(null);
+    UpdateInterfacePosition();
   }
 
 public define int POPUP_WIDTH = 300;
 public define int POPUP_HEIGHT = 300;
+public define int BROWSER_TRAIN_MARGIN = 15;
+
   void createPopupWindow()
   {
+    int popupLeftOffset = (GetTTTETrainSize() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
+
     popup = null;
     popup = Constructors.NewBrowser();
     popup.SetCloseEnabled(false);
-    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2));
+    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2));
     popup.SetWindowSize(POPUP_WIDTH, POPUP_HEIGHT);
     popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
     popup.SetMovableByDraggingBackground(true);
@@ -2909,10 +3169,16 @@ public define int POPUP_HEIGHT = 300;
   // Desc: Updates the position of all UI elements
   // ============================================================================
 
-  void UpdateInterfacePosition(Message msg)
+  void UpdateInterfacePosition()
   {
-    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH, (Interface.GetDisplayHeight() / 2) - (browser.GetWindowHeight() / 2));
+    int browserLeftOffset = (GetTTTETrainSize() - GetTTTETrainIndex() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
 
+    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - browserLeftOffset, (Interface.GetDisplayHeight() / 2) - (browser.GetWindowHeight() / 2));
+  }
+
+  void UpdateInterfacePositionHandler(Message msg)
+  {
+    UpdateInterfacePosition();
   }
 
   void RefreshMenuBrowser()
@@ -2925,42 +3191,53 @@ public define int POPUP_HEIGHT = 300;
   // Desc: Updates all browser parameters by reloading the HTML strings.
   // ============================================================================
 
-  void RefreshBrowser()
+  public void RefreshBrowser()
   {
-    switch(CurrentMenu)
+    if(CurrentMenu >= BROWSER_CUSTOMMENU_0)
     {
-      case BROWSER_NONE:
-        PopupClosed = true;
-        popup = null;
-        break;
-      case BROWSER_EYEMENU:
-        popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
-        break;
-      case BROWSER_JOYSTICKMENU:
-        popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
-        JoystickThread();
-        break;
-      case BROWSER_LAMPMENU:
-        popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
-        break;
-      case BROWSER_LIVERYMENU:
-        popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
-        break;
-      case BROWSER_FACEMENU:
-        popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
-        break;
-      case BROWSER_LOCOMENU:
-        popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
-        popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
-        popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
-        break;
-      case BROWSER_SMOKEMENU:
-        popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
-        RefreshSmokeTags();
-        break;
-      default:
-        PopupClosed = true;
-        popup = null;
+      int menuID = CurrentMenu - BROWSER_CUSTOMMENU_0;
+      popup.LoadHTMLString(GetAsset(), customMenus[menuID].GetMenuHTML());
+    }
+    else
+    {
+      switch(CurrentMenu)
+      {
+        case BROWSER_NONE:
+          PopupClosed = true;
+          popup = null;
+          break;
+        case BROWSER_EYEMENU:
+          popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
+          break;
+        case BROWSER_JOYSTICKMENU:
+          popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
+          JoystickThread();
+          break;
+        case BROWSER_LAMPMENU:
+          popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
+          break;
+        case BROWSER_LIVERYMENU:
+          popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
+          break;
+        case BROWSER_FACEMENU:
+          popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
+          break;
+        case BROWSER_LOCOMENU:
+          popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
+          popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
+          popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
+          break;
+        case BROWSER_SMOKEMENU:
+          popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
+          RefreshSmokeTags();
+          break;
+        case BROWSER_SOCIALMENU:
+          popup.LoadHTMLString(GetAsset(), GetSocialWindowHTML());
+          break;
+        default:
+          PopupClosed = true;
+          popup = null;
+      }
     }
 
     if(popup and CurrentMenu != BROWSER_JOYSTICKMENU)
@@ -2976,14 +3253,14 @@ public define int POPUP_HEIGHT = 300;
   {
     while(true)
     {
-      if (!HasFocus)
+      if (!(HasFocus or IsTargetLoco()))
       {
         CurrentMenu = BROWSER_NONE;
         browser = null;
         popup = null;
         BrowserClosed = true;
       }
-      if (HasFocus and BrowserClosed)
+      if ((HasFocus or IsTargetLoco()) and BrowserClosed)
       {
         //replace this with keybind
         createMenuWindow();
@@ -2994,6 +3271,9 @@ public define int POPUP_HEIGHT = 300;
       //{
         //LockTargetWindow.SearchTick();
       //}
+
+      UpdateInterfacePosition();
+
       Sleep(0.1);
     }
   }
@@ -3003,7 +3283,8 @@ public define int POPUP_HEIGHT = 300;
   // Desc: Handles all browser input.
   // ============================================================================
 
-  thread void ScanBrowser() {
+  thread void ScanBrowser()
+  {
 		Message msg;
 		wait(){
       //Eye Window
@@ -3235,6 +3516,41 @@ public define int POPUP_HEIGHT = 300;
       msg.src = null;
       continue;
 
+      //Social Window
+      on "Browser-URL", "live://open_social", msg:
+      if ( browser and msg.src == browser )
+      {
+        if(CurrentMenu != BROWSER_SOCIALMENU)
+        {
+          CurrentMenu = BROWSER_SOCIALMENU;
+          createPopupWindow();
+          RefreshBrowser();
+        }
+        else
+          closePopup();
+      }
+      msg.src = null;
+      continue;
+
+      //invite_friend
+      on "Browser-URL", "live://invite_friend", msg:
+      if ( popup and msg.src == popup )
+      {
+        string inviteUser = popup.GetElementProperty("social_user", "text");
+        TrainzScript.Log("sending invite to " + inviteUser);
+
+        //assignedFriend = inviteUser;
+        
+        TTTEOnline onlineLibrary = GetOnlineLibrary();
+        if(onlineLibrary)
+          onlineLibrary.InviteToGroup(inviteUser);
+
+        RefreshBrowser();
+      }
+      msg.src = null;
+      continue;
+
+
       //Main Window
       on "Browser-URL", "live://return", msg:
       if ( popup and msg.src == popup )
@@ -3302,111 +3618,170 @@ public define int POPUP_HEIGHT = 300;
 
       //other messages
       on "Browser-URL", "", msg:
-      if ( popup and msg.src == popup )
       {
+        //doesn't require the source to be the popup
+        if ( (popup and msg.src == popup) or (browser and msg.src == browser) )
+        {
+          if(TrainUtil.HasPrefix(msg.minor, "live://open_custom/"))
+          {
+            TrainzScript.Log("Opening custom menu.");
+            string command = Str.Tokens(msg.minor, "live://open_custom/")[0];
+            if(command)
+            {
+              int menuID = BROWSER_CUSTOMMENU_0 + Str.UnpackInt(command);
+              //CustomScriptMenu menu = customMenus[menuID];
+              if(CurrentMenu != menuID)
+              {
+                CurrentMenu = menuID;
+                createPopupWindow();
+                RefreshBrowser();
+              }
+              else
+                closePopup();
+            }
+          }
+        }
 
-        if(TrainUtil.HasPrefix(msg.minor, "live://smoke-update/"))
+        if ( popup and msg.src == popup )
         {
-          string command = msg.minor;
-          Str.TrimLeft(command, "live://smoke-update/");
-          if(command)
-          {
-            //unpackint removes the integer from the original string
-            string[] propertytokens = Str.Tokens(command, "0123456789");
-            string propertyname = propertytokens[propertytokens.size() - 1];
-            string smokeid = Str.UnpackInt(Str.CloneString(command));
-            Soup smoke = SmokeEdits.GetNamedSoup(smokeid);
 
-            float value = Str.ToFloat(popup.GetElementProperty(command, "value"));
+          if(TrainUtil.HasPrefix(msg.minor, "live://smoke-update/"))
+          {
+            string command = msg.minor;
+            Str.TrimLeft(command, "live://smoke-update/");
+            if(command)
+            {
+              //unpackint removes the integer from the original string
+              string[] propertytokens = Str.Tokens(command, "0123456789");
+              string propertyname = propertytokens[propertytokens.size() - 1];
+              string smokeid = Str.UnpackInt(Str.CloneString(command));
+              Soup smoke = SmokeEdits.GetNamedSoup(smokeid);
 
-            smoke.SetNamedTag(propertyname, value);
+              float value = Str.ToFloat(popup.GetElementProperty(command, "value"));
 
-            popup.SetTrainzText(command + "-text", (string)value);
+              smoke.SetNamedTag(propertyname, value);
 
-            RefreshSmokeTags();
-            UpdateSmoke();
+              popup.SetTrainzText(command + "-text", (string)value);
+
+              RefreshSmokeTags();
+              UpdateSmoke();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://contract/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
           {
-            Soup smoke = SmokeEdits.GetNamedSoup(command);
-            smoke.SetNamedTag("expanded", false);
-            RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://contract/")[0];
+            if(command)
+            {
+              Soup smoke = SmokeEdits.GetNamedSoup(command);
+              smoke.SetNamedTag("expanded", false);
+              RefreshBrowser();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://expand/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
           {
-            Soup smoke = SmokeEdits.GetNamedSoup(command);
-            smoke.SetNamedTag("expanded", true);
-            RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://expand/")[0];
+            if(command)
+            {
+              Soup smoke = SmokeEdits.GetNamedSoup(command);
+              smoke.SetNamedTag("expanded", true);
+              RefreshBrowser();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://smoke-bind/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://smoke-bind/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://smoke-bind/"))
           {
-             BoundWheesh = Str.UnpackInt(command);
-             RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://smoke-bind/")[0];
+            if(command)
+            {
+               BoundWheesh = Str.UnpackInt(command);
+               RefreshBrowser();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://extra-lamps/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://extra-lamps/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://extra-lamps/"))
           {
-             int TargetLamp = Str.UnpackInt(command);
-             ToggleExtraLamp(TargetLamp);
-             RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://extra-lamps/")[0];
+            if(command)
+            {
+               int TargetLamp = Str.UnpackInt(command);
+               ToggleExtraLamp(TargetLamp);
+               RefreshBrowser();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://livery_set/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://livery_set/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://livery_set/"))
           {
-             skinSelection = Str.UnpackInt(command);
-             ConfigureSkins();
-             RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://livery_set/")[0];
+            if(command)
+            {
+               skinSelection = Str.UnpackInt(command);
+               ConfigureSkins();
+               RefreshBrowser();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://face_set/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://face_set/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://face_set/"))
           {
-             faceSelection = Str.UnpackInt(command);
-             DLSfaceSelection = -1;
-             ConfigureFaces();
-             RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://face_set/")[0];
+            if(command)
+            {
+               faceSelection = Str.UnpackInt(command);
+               DLSfaceSelection = -1;
+               ConfigureFaces();
+               RefreshBrowser();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://face_set_dls/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://face_set_dls/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://face_set_dls/"))
           {
-             faceSelection = -1;
-             DLSfaceSelection = Str.UnpackInt(command);
-             ConfigureFaces();
-             RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://face_set_dls/")[0];
+            if(command)
+            {
+               faceSelection = -1;
+               DLSfaceSelection = Str.UnpackInt(command);
+               ConfigureFaces();
+               RefreshBrowser();
+            }
           }
-        }
-        else if(TrainUtil.HasPrefix(msg.minor, "live://dlc_download/"))
-        {
-          string command = Str.Tokens(msg.minor, "live://dlc_download/")[0];
-          if(command)
+          else if(TrainUtil.HasPrefix(msg.minor, "live://dlc_download/"))
           {
-            Asset DLSFace = DLSFaces[Str.UnpackInt(command)];
-            TrainzScript.OpenURL("trainz://install/" + DLSFace.GetKUID().GetHTMLString());
-            CurrentMenu = BROWSER_NONE;
-            RefreshBrowser();
+            string command = Str.Tokens(msg.minor, "live://dlc_download/")[0];
+            if(command)
+            {
+              Asset DLSFace = DLSFaces[Str.UnpackInt(command)];
+              TrainzScript.OpenURL("trainz://install/" + DLSFace.GetKUID().GetHTMLString());
+              CurrentMenu = BROWSER_NONE;
+              RefreshBrowser();
+            }
+          }
+          else if(TrainUtil.HasPrefix(msg.minor, "live://assign_friend/"))
+          {
+            string command = Str.Tokens(msg.minor, "live://assign_friend/")[0];
+            if(command)
+            {
+              int idx = Str.ToInt(command);
+
+              OnlineGroup socialGroup = GetSocialGroup();
+              string user = socialGroup.GetIndexedUser(idx);
+
+              socialGroup.PostMessage(GetOnlineDesc());
+              assignedFriend = user;
+              RefreshBrowser();
+            }
+          }
+          else if(TrainUtil.HasPrefix(msg.minor, "live://unassign_friend/"))
+          {
+            string command = Str.Tokens(msg.minor, "live://unassign_friend/")[0];
+            if(command)
+            {
+              assignedFriend = "";
+              RefreshBrowser();
+            }
+          }
+          else
+          {
+            //PROCESS CUSTOM MENU COMMANDS
+            if(popup and msg.src == popup)
+            {
+              int i;
+              for(i = 0; i < customMenus.size(); i++)
+                customMenus[i].ProcessMessage(msg.minor);
+            }
           }
         }
       }
@@ -3431,6 +3806,21 @@ public define int POPUP_HEIGHT = 300;
       Sleep(0.5);
 		}
 	}
+
+  // ============================================================================
+  // Custom Override Functions
+  // Desc: Override the following functions in tttestub.gs to provide custom functionality.
+  // ============================================================================
+
+  // ============================================================================
+  // Name: GetCustomMenus()
+  // Desc: Return a list of custom script menus supported by this locomotive.
+  // ============================================================================
+  public CustomScriptMenu[] GetCustomMenus()
+  {
+    return new CustomScriptMenu[0];
+  }
+
 
   // ============================================================================
   // Math Utility Functions
