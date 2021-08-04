@@ -404,6 +404,8 @@ class tttelocomotive isclass Locomotive
   {
     // call the parent
     inherited(asset);
+    TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
+
     customMenus = GetCustomMenus();
 
     ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
@@ -414,7 +416,6 @@ class tttelocomotive isclass Locomotive
     //CheckDLSAdditionalContent();
 
     //TrainzScript.Log("searching for ttte settings lib");
-    TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
 
     // ****************************************************************************/
    // Grab assets from the Locomotive
@@ -732,8 +733,11 @@ class tttelocomotive isclass Locomotive
   {
     Soup parameters = msg.paramSoup;
     string user = parameters.GetNamedTag("username");
+    Str.ToLower(user);
+    string friendLower = Str.CloneString(assignedFriend);
+    Str.ToLower(friendLower);
 
-    if(user == assignedFriend)
+    if(user == friendLower)
     {
       EyeFrame[] eyeQueueTemp = new EyeFrame[0];
       //eyeQueue
@@ -750,9 +754,9 @@ class tttelocomotive isclass Locomotive
       float dccValue = parameters.GetNamedTagAsFloat("dccValue", 0.0);
       GetMyTrain().SetDCCThrottle(dccValue);
 
-      int packetSize = parameters.GetNamedTagAsInt("packetSize", TTTEOnline.EYEBUFFER_SIZE);
+      int packetSize = parameters.GetNamedTagAsInt("packetSize", 50);
       int i;
-      for(i = 0; i < TTTEOnline.EYEBUFFER_SIZE; i++)
+      for(i = 0; i < packetSize; i++)
       {
         Soup frameSoup = parameters.GetNamedSoup((string)i);
         EyeFrame frame = new EyeFrame();
@@ -772,6 +776,7 @@ class tttelocomotive isclass Locomotive
   {
     Soup soup = Constructors.NewSoup();
     soup.SetNamedTag("type", "locoDesc");
+    soup.SetNamedTag("targetUser", assignedFriend);
 
     //config soups are locked
     Soup facesSoup = Constructors.NewSoup();
@@ -3142,15 +3147,19 @@ public define int BROWSER_WIDTH = 40;
 public define int POPUP_WIDTH = 300;
 public define int POPUP_HEIGHT = 300;
 public define int BROWSER_TRAIN_MARGIN = 15;
-
+public define int SURVEYOR_MENU_OFFSET = 250;
   void createPopupWindow()
   {
     int popupLeftOffset = (GetTTTETrainSize() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
 
+    int surveyorOffset = 0;
+    if(World.GetCurrentModule() == World.SURVEYOR_MODULE)
+      surveyorOffset = SURVEYOR_MENU_OFFSET;
+
     popup = null;
     popup = Constructors.NewBrowser();
     popup.SetCloseEnabled(false);
-    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2));
+    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2) + surveyorOffset);
     popup.SetWindowSize(POPUP_WIDTH, POPUP_HEIGHT);
     popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
     popup.SetMovableByDraggingBackground(true);
@@ -3173,7 +3182,11 @@ public define int BROWSER_TRAIN_MARGIN = 15;
   {
     int browserLeftOffset = (GetTTTETrainSize() - GetTTTETrainIndex() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
 
-    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - browserLeftOffset, (Interface.GetDisplayHeight() / 2) - (browser.GetWindowHeight() / 2));
+    int surveyorOffset = 0;
+    if(World.GetCurrentModule() == World.SURVEYOR_MODULE)
+      surveyorOffset = SURVEYOR_MENU_OFFSET;
+
+    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - browserLeftOffset, (Interface.GetDisplayHeight() / 2) - (browser.GetWindowHeight() / 2) + surveyorOffset);
   }
 
   void UpdateInterfacePositionHandler(Message msg)
@@ -3758,9 +3771,10 @@ public define int BROWSER_TRAIN_MARGIN = 15;
 
               OnlineGroup socialGroup = GetSocialGroup();
               string user = socialGroup.GetIndexedUser(idx);
-
-              socialGroup.PostMessage(GetOnlineDesc());
+              
               assignedFriend = user;
+              socialGroup.PostMessage(GetOnlineDesc());
+              
               RefreshBrowser();
             }
           }

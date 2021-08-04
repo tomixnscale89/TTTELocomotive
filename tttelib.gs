@@ -11,9 +11,9 @@ class tttelib isclass Library
   public void Init(Asset asset)
   {
     inherited(asset);
-    TTTESettingsLibrary = cast<TTTESettings>World.GetLibrary(GetAsset().LookupKUIDTable("settings")); //library kuid-table, not loco
-
-    onlineLibrary = cast<TTTEOnline>World.GetLibrary(GetAsset().LookupKUIDTable("onlinelibrary"));
+    TTTESettingsLibrary = cast<TTTESettings>World.GetLibrary(asset.LookupKUIDTable("settings")); //library kuid-table, not loco
+    onlineLibrary = cast<TTTEOnline>World.GetLibrary(asset.LookupKUIDTable("onlinelibrary"));
+    
     //OA = GetOnlineAccess();
   }
   public Soup GetSettings()
