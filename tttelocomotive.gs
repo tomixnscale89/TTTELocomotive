@@ -161,6 +161,7 @@ class tttelocomotive isclass Locomotive
   string assignedFriend;
   int eyeQueueFrame = 0;
   EyeFrame[] eyeQueue;
+  thread void OnlineEyeThread();
 
   thread void EyeScriptCheckThread(void);
   thread void JoystickThread(void);
@@ -635,6 +636,7 @@ class tttelocomotive isclass Locomotive
   {
     AddHandler(GetOnlineLibrary(), "TTTEOnline", "UsersChange", "UsersChangeHandler");
     AddHandler(GetOnlineLibrary(), "TTTEOnline", "Update", "OnlineUpdateHandler");
+    OnlineEyeThread();
   }
 
 	train = me.GetMyTrain(); // Get the train
@@ -767,8 +769,36 @@ class tttelocomotive isclass Locomotive
       //eyeX = parameters.GetNamedTagAsFloat("eyeX");
       //eyeY = parameters.GetNamedTagAsFloat("eyeY");
 
-      eyeQueueFrame = 0;
-      eyeQueue = eyeQueueTemp;
+      //decide whether to append or replace
+      int dist = eyeQueue.size() - eyeQueueFrame;
+
+      //if we get more than 30 frames behind, replace
+      if(dist > 30)
+      {
+        eyeQueueFrame = 0;
+        eyeQueue = eyeQueueTemp;
+      }
+      else
+      {
+        for(i = 0; i < eyeQueueTemp.size(); i++)
+          eyeQueue[eyeQueue.size()] = eyeQueueTemp[i];
+      }
+    }
+  }
+
+  thread void OnlineEyeThread()
+  {
+    while(true)
+    {
+      if(eyeQueue.size() and eyeQueueFrame < eyeQueue.size())
+      {
+        EyeFrame frame = eyeQueue[eyeQueueFrame];
+        eyeX = frame.x;
+        eyeY = frame.y;
+        eyeQueueFrame++;
+      }
+
+      Sleep(TTTEOnline.RECORD_INTERVAL);
     }
   }
 
@@ -2218,14 +2248,6 @@ class tttelocomotive isclass Locomotive
         //eyeY = finalAng.ry - (Math.PI / 4.0);
         //eyeY = lookAng.ry - (Math.PI / 4.0);
         //TrainzScript.Log("rot x " + eyeX);
-      }
-
-      if(eyeQueue.size() and eyeQueueFrame < eyeQueue.size())
-      {
-        EyeFrame frame = eyeQueue[eyeQueueFrame];
-        eyeX = frame.x;
-        eyeY = frame.y;
-        eyeQueueFrame++;
       }
 
 			//final orientation apply ================================================
