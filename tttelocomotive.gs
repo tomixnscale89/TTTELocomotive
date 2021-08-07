@@ -1909,7 +1909,7 @@ class tttelocomotive isclass Locomotive
       //lamp icon
       // // option to change headcode, this displays inside the ? HTML window in surveyor.
       html = html + "<tr><td>";
-      html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=300 height=20></a>";
+      html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
       html = html + "</tr></td>";
       //lamp status
       string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
@@ -1919,8 +1919,9 @@ class tttelocomotive isclass Locomotive
 
       //livery window
       html = html + "<tr><td>";
-      html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=300 height=20></a>";
+      html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
       html = html + "</tr></td>";
+      
       //livery status
       string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
       html = html + "<tr><td>";
@@ -1929,7 +1930,7 @@ class tttelocomotive isclass Locomotive
 
       //face window
       html = html + "<tr><td>";
-      html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=300 height=20></a>";
+      html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
       html = html + "</tr></td>";
 
       //face status
@@ -3087,6 +3088,27 @@ define float Joystick_Range = 44.0;
     return output.AsString();
   }
 
+  string GetStatusString(int status)
+  {
+    switch(status)
+    {
+      case OnlineGroup.USER_STATUS_UNKNOWN:
+        return "Unknown";
+      case OnlineGroup.USER_STATUS_OFFLINE:
+        return "Offline";
+      case OnlineGroup.USER_STATUS_ONLINE:
+        return "Online";
+      case OnlineGroup.USER_STATUS_INSIDE:
+        return "Active";
+      case OnlineGroup.USER_STATUS_INVALID:
+        return "Invalid";
+      default:
+        return "Error";
+    }
+
+    return "Error";
+  }
+
   string GetSocialWindowHTML()
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
@@ -3096,7 +3118,7 @@ define float Joystick_Range = 44.0;
 
     OnlineGroup socialGroup = GetSocialGroup();
 
-    output.Print("<table width=200>");
+    output.Print("<table width=300>");
     bool rowParity = false;
 
     int i;
@@ -3111,26 +3133,31 @@ define float Joystick_Range = 44.0;
       else
         output.Print("<tr bgcolor=#05171E height=20>");
 
-      output.Print("<td>");
+      output.Print("<td width=100>");
       output.Print(user);
       output.Print("</td>");
 
-      output.Print("<td>");
-      if(user == assignedFriend)
-        output.Print("<td><a href='live://unassign_friend/" + (string)i + "'>Revoke Control</a></td>");
-      else
-        output.Print("<td><a href='live://assign_friend/" + (string)i + "'>Assign To Loco</a></td>");
+      output.Print("<td width=100>");
+      if(status == OnlineGroup.USER_STATUS_INSIDE)
+      {
+        if(user == assignedFriend)
+          output.Print("<a href='live://unassign_friend/" + (string)i + "'>Revoke Control</a>");
+        else
+          output.Print("<a href='live://assign_friend/" + (string)i + "'>Assign To Loco</a>");
+      }
       output.Print("</td>");
 
+      output.Print("<td width=50><a href='live://kick_friend/" + (string)i + "'>Kick</a></td>");
       
+      output.Print("<td width=50>" + GetStatusString(status) + "</td>");
 
-        output.Print("</tr>");
+      output.Print("</tr>");
     }
     output.Print("</table>");
 
     output.Print("<br>");
     output.Print("iTrainz Username: ");
-    output.Print("<trainz-object style=edit-box link-on-focus-loss id=social_user width=200 height=16></trainz-object>");
+    output.Print("<trainz-object style=edit-box link-on-focus-loss id=social_user width=250 height=16></trainz-object>");
     output.Print("<br>");
 
     output.Print("<a href='live://invite_friend'>Invite</a>");
@@ -3577,9 +3604,15 @@ public define int SURVEYOR_MENU_OFFSET = 250;
         //assignedFriend = inviteUser;
         
         TTTEOnline onlineLibrary = GetOnlineLibrary();
-        if(onlineLibrary)
+        if(onlineLibrary and inviteUser != "")
           onlineLibrary.InviteToGroup(inviteUser);
-
+        else
+        {
+          if(inviteUser == "")
+            Interface.ShowMessageBox(me, "Invalid username specified.", true, "TTTEOnline", "invalidUser");
+          else
+            Interface.ShowMessageBox(me, "Unable to access online library.", true, "TTTEOnline", "invalidLibrary");
+        }
         RefreshBrowser();
       }
       msg.src = null;
@@ -3796,6 +3829,22 @@ public define int SURVEYOR_MENU_OFFSET = 250;
               
               assignedFriend = user;
               socialGroup.PostMessage(GetOnlineDesc());
+              
+              RefreshBrowser();
+            }
+          }
+          else if(TrainUtil.HasPrefix(msg.minor, "live://kick_friend/"))
+          {
+            string command = Str.Tokens(msg.minor, "live://kick_friend/")[0];
+            if(command)
+            {
+              int idx = Str.ToInt(command);
+
+              OnlineGroup socialGroup = GetSocialGroup();
+              string user = socialGroup.GetIndexedUser(idx);
+
+              if(user != "")
+                socialGroup.RemoveUser(user);
               
               RefreshBrowser();
             }
