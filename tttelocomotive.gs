@@ -301,6 +301,11 @@ class tttelocomotive isclass Locomotive
   bool BrowserClosed;
   bool PopupClosed = true;
 
+public define int POPUP_WIDTH = 300;
+public define int POPUP_HEIGHT = 300;
+public define int BROWSER_TRAIN_MARGIN = 15;
+public define int SURVEYOR_MENU_OFFSET = 250;
+
   //tab specific Options
   bool b_WheelslipEnabled = false;
   bool b_ShakeEnabled = false;
@@ -2705,7 +2710,7 @@ define float Joystick_Range = 44.0;
   	HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
     //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-
+    output.Print("<img kuid='<kuid:414976:102981>' width=" + (string)POPUP_WIDTH + " height=" + (string)POPUP_HEIGHT + ">");
   	output.Print("</body></html>");
 
   	return output.AsString();
@@ -3193,10 +3198,6 @@ public define int BROWSER_WIDTH = 40;
     UpdateInterfacePosition();
   }
 
-public define int POPUP_WIDTH = 300;
-public define int POPUP_HEIGHT = 300;
-public define int BROWSER_TRAIN_MARGIN = 15;
-public define int SURVEYOR_MENU_OFFSET = 250;
   void createPopupWindow()
   {
     int popupLeftOffset = (GetTTTETrainSize() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
@@ -3262,6 +3263,8 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     }
     else
     {
+      bool isTransparent = false;
+
       switch(CurrentMenu)
       {
         case BROWSER_NONE:
@@ -3272,6 +3275,7 @@ public define int SURVEYOR_MENU_OFFSET = 250;
           popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
           break;
         case BROWSER_JOYSTICKMENU:
+          isTransparent = true;
           popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
           JoystickThread();
           break;
@@ -3300,6 +3304,15 @@ public define int SURVEYOR_MENU_OFFSET = 250;
           PopupClosed = true;
           popup = null;
       }
+
+      if(popup)
+      {
+        // if(isTransparent)
+        //   popup.SetWindowStyle(Browser.STYLE_POPOVER);
+        // else
+        //   popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
+      }
+      
     }
 
     if(popup and CurrentMenu != BROWSER_JOYSTICKMENU)
