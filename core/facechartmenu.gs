@@ -36,7 +36,7 @@ class FaceChartMenu isclass CustomScriptMenu
     int j;
     output.Print("<tr height=" + (string)face_height + ">");
     //0, 0
-    output.Print("<td width=48></td>");
+    output.Print("<td></td>");
     for(i = 0; i < headers.CountTags(); i++)
     {
       string suffix = headers.GetIndexedTagName(i);
@@ -55,14 +55,16 @@ class FaceChartMenu isclass CustomScriptMenu
       //Str.ToUpper(pretty_name[0]);
 
       //output.Print("<td><b>" + (string)(i + 1) + "</b></td>");
-      output.Print("<td><b>" + pretty_name + "</b></td>");
+      output.Print("<td width='72'><b>" + pretty_name + "</b></td>");
       for(j = 0; j < headers.CountTags(); j++)
       {
         string suffix = headers.GetIndexedTagName(j);
         output.Print("<td bgcolor=#2C3D4D width=" + (string)face_width + ">");
         if(SoupHasTag(face_soup, suffix))
         {
+          output.Print("<a href='live://face_set/" +  face_name + suffix + "'>");
           output.Print("<img src='facechart/" + face_name + suffix + ".png' width=" + (string)face_width + " height=" + (string)face_height + ">");
+          output.Print("</a>");
         }
         output.Print("</td>");
       }
@@ -122,19 +124,23 @@ class FaceChartMenu isclass CustomScriptMenu
     if(headers == null)
       return TTTEBase.POPUP_WIDTH;
     
-    return (face_width + face_margin) * (headers.CountTags() + 2) + face_margin;
+    return (face_width + face_margin) * (headers.CountTags() + 3) + face_margin;
   }
 
   public void ProcessMessage(string cmd)
   {
     if(TrainUtil.HasPrefix(cmd, "live://face_set/"))
     {
-      string command = Str.Tokens(cmd, "live://face_set/")[0];
+      string command = cmd["live://face_set/".size(),];
       if(command)
       {
-        base.faceSelection = Str.UnpackInt(command);
-        base.DLSfaceSelection = -1;
-        base.ConfigureFaces();
+        int idx = base.FacesContainer.GetIndexForNamedTag(command);
+        if(idx != -1)
+        {
+          base.faceSelection = idx;
+          base.DLSfaceSelection = -1;
+          base.ConfigureFaces();
+        }
       }
     }
 
