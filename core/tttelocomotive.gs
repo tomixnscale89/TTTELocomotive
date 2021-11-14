@@ -117,7 +117,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
   int DetermineCarPosition(void);
   void SniffMyTrain(void);
-  void ConfigureHeadcodeLamps(int headcode);
   string HeadcodeDescription(int headcode);
   void ConfigureFaces();
   public void SetProperties(Soup soup);
@@ -160,14 +159,8 @@ class tttelocomotive isclass Locomotive, TTTEBase
   KUID ObsoletedBy;
 
 
-  Asset headlight_asset;      // headlight asset used by the loco
-  Asset rear_headlight_asset; // Backup headlight (not sure if we want this)
   Asset coupler_idle, coupler_coupled;											// two options for the coupler
   Asset driver, fireman;	// fireman and driver meshes
-
-
-  // Bogie array to use for livery swapping
-  Bogey[] myBogies; // Array of bogies from Conifg
 
 
   bool m_cameraViewpoint; // Current Camera point
@@ -177,26 +170,11 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
   float trainzVersion = World.GetTrainzVersion();
 
-  // LIVERY SWAPPING Variables
-  Asset textureSet; // Texture asset we will use to grab the textures
-
-  int skinSelection; // Integer used to store the current skin of the asset. This will default to zero, unless forced in Init().
-  int m_copySkin; // May not be needed..
-  int m_copySkinBogey;
 
   // Faces Options
   int faceSelection;
   int DLSfaceSelection;
 
-  Soup FacesContainer;
-  Soup LiveryContainer;
-  Soup LiveryTextureOptions;
-  Soup BogeyLiveryTextureOptions;
-  Soup SmokeboxContainer;
-  Soup BuffersContainer;
-  Soup ExtraLampsContainer;
-  bool[] ExtraLampVisibility;
-  Asset[] ExtraLampAssets;
 
   Asset[] InstalledDLSFaces;
   Asset[] DLSFaces;
@@ -249,25 +227,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   float normal_traction;
   float normal_momentum;
 
-  //bitwise flags
-  define int HEADCODE_BL = 1;
-  define int HEADCODE_BC = 2;
-  define int HEADCODE_BR = 4;
-  define int HEADCODE_TC = 8;
-
-  define int HEADCODE_NONE = 0;
-  define int HEADCODE_ALL_LAMPS = HEADCODE_BL | HEADCODE_BC | HEADCODE_BR | HEADCODE_TC;
-  define int HEADCODE_TAIL_LIGHTS = HEADCODE_BL | HEADCODE_BR;
-  define int HEADCODE_BRANCH = HEADCODE_BL;
-  define int HEADCODE_EXPRESS = HEADCODE_BL | HEADCODE_BR;
-  define int HEADCODE_EXPRESS_FREIGHT = HEADCODE_TC | HEADCODE_BR;
-  define int HEADCODE_EXPRESS_FREIGHT_2 = HEADCODE_BC | HEADCODE_BL;
-  define int HEADCODE_EXPRESS_FREIGHT_3 = HEADCODE_TC | HEADCODE_BL;
-  define int HEADCODE_GOODS = HEADCODE_BC | HEADCODE_BR;
-  define int HEADCODE_LIGHT = HEADCODE_TC;
-  define int HEADCODE_THROUGH_FREIGHT = HEADCODE_TC | HEADCODE_BC;
-  define int HEADCODE_TVS = HEADCODE_BR;
-
 
 
   // Options for headcode lights;
@@ -283,9 +242,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   //define int HEADCODE_LIGHT = 9;
   //define int HEADCODE_THROUGH_FREIGHT = 10;
   //define int HEADCODE_TVS = 11;
-
-  int m_headCode;   // Stores the current state of the headcode lamps
-
 
 
   public define int CAR_DERAILED = -1;
@@ -320,9 +276,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
     // ****************************************************************************/
     // Grab assets from the Locomotive
     // ****************************************************************************/
-
-    myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
-
     faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
     DLSfaceSelection = -1;
 
@@ -1200,132 +1153,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
 
   // ============================================================================
-  // Name: ConfigureSkins()
-  // Parm:  None
-  // Desc:
-  // ============================================================================
-  void ConfigureSkins()
-  {
-    TrainzScript.Log("Setting skin to " + (string)skinSelection);
-
-    int MainTextureGroupSize = 0;
-    int BogeyTextureGroupSize = 0;
-    //determine texturegroup offset
-    int i;
-
-    for(i = 0; i < LiveryTextureOptions.CountTags(); i++)
-    {
-      string TextureName = LiveryTextureOptions.GetIndexedTagName(i);
-      string TextureMode = LiveryTextureOptions.GetNamedTag(TextureName);
-      if(TextureMode == "none")
-      {
-        MainTextureGroupSize = MainTextureGroupSize + 1;
-      }
-      else if(TextureMode == "diffusenormal")
-      {
-        MainTextureGroupSize = MainTextureGroupSize + 2;
-      }
-      else if(TextureMode == "pbrstandard")
-      {
-        MainTextureGroupSize = MainTextureGroupSize + 3;
-      }
-    }
-    for(i = 0; i < BogeyLiveryTextureOptions.CountTags(); i++)
-    {
-      string TextureName = BogeyLiveryTextureOptions.GetIndexedTagName(i);
-      string TextureMode = BogeyLiveryTextureOptions.GetNamedTag(TextureName);
-      if(TextureMode == "none")
-      {
-        BogeyTextureGroupSize = BogeyTextureGroupSize + 1;
-      }
-      else if(TextureMode == "diffusenormal")
-      {
-        BogeyTextureGroupSize = BogeyTextureGroupSize + 2;
-      }
-      else if(TextureMode == "pbrstandard")
-      {
-        BogeyTextureGroupSize = BogeyTextureGroupSize + 3;
-      }
-    }
-
-    TrainzScript.Log("Found texturegroup size of " + (string)MainTextureGroupSize + " and bogey texturegroup size of " + (string)BogeyTextureGroupSize);
-
-    //increment this value for each texture, to loop along
-    //use texturegroup offset
-    m_copySkin = skinSelection * (MainTextureGroupSize + BogeyTextureGroupSize);
-
-    for(i = 0; i < LiveryTextureOptions.CountTags(); i++)
-    {
-      string TextureName = LiveryTextureOptions.GetIndexedTagName(i);
-      string TextureMode = LiveryTextureOptions.GetNamedTag(TextureName);
-      if(TextureMode == "none")
-      {
-        SetFXTextureReplacement(TextureName,textureSet,m_copySkin);
-        m_copySkin = m_copySkin + 1;
-      }
-      else if(TextureMode == "diffusenormal")
-      {
-        SetFXTextureReplacement(TextureName + "_diffuse",textureSet,m_copySkin);
-        SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkin + 1);
-        m_copySkin = m_copySkin + 2;
-      }
-      else if(TextureMode == "pbrstandard")
-      {
-        SetFXTextureReplacement(TextureName + "_albedo",textureSet,m_copySkin);
-        SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkin + 1);
-        SetFXTextureReplacement(TextureName + "_parameter",textureSet,m_copySkin + 2);
-        m_copySkin = m_copySkin + 3;
-      }
-      else
-      {
-        TrainzScript.Log("Livery mode " + TextureMode + " is not supported!");
-      }
-    }
-
-    //bogey liveries
-
-    int currentBogey;
-    for(currentBogey = 0; currentBogey < myBogies.size(); currentBogey++)
-    {
-      if(myBogies[currentBogey])
-      {
-        m_copySkinBogey = m_copySkin;
-        Bogey ActiveBogey = myBogies[currentBogey];
-
-        for(i = 0; i < BogeyLiveryTextureOptions.CountTags(); i++)
-        {
-          string TextureName = BogeyLiveryTextureOptions.GetIndexedTagName(i);
-          string TextureMode = BogeyLiveryTextureOptions.GetNamedTag(TextureName);
-          if(TextureMode == "none")
-          {
-            ActiveBogey.SetFXTextureReplacement(TextureName,textureSet,m_copySkinBogey);
-            m_copySkinBogey = m_copySkinBogey + 1;
-          }
-          else if(TextureMode == "diffusenormal")
-          {
-            ActiveBogey.SetFXTextureReplacement(TextureName + "_diffuse",textureSet,m_copySkinBogey);
-            ActiveBogey.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkinBogey + 1);
-            m_copySkinBogey = m_copySkinBogey + 2;
-          }
-          else if(TextureMode == "pbrstandard")
-          {
-            ActiveBogey.SetFXTextureReplacement(TextureName + "_albedo",textureSet,m_copySkinBogey);
-            ActiveBogey.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkinBogey + 1);
-            ActiveBogey.SetFXTextureReplacement(TextureName + "_parameter",textureSet,m_copySkinBogey + 2);
-            m_copySkinBogey = m_copySkinBogey + 3;
-          }
-          else
-          {
-            TrainzScript.Log("Livery mode " + TextureMode + " is not supported!");
-          }
-        }
-      }
-    }
-
-
-  }
-
-  // ============================================================================
   // Name: ConfigureFaces()
   // Parm:  None
   // Desc: Configures the locomotive face. Uses a switch with faceSelection to determine the correct face to display.
@@ -1542,41 +1369,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
     {
       Sniff(train, "Train", "", true);
     }
-  }
-
-  // ============================================================================
-  // Name: ConfigureHeadcodeLamps()
-  // Desc: Sets the lamp arrangement from the headcode variable
-  // Lamp names are fairly self-explanatory, but here is the full name for each lamp:
-  // lamp_tc  = Top Center , lamp_bc = Bottom Center , Lamp_bl = Bottom Left , lamp_br = Bottom Right
-  // ============================================================================
-  void ConfigureHeadcodeLamps(int headcode)
-  {
-    // We are going to use SetFXAttachment to set the lamps in the correct positions.
-    // This is using the names of the lamps that are in the effects container of the locomotive.
-    if ((headcode & HEADCODE_BL) != 0) SetFXAttachment("lamp_bl", headlight_asset);
-    else SetFXAttachment("lamp_bl", null);
-    if ((headcode & HEADCODE_BC) != 0) SetFXAttachment("lamp_bc", headlight_asset);
-    else SetFXAttachment("lamp_bc", null);
-    if ((headcode & HEADCODE_BR) != 0) SetFXAttachment("lamp_br", headlight_asset);
-    else SetFXAttachment("lamp_br", null);
-    if ((headcode & HEADCODE_TC) != 0) SetFXAttachment("lamp_tc", headlight_asset);
-    else SetFXAttachment("lamp_tc", null);
-
-  }
-
-  // ============================================================================
-  // Name: ToggleExtraLamp()
-  // Desc: Toggles the state of a custom lamp effect
-  // ============================================================================
-  void ToggleExtraLamp(int TargetLamp)
-  {
-    ExtraLampVisibility[TargetLamp] = !ExtraLampVisibility[TargetLamp];
-    string effectName = ExtraLampsContainer.GetIndexedTagName(TargetLamp);
-    if(ExtraLampVisibility[TargetLamp])
-      SetFXAttachment(effectName, ExtraLampAssets[TargetLamp]);
-    else
-      SetFXAttachment(effectName, null);
   }
 
   // ============================================================================
@@ -1908,7 +1700,7 @@ class tttelocomotive isclass Locomotive, TTTEBase
       if (p_index > -1 and p_index < 12)
       {
         m_headCode = GetHeadcodeFlags(p_index);
-        ConfigureHeadcodeLamps(m_headCode);
+        ConfigureHeadcodeLamps();
       }
     }
     else if (p_propertyID == "faces")
@@ -2154,7 +1946,7 @@ class tttelocomotive isclass Locomotive, TTTEBase
       if(m_headCode != Rheadcode)
       {
         m_headCode = Rheadcode;
-        ConfigureHeadcodeLamps(m_headCode);
+        ConfigureHeadcodeLamps();
       }
 
 			//bool Rwheesh = ReceivedData.GetNamedTagAsBool("wheesh");
@@ -2428,171 +2220,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
   // 	return output.AsString();
   // }
-
-  string GetJoystickWindowHTML()
-  {
-  	HTMLBuffer output = HTMLBufferStatic.Construct();
-  	output.Print("<html><body>");
-    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("<img kuid='<kuid:414976:102981>' width=" + (string)POPUP_WIDTH + " height=" + (string)POPUP_HEIGHT + ">");
-  	output.Print("</body></html>");
-
-  	return output.AsString();
-  }
-
-  string GetLampWindowHTML()
-  {
-  	HTMLBuffer output = HTMLBufferStatic.Construct();
-  	output.Print("<html><body>");
-    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("<br>");
-    output.Print("<table>");
-      output.Print("<tr>");
-        output.Print("<td></td>");
-        output.Print("<td rowspan=2><img kuid='<kuid:414976:105416>' width=256 height=256></td>");
-        //output.Print("<td rowspan=2><img kuid='<kuid:414976:105423>' width=48 height=48></td>");
-      output.Print("</tr>");
-      output.Print("<tr>");
-        //overlay
-        output.Print("<td colspan=2>");
-          //output.Print("<img kuid='<kuid:414976:105423>' width=48 height=48>");
-
-          //output.Print("<img kuid='<kuid:414976:105416>' width=256 height=256>");
-          //upper row
-          output.Print("<table>");
-            output.Print("<tr height=10></tr>");
-            output.Print("<tr height=48>");
-              output.Print("<td width='98'></td>"); //spacing
-              output.Print("<td>");
-
-                output.Print("<a href='live://lamp_tc'><img kuid='");
-                if ((m_headCode & HEADCODE_TC) == 0)
-                  output.Print("<kuid:414976:105456>");
-                else
-                  output.Print("<kuid:414976:105423>");
-                output.Print("' width=48 height=48></a>");
-
-              output.Print("</td>");
-            output.Print("</tr>");
-          output.Print("</table>");
-          output.Print("<br>");
-          //bottom row
-          output.Print("<table>");
-            output.Print("<tr height=90></tr>"); //spacing
-            output.Print("<tr height=48>");
-              output.Print("<td width='32'></td>"); //spacing
-              output.Print("<td>");
-
-                output.Print("<a href='live://lamp_br'><img kuid='");
-                if ((m_headCode & HEADCODE_BR) == 0)
-                  output.Print("<kuid:414976:105456>");
-                else
-                  output.Print("<kuid:414976:105423>");
-                output.Print("' width=48 height=48></a>");
-
-              output.Print("</td>");
-              output.Print("<td width='5'></td>"); //spacing
-              output.Print("<td>");
-
-                output.Print("<a href='live://lamp_bc'><img kuid='");
-                if ((m_headCode & HEADCODE_BC) == 0)
-                  output.Print("<kuid:414976:105456>");
-                else
-                  output.Print("<kuid:414976:105423>");
-                output.Print("' width=48 height=48></a>");
-
-              output.Print("</td>");
-              output.Print("<td width='5'></td>"); //spacing
-              output.Print("<td>");
-
-                output.Print("<a href='live://lamp_bl'><img kuid='");
-                if ((m_headCode & HEADCODE_BL) == 0)
-                  output.Print("<kuid:414976:105456>");
-                else
-                  output.Print("<kuid:414976:105423>");
-                output.Print("' width=48 height=48></a>");
-
-              output.Print("</td>");
-            output.Print("</tr>");
-          output.Print("</table>");
-
-        //end overlay
-        output.Print("</td>");
-      output.Print("</tr>");
-    output.Print("</table>");
-
-    if(ExtraLampsContainer and ExtraLampsContainer.CountTags())
-    {
-      output.Print("<br>");
-      output.Print("Custom Lamps:");
-      output.Print("<br>");
-      output.Print("<table>");
-      output.Print("<tr> <td width='300'></td> </tr>");
-      bool rowParity = false;
-      int i;
-      for(i = 0; i < ExtraLampsContainer.CountTags(); i++)
-      {
-        rowParity = !rowParity;
-        string effectName = ExtraLampsContainer.GetIndexedTagName(i);
-        string nameText = ExtraLampsContainer.GetNamedTag(effectName);
-        if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>");
-        else
-          output.Print("<tr bgcolor=#05171E>");
-
-        output.Print("<td>");
-        output.Print(HTMLWindow.CheckBox("live://extra-lamps/" + i, ExtraLampVisibility[i]));
-        output.Print(" " + nameText);
-        output.Print("</tr></td>");
-      }
-      output.Print("</table>");
-    }
-    //output.Print("<nowrap>");
-    //output.Print("lamp");
-    //output.Print("<img kuid='<kuid:414976:105416>' width=256 height=256>");
-    //output.Print("overlay");
-    //output.Print("</nowrap>");
-
-  	output.Print("</body></html>");
-
-  	return output.AsString();
-  }
-
-  string GetLiveryWindowHTML()
-  {
-    HTMLBuffer output = HTMLBufferStatic.Construct();
-    output.Print("<html><body>");
-    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("<br>");
-    output.Print(strTable.GetString("skin_description"));
-    output.Print("<br>");
-    output.Print("<table>");
-    output.Print("<tr> <td width='300'></td> </tr>");
-    bool rowParity = false;
-    int i;
-    for(i = 0; i < LiveryContainer.CountTags(); i++)
-    {
-      rowParity = !rowParity;
-      string liveryName = LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(i));
-      if (rowParity)
-        output.Print("<tr bgcolor=#0E2A35>");
-      else
-        output.Print("<tr bgcolor=#05171E>");
-
-      output.Print("<td>");
-      if(i != skinSelection)
-        output.Print("<a href='live://livery_set/" + i + "'>");
-      output.Print(liveryName);
-      if(i != skinSelection)
-        output.Print("</a>");
-
-      output.Print("</td>");
-      output.Print("</tr>");
-    }
-    output.Print("</table>");
-    output.Print("</body></html>");
-    return output.AsString();
-  }
 
   string GetFaceWindowHTML()
   {
@@ -3106,58 +2733,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
       // msg.src = null;
       // continue;
 
-      on "Browser-URL", "live://lamp_tc", msg:
-      if ( popup and msg.src == popup )
-      {
-        if(GetHeadcodeSupported(HEADCODE_TC))
-        {
-          m_headCode = m_headCode ^ HEADCODE_TC;
-          ConfigureHeadcodeLamps(m_headCode);
-          RefreshBrowser();
-        }
-      }
-      msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://lamp_bl", msg:
-      if ( popup and msg.src == popup )
-      {
-        if(GetHeadcodeSupported(HEADCODE_BL))
-        {
-          m_headCode = m_headCode ^ HEADCODE_BL;
-          ConfigureHeadcodeLamps(m_headCode);
-          RefreshBrowser();
-        }
-      }
-      msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://lamp_bc", msg:
-      if ( popup and msg.src == popup )
-      {
-        if(GetHeadcodeSupported(HEADCODE_BC))
-        {
-          m_headCode = m_headCode ^ HEADCODE_BC;
-          ConfigureHeadcodeLamps(m_headCode);
-          RefreshBrowser();
-        }
-      }
-      msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://lamp_br", msg:
-      if ( popup and msg.src == popup )
-      {
-        if(GetHeadcodeSupported(HEADCODE_BR))
-        {
-          m_headCode = m_headCode ^ HEADCODE_BR;
-          ConfigureHeadcodeLamps(m_headCode);
-          RefreshBrowser();
-        }
-      }
-      msg.src = null;
-      continue;
-
       // //Loco Window
       // on "Browser-URL", "live://open_loco", msg:
       // if ( browser and msg.src == browser )
@@ -3372,26 +2947,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
             if(command)
             {
                BoundWheesh = Str.UnpackInt(command);
-               RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://extra-lamps/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://extra-lamps/")[0];
-            if(command)
-            {
-               int TargetLamp = Str.UnpackInt(command);
-               ToggleExtraLamp(TargetLamp);
-               RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://livery_set/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://livery_set/")[0];
-            if(command)
-            {
-               skinSelection = Str.UnpackInt(command);
-               ConfigureSkins();
                RefreshBrowser();
             }
           }

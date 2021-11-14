@@ -3,6 +3,8 @@ include "tttehelpers.gs"
 include "tttemenu.gs"
 include "eyescriptmenu.gs"
 include "joystickmenu.gs"
+include "lampmenu.gs"
+include "liverymenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
@@ -18,8 +20,17 @@ class TTTEBase isclass TTTEHelpers
   public StringTable strTable = null; // This asset's string table, saved for convenient fast access
 
   //Config data
-  Soup myConfig;
-  Soup ExtensionsContainer;
+  public Soup myConfig;
+  public Soup ExtensionsContainer;
+  public Soup FacesContainer;
+  public Soup LiveryContainer;
+  public Soup LiveryTextureOptions;
+  public Soup BogeyLiveryTextureOptions;
+  public Soup SmokeboxContainer;
+  public Soup BuffersContainer;
+  public Soup ExtraLampsContainer;
+  public bool[] ExtraLampVisibility;
+  public Asset[] ExtraLampAssets;
 
 
   public bool useLockTarget = false;
@@ -62,6 +73,35 @@ class TTTEBase isclass TTTEHelpers
 	public float eyeX = 0.0; //Left-Right Eye Rotation
 	public float eyeY = 0.0; // Eye Roll
 	public float eyeZ = 0.0; // Up-Down Eye Rotation
+
+  //Headcode stuff
+  public Asset headlight_asset;      // headlight asset used by the loco
+  public int m_headCode = 0;   // Stores the current state of the headcode lamps
+
+  //Livery stuff
+  Asset textureSet; // Texture asset we will use to grab the textures
+
+  public int skinSelection; // Integer used to store the current skin of the asset. This will default to zero, unless forced in Init().
+  int m_copySkin; // May not be needed..
+  int m_copySkinBogey;
+
+  public define int HEADCODE_BL = 1;
+  public define int HEADCODE_BC = 2;
+  public define int HEADCODE_BR = 4;
+  public define int HEADCODE_TC = 8;
+
+  public define int HEADCODE_NONE = 0;
+  public define int HEADCODE_ALL_LAMPS = HEADCODE_BL | HEADCODE_BC | HEADCODE_BR | HEADCODE_TC;
+  public define int HEADCODE_TAIL_LIGHTS = HEADCODE_BL | HEADCODE_BR;
+  public define int HEADCODE_BRANCH = HEADCODE_BL;
+  public define int HEADCODE_EXPRESS = HEADCODE_BL | HEADCODE_BR;
+  public define int HEADCODE_EXPRESS_FREIGHT = HEADCODE_TC | HEADCODE_BR;
+  public define int HEADCODE_EXPRESS_FREIGHT_2 = HEADCODE_BC | HEADCODE_BL;
+  public define int HEADCODE_EXPRESS_FREIGHT_3 = HEADCODE_TC | HEADCODE_BL;
+  public define int HEADCODE_GOODS = HEADCODE_BC | HEADCODE_BR;
+  public define int HEADCODE_LIGHT = HEADCODE_TC;
+  public define int HEADCODE_THROUGH_FREIGHT = HEADCODE_TC | HEADCODE_BC;
+  public define int HEADCODE_TVS = HEADCODE_BR;
 
   //public define int BROWSER_NONE         = -1;
   // public define int BROWSER_EYEMENU      = 1;
@@ -167,12 +207,12 @@ class TTTEBase isclass TTTEHelpers
     SupportedHeadcode = SupportedHeadcode | flag;
   }
 
-  bool GetFeatureSupported(int features)
+  public bool GetFeatureSupported(int features)
   {
     return (SupportedFeatureset & features) == features;
   }
 
-  bool GetHeadcodeSupported(int flags)
+  public bool GetHeadcodeSupported(int flags)
   {
     return (SupportedHeadcode & flags) == flags;
   }
@@ -193,11 +233,15 @@ class TTTEBase isclass TTTEHelpers
     //lamp window
     if(GetFeatureSupported(FEATURE_LAMPS))
     {
+      LampMenu = new LampMenu();
+      customMenus[customMenus.size()] = LampMenu;
     }
 
     //livery window
     if(GetFeatureSupported(FEATURE_LIVERIES))
     {
+      LiveryMenu = new LiveryMenu();
+      customMenus[customMenus.size()] = LiveryMenu;
     }
 
     //face window
@@ -250,7 +294,7 @@ class TTTEBase isclass TTTEHelpers
 
   void closePopup()
   {
-    if(CurrentMenu) CurrentMenu.Close();
+    popup = null;
     CurrentMenu = null;
     RefreshBrowser();
   }
@@ -319,6 +363,168 @@ class TTTEBase isclass TTTEHelpers
     }
 
     return num_vehicles;
+  }
+
+  // ============================================================================
+  // Name: ConfigureHeadcodeLamps()
+  // Desc: Sets the lamp arrangement from the headcode variable
+  // Lamp names are fairly self-explanatory, but here is the full name for each lamp:
+  // lamp_tc  = Top Center , lamp_bc = Bottom Center , Lamp_bl = Bottom Left , lamp_br = Bottom Right
+  // ============================================================================
+  public void ConfigureHeadcodeLamps()
+  {
+    // We are going to use SetFXAttachment to set the lamps in the correct positions.
+    // This is using the names of the lamps that are in the effects container of the locomotive.
+    if ((m_headCode & HEADCODE_BL) != 0) self.SetFXAttachment("lamp_bl", headlight_asset);
+    else self.SetFXAttachment("lamp_bl", null);
+    if ((m_headCode & HEADCODE_BC) != 0) self.SetFXAttachment("lamp_bc", headlight_asset);
+    else self.SetFXAttachment("lamp_bc", null);
+    if ((m_headCode & HEADCODE_BR) != 0) self.SetFXAttachment("lamp_br", headlight_asset);
+    else self.SetFXAttachment("lamp_br", null);
+    if ((m_headCode & HEADCODE_TC) != 0) self.SetFXAttachment("lamp_tc", headlight_asset);
+    else self.SetFXAttachment("lamp_tc", null);
+  }
+
+  // ============================================================================
+  // Name: ToggleExtraLamp()
+  // Desc: Toggles the state of a custom lamp effect
+  // ============================================================================
+  public void ToggleExtraLamp(int TargetLamp)
+  {
+    ExtraLampVisibility[TargetLamp] = !ExtraLampVisibility[TargetLamp];
+    string effectName = ExtraLampsContainer.GetIndexedTagName(TargetLamp);
+    if(ExtraLampVisibility[TargetLamp])
+      self.SetFXAttachment(effectName, ExtraLampAssets[TargetLamp]);
+    else
+      self.SetFXAttachment(effectName, null);
+  }
+
+  
+  // ============================================================================
+  // Name: ConfigureSkins()
+  // Parm:  None
+  // Desc:
+  // ============================================================================
+  public void ConfigureSkins()
+  {
+    TrainzScript.Log("Setting skin to " + (string)skinSelection);
+
+    int MainTextureGroupSize = 0;
+    int BogeyTextureGroupSize = 0;
+    //determine texturegroup offset
+    int i;
+
+    for(i = 0; i < LiveryTextureOptions.CountTags(); i++)
+    {
+      string TextureName = LiveryTextureOptions.GetIndexedTagName(i);
+      string TextureMode = LiveryTextureOptions.GetNamedTag(TextureName);
+      if(TextureMode == "none")
+      {
+        MainTextureGroupSize = MainTextureGroupSize + 1;
+      }
+      else if(TextureMode == "diffusenormal")
+      {
+        MainTextureGroupSize = MainTextureGroupSize + 2;
+      }
+      else if(TextureMode == "pbrstandard")
+      {
+        MainTextureGroupSize = MainTextureGroupSize + 3;
+      }
+    }
+    for(i = 0; i < BogeyLiveryTextureOptions.CountTags(); i++)
+    {
+      string TextureName = BogeyLiveryTextureOptions.GetIndexedTagName(i);
+      string TextureMode = BogeyLiveryTextureOptions.GetNamedTag(TextureName);
+      if(TextureMode == "none")
+      {
+        BogeyTextureGroupSize = BogeyTextureGroupSize + 1;
+      }
+      else if(TextureMode == "diffusenormal")
+      {
+        BogeyTextureGroupSize = BogeyTextureGroupSize + 2;
+      }
+      else if(TextureMode == "pbrstandard")
+      {
+        BogeyTextureGroupSize = BogeyTextureGroupSize + 3;
+      }
+    }
+
+    TrainzScript.Log("Found texturegroup size of " + (string)MainTextureGroupSize + " and bogey texturegroup size of " + (string)BogeyTextureGroupSize);
+
+    //increment this value for each texture, to loop along
+    //use texturegroup offset
+    m_copySkin = skinSelection * (MainTextureGroupSize + BogeyTextureGroupSize);
+
+    for(i = 0; i < LiveryTextureOptions.CountTags(); i++)
+    {
+      string TextureName = LiveryTextureOptions.GetIndexedTagName(i);
+      string TextureMode = LiveryTextureOptions.GetNamedTag(TextureName);
+      if(TextureMode == "none")
+      {
+        self.SetFXTextureReplacement(TextureName,textureSet,m_copySkin);
+        m_copySkin = m_copySkin + 1;
+      }
+      else if(TextureMode == "diffusenormal")
+      {
+        self.SetFXTextureReplacement(TextureName + "_diffuse",textureSet,m_copySkin);
+        self.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkin + 1);
+        m_copySkin = m_copySkin + 2;
+      }
+      else if(TextureMode == "pbrstandard")
+      {
+        self.SetFXTextureReplacement(TextureName + "_albedo",textureSet,m_copySkin);
+        self.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkin + 1);
+        self.SetFXTextureReplacement(TextureName + "_parameter",textureSet,m_copySkin + 2);
+        m_copySkin = m_copySkin + 3;
+      }
+      else
+      {
+        TrainzScript.Log("Livery mode " + TextureMode + " is not supported!");
+      }
+    }
+
+    //bogey liveries
+    Bogey[] myBogies = self.GetBogeyList();
+
+    int currentBogey;
+    for(currentBogey = 0; currentBogey < myBogies.size(); currentBogey++)
+    {
+      if(myBogies[currentBogey])
+      {
+        m_copySkinBogey = m_copySkin;
+        Bogey ActiveBogey = myBogies[currentBogey];
+
+        for(i = 0; i < BogeyLiveryTextureOptions.CountTags(); i++)
+        {
+          string TextureName = BogeyLiveryTextureOptions.GetIndexedTagName(i);
+          string TextureMode = BogeyLiveryTextureOptions.GetNamedTag(TextureName);
+          if(TextureMode == "none")
+          {
+            ActiveBogey.SetFXTextureReplacement(TextureName,textureSet,m_copySkinBogey);
+            m_copySkinBogey = m_copySkinBogey + 1;
+          }
+          else if(TextureMode == "diffusenormal")
+          {
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_diffuse",textureSet,m_copySkinBogey);
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkinBogey + 1);
+            m_copySkinBogey = m_copySkinBogey + 2;
+          }
+          else if(TextureMode == "pbrstandard")
+          {
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_albedo",textureSet,m_copySkinBogey);
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_normal",textureSet,m_copySkinBogey + 1);
+            ActiveBogey.SetFXTextureReplacement(TextureName + "_parameter",textureSet,m_copySkinBogey + 2);
+            m_copySkinBogey = m_copySkinBogey + 3;
+          }
+          else
+          {
+            TrainzScript.Log("Livery mode " + TextureMode + " is not supported!");
+          }
+        }
+      }
+    }
+
+
   }
 
   public void BaseInit(Asset asset)

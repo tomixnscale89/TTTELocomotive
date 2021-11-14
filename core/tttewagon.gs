@@ -24,9 +24,6 @@ class tttewagon isclass Vehicle, TTTEBase
   Soup LiveryTextureOptions;
   Soup BogeyLiveryTextureOptions;
 
-  // Bogie array to use for livery swapping
-  Bogey[] myBogies;
-
   bool m_cameraTarget; // Is this the camera target?
 
   Library ACSlib;   // reference to the Advanced Coupling System Library
@@ -56,8 +53,6 @@ class tttewagon isclass Vehicle, TTTEBase
     self = me;
     BaseInit(asset);
 
-
-    myBogies = me.GetBogeyList();
 
     LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
     LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
