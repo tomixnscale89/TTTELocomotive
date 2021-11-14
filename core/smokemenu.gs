@@ -27,7 +27,7 @@ class SmokeMenu isclass CustomScriptMenu
       output.Print("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
       if(i != base.BoundWheesh)
       {
-        output.Print("<i><a href='live://smoke-bind/" + (string)i + "'>" + strTable.GetString("bind_wheesh") + "</a></i>");
+        output.Print("<i><a href='live://smoke-bind/" + (string)i + "'>" + base.strTable.GetString("bind_wheesh") + "</a></i>");
       }
 
       output.Print("</b>");
@@ -91,10 +91,19 @@ class SmokeMenu isclass CustomScriptMenu
         if(curTagName != "active" and curTagName != "expanded")
         {
           string id = (string)i + curTagName;
-          popup.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
+          base.popup.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
         }
       }
     }
+  }
+
+  public void Open()
+  {
+  }
+
+  public void PostRefresh()
+  {
+    RefreshSmokeTags();
   }
 
   public void ProcessMessage(string cmd)
@@ -109,9 +118,9 @@ class SmokeMenu isclass CustomScriptMenu
         string[] propertytokens = Str.Tokens(command, "0123456789");
         string propertyname = propertytokens[propertytokens.size() - 1];
         string smokeid = Str.UnpackInt(Str.CloneString(command));
-        Soup smoke = SmokeEdits.GetNamedSoup(smokeid);
+        Soup smoke = base.SmokeEdits.GetNamedSoup(smokeid);
 
-        float value = Str.ToFloat(popup.GetElementProperty(command, "value"));
+        float value = Str.ToFloat(base.popup.GetElementProperty(command, "value"));
 
         smoke.SetNamedTag(propertyname, value);
 
@@ -126,7 +135,7 @@ class SmokeMenu isclass CustomScriptMenu
       string command = Str.Tokens(cmd, "live://contract/")[0];
       if(command)
       {
-        Soup smoke = SmokeEdits.GetNamedSoup(command);
+        Soup smoke = base.SmokeEdits.GetNamedSoup(command);
         smoke.SetNamedTag("expanded", false);
         base.RefreshBrowser();
       }
@@ -136,7 +145,7 @@ class SmokeMenu isclass CustomScriptMenu
       string command = Str.Tokens(cmd, "live://expand/")[0];
       if(command)
       {
-        Soup smoke = SmokeEdits.GetNamedSoup(command);
+        Soup smoke = base.SmokeEdits.GetNamedSoup(command);
         smoke.SetNamedTag("expanded", true);
         base.RefreshBrowser();
       }
@@ -146,8 +155,8 @@ class SmokeMenu isclass CustomScriptMenu
       string command = Str.Tokens(cmd, "live://smoke-bind/")[0];
       if(command)
       {
-         BoundWheesh = Str.UnpackInt(command);
-         base.RefreshBrowser();
+        base.BoundWheesh = Str.UnpackInt(command);
+        base.RefreshBrowser();
       }
     }
   }

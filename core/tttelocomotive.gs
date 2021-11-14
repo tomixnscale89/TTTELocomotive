@@ -130,14 +130,11 @@ class tttelocomotive isclass Locomotive, TTTEBase
   thread void CheckScriptAssetObsolete();
   thread void CheckDLSAdditionalFaces();
 
-  string assignedFriend;
-  int eyeQueueFrame = 0;
-  EyeFrame[] eyeQueue;
-  thread void OnlineEyeThread();
 
   thread void EyeScriptCheckThread(void);
   //thread void JoystickThread(void);
   thread void BufferThread();
+  thread void OnlineEyeThread();
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
   void createMenuWindow();
@@ -178,9 +175,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   Vehicle LastCoupleInteraction;
 
   //Eyescript Variables
-  define bool eye_IsControllerSupportEnabled = true; //Is a controller currently bound and set to control the script?
-
-
 	define float eye_UpdatePeriod = 0.01;
   define float MP_UpdatePeriod = 0.1;
   int eye_animframe = 0;
@@ -201,21 +195,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   bool HasFocus = false;
   bool BrowserClosed;
   bool PopupClosed = true;
-
-
-  // Options for headcode lights;
-  //define int HEADCODE_NONE = 0;
-  //define int HEADCODE_ALL_LAMPS = 1;
-  //define int HEADCODE_TAIL_LIGHTS = 2;
-  //define int HEADCODE_BRANCH = 3;
-  //define int HEADCODE_EXPRESS = 4;
-  //define int HEADCODE_EXPRESS_FREIGHT = 5;
-  //define int HEADCODE_EXPRESS_FREIGHT_2 = 6;
-  //define int HEADCODE_EXPRESS_FREIGHT_3 = 7;
-  //define int HEADCODE_GOODS = 8;
-  //define int HEADCODE_LIGHT = 9;
-  //define int HEADCODE_THROUGH_FREIGHT = 10;
-  //define int HEADCODE_TVS = 11;
 
 
   public define int CAR_DERAILED = -1;
@@ -458,6 +437,12 @@ class tttelocomotive isclass Locomotive, TTTEBase
     // Handler for Secondary Whistle PFX
     // AddHandler(me.GetMyTrain(), "Train", "NotifyHorn", "WhistleMonitor");
 
+
+    train = me.GetMyTrain(); // Get the train
+    SniffMyTrain(); // Then sniff it
+
+    HeadlightMonitor();
+
     //listen for user change messages in the online group
     //although this message is sent to OnlineGroup objects, it is forwarded to the online group library through Sniff
     if(GetOnlineLibrary())
@@ -466,11 +451,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
       AddHandler(GetOnlineLibrary(), "TTTEOnline", "Update", "OnlineUpdateHandler");
       OnlineEyeThread();
     }
-
-    train = me.GetMyTrain(); // Get the train
-    SniffMyTrain(); // Then sniff it
-
-    HeadlightMonitor();
 
   }
 
@@ -489,96 +469,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
     return GetMyTrain() == World.GetCurrentTrain();
   }
 
-  void UsersChangeHandler(Message msg)
-  {
-    RefreshBrowser();
-  }
-
-  void OnlineUpdateHandler(Message msg)
-  {
-    Soup parameters = msg.paramSoup;
-    string user = parameters.GetNamedTag("username");
-    Str.ToLower(user);
-    string friendLower = Str.CloneString(assignedFriend);
-    Str.ToLower(friendLower);
-
-    if(user == friendLower)
-    {
-      EyeFrame[] eyeQueueTemp = new EyeFrame[0];
-      //eyeQueue
-
-      int newSelection = parameters.GetNamedTagAsInt("faceSelection", faceSelection);
-      if(newSelection != faceSelection)
-      {
-        faceSelection = newSelection;
-        if(faceSelection >= FacesContainer.CountTags())
-          faceSelection = FacesContainer.CountTags() - 1;
-        ConfigureFaces();
-      }
-
-      float dccValue = parameters.GetNamedTagAsFloat("dccValue", 0.0);
-      GetMyTrain().SetDCCThrottle(dccValue);
-
-      int packetSize = parameters.GetNamedTagAsInt("packetSize", 50);
-      int i;
-      for(i = 0; i < packetSize; i++)
-      {
-        Soup frameSoup = parameters.GetNamedSoup((string)i);
-        EyeFrame frame = new EyeFrame();
-        frame.x = frameSoup.GetNamedTagAsFloat("eyeX");
-        frame.y = frameSoup.GetNamedTagAsFloat("eyeY");
-        eyeQueueTemp[eyeQueueTemp.size()] = frame;
-      }
-      //eyeX = parameters.GetNamedTagAsFloat("eyeX");
-      //eyeY = parameters.GetNamedTagAsFloat("eyeY");
-
-      //decide whether to append or replace
-      int dist = eyeQueue.size() - eyeQueueFrame;
-
-      //if we get more than 30 frames behind, replace
-      if(dist > 30)
-      {
-        eyeQueueFrame = 0;
-        eyeQueue = eyeQueueTemp;
-      }
-      else
-      {
-        for(i = 0; i < eyeQueueTemp.size(); i++)
-          eyeQueue[eyeQueue.size()] = eyeQueueTemp[i];
-      }
-    }
-  }
-
-  thread void OnlineEyeThread()
-  {
-    while(true)
-    {
-      if(eyeQueue.size() and eyeQueueFrame < eyeQueue.size())
-      {
-        EyeFrame frame = eyeQueue[eyeQueueFrame];
-        eyeX = frame.x;
-        eyeY = frame.y;
-        eyeQueueFrame++;
-      }
-
-      Sleep(TTTEOnline.RECORD_INTERVAL);
-    }
-  }
-
-  Soup GetOnlineDesc()
-  {
-    Soup soup = Constructors.NewSoup();
-    soup.SetNamedTag("type", "locoDesc");
-    soup.SetNamedTag("targetUser", assignedFriend);
-
-    //config soups are locked
-    Soup facesSoup = Constructors.NewSoup();
-    facesSoup.Copy(FacesContainer);
-
-    soup.SetNamedSoup("facesContainer", facesSoup);
-
-    return soup;
-  }
 
   int[] GetKuidData(KUID FoundKUID)
   {
@@ -1884,6 +1774,32 @@ class tttelocomotive isclass Locomotive, TTTEBase
 		}
 	}
 
+  void UsersChangeHandler(Message msg)
+  {
+    RefreshBrowser();
+  }
+
+  void OnlineUpdateHandler(Message msg)
+  {
+    OnlineUpdate(msg);
+  }
+
+  thread void OnlineEyeThread()
+  {
+    while(true)
+    {
+      if(eyeQueue.size() and eyeQueueFrame < eyeQueue.size())
+      {
+        EyeFrame frame = eyeQueue[eyeQueueFrame];
+        eyeX = frame.x;
+        eyeY = frame.y;
+        eyeQueueFrame++;
+      }
+
+      Sleep(TTTEOnline.RECORD_INTERVAL);
+    }
+  }
+
   // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
@@ -1978,149 +1894,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   	return output.AsString();
   }
 
-
-  // string GetEyeWindowHTML()
-  // {
-  // 	HTMLBuffer output = HTMLBufferStatic.Construct();
-  // 	output.Print("<html><body>");
-  // 	output.Print("<table>");
-
-  //   //output.Print("<tr><td>");
-  //   //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-  //   //output.Print("</tr></td>");
-
-  //   //Options
-  //   output.Print("<tr><td>");
-  //   output.Print("<font><b>" + strTable.GetString("eye_menu") + "</font>");
-  //   output.Print("<br>");
-  //   output.Print("<a href='live://eye-reset' tooltip='" + strTable.GetString("tooltip_reset") + "'><font>" + strTable.GetString("reset_controls") + "</font></a>");
-  //   output.Print("</tr></td>");
-
-  //   //controls
-  //   output.Print("<tr><td>");
-  //   output.Print(strTable.GetString("eye_rotation_h"));
-  //   output.Print("<br>");
-  //   output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-  //   output.Print("</tr></td>");
-
-  //   output.Print("<tr><td>");
-  //   output.Print(strTable.GetString("eye_rotation_v"));
-  //   output.Print("<br>");
-  //   output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-  //   output.Print("</tr></td>");
-
-  //   //dial is no longer advanced lol
-  //   output.Print("<tr><td>");
-  //   output.Print("<trainz-object style=dial width=100 height=100 id='eyeZ' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
-  //   output.Print("</tr></td>");
-
-  //   output.Print("<tr><td>");
-  //   output.Print("<a href='live://record'><font>" + strTable.GetString("recording_start") + "</font></a>");
-  //   output.Print("<br>");
-  //   output.Print("<a href='live://record-stop'><font>" + strTable.GetString("recording_stop") + "</font></a>");
-  //   output.Print("<br>");
-  //   output.Print("<a href='live://play'><font>" + strTable.GetString("recording_anim") + "</font></a>");
-  //   output.Print("</tr></td>");
-
-  //   output.Print("</table>");
-
-  //   output.Print("<br>");
-  //   output.Print(HTMLWindow.CheckBox("live://eye-lock", useLockTarget));
-  // 	output.Print(strTable.GetString("target_lock") + "</tr></td>");
-  //   if(useLockTarget)
-  // 	{
-  //     string targetText = strTable.GetString("target_select");
-  //     if(selectingTarget)
-  //       targetText = strTable.GetString("target_looking");
-  //     else if(eyeLockTarget != null)
-  //       targetText = eyeLockTarget.GetAsset().GetLocalisedName();
-  // 		output.Print("<br>");
-  // 		output.Print("<a href='live://eye-lock-select' tooltip='" + strTable.GetString("target_select_eye") + "'>" + targetText + "</a>");
-  // 	}
-
-  // 	output.Print("</body></html>");
-
-  // 	return output.AsString();
-  // }
-
-  string GetStatusString(int status)
-  {
-    switch(status)
-    {
-      case OnlineGroup.USER_STATUS_UNKNOWN:
-        return "Unknown";
-      case OnlineGroup.USER_STATUS_OFFLINE:
-        return "Offline";
-      case OnlineGroup.USER_STATUS_ONLINE:
-        return "Online";
-      case OnlineGroup.USER_STATUS_INSIDE:
-        return "Active";
-      case OnlineGroup.USER_STATUS_INVALID:
-        return "Invalid";
-      default:
-        return "Error";
-    }
-
-    return "Error";
-  }
-
-  string GetSocialWindowHTML()
-  {
-    HTMLBuffer output = HTMLBufferStatic.Construct();
-    output.Print("<html><body>");
-    output.Print("Invite your friends to control this locomotive!");
-    output.Print("<br>");
-
-    OnlineGroup socialGroup = GetSocialGroup();
-
-    output.Print("<table width=300>");
-    bool rowParity = false;
-
-    int i;
-    for(i = 0; i < socialGroup.CountUsers(); i++)
-    {
-      string user = socialGroup.GetIndexedUser(i);
-      int status = socialGroup.GetUserStatus(i);
-
-      rowParity = !rowParity;
-      if (rowParity)
-        output.Print("<tr bgcolor=#0E2A35 height=20>");
-      else
-        output.Print("<tr bgcolor=#05171E height=20>");
-
-      output.Print("<td width=100>");
-      output.Print(user);
-      output.Print("</td>");
-
-      output.Print("<td width=100>");
-      if(status == OnlineGroup.USER_STATUS_INSIDE)
-      {
-        if(user == assignedFriend)
-          output.Print("<a href='live://unassign_friend/" + (string)i + "'>Revoke Control</a>");
-        else
-          output.Print("<a href='live://assign_friend/" + (string)i + "'>Assign To Loco</a>");
-      }
-      output.Print("</td>");
-
-      output.Print("<td width=50><a href='live://kick_friend/" + (string)i + "'>Kick</a></td>");
-      
-      output.Print("<td width=50>" + GetStatusString(status) + "</td>");
-
-      output.Print("</tr>");
-    }
-    output.Print("</table>");
-
-    output.Print("<br>");
-    output.Print("iTrainz Username: ");
-    output.Print("<trainz-object style=edit-box link-on-focus-loss id=social_user width=250 height=16></trainz-object>");
-    output.Print("<br>");
-
-    output.Print("<a href='live://invite_friend'>Invite</a>");
-    output.Print("<br>");
-
-    output.Print("</body></html>");
-    return output.AsString();
-  }
 
   // ============================================================================
   // Name: createMenuWindow()
@@ -2386,31 +2159,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
       // msg.src = null;
       // continue;
 
-      //invite_friend
-      on "Browser-URL", "live://invite_friend", msg:
-      if ( popup and msg.src == popup )
-      {
-        string inviteUser = popup.GetElementProperty("social_user", "text");
-        TrainzScript.Log("sending invite to " + inviteUser);
-
-        //assignedFriend = inviteUser;
-        
-        TTTEOnline onlineLibrary = GetOnlineLibrary();
-        if(onlineLibrary and inviteUser != "")
-          onlineLibrary.InviteToGroup(inviteUser);
-        else
-        {
-          if(inviteUser == "")
-            Interface.ShowMessageBox(me, "Invalid username specified.", true, "TTTEOnline", "invalidUser");
-          else
-            Interface.ShowMessageBox(me, "Unable to access online library.", true, "TTTEOnline", "invalidLibrary");
-        }
-        RefreshBrowser();
-      }
-      msg.src = null;
-      continue;
-
-
       //Main Window
       on "Browser-URL", "live://return", msg:
       if ( popup and msg.src == popup )
@@ -2452,57 +2200,12 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
         if ( popup and msg.src == popup )
         {
-          if(TrainUtil.HasPrefix(msg.minor, "live://assign_friend/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://assign_friend/")[0];
-            if(command)
-            {
-              int idx = Str.ToInt(command);
+          // int i;
+          // for(i = 0; i < customMenus.size(); i++)
+          //   customMenus[i].ProcessMessage(msg.minor);
 
-              OnlineGroup socialGroup = GetSocialGroup();
-              string user = socialGroup.GetIndexedUser(idx);
-              
-              assignedFriend = user;
-              socialGroup.PostMessage(GetOnlineDesc());
-              
-              RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://kick_friend/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://kick_friend/")[0];
-            if(command)
-            {
-              int idx = Str.ToInt(command);
-
-              OnlineGroup socialGroup = GetSocialGroup();
-              string user = socialGroup.GetIndexedUser(idx);
-
-              if(user != "")
-                socialGroup.RemoveUser(user);
-              
-              RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://unassign_friend/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://unassign_friend/")[0];
-            if(command)
-            {
-              assignedFriend = "";
-              RefreshBrowser();
-            }
-          }
-          else
-          {
-            //PROCESS CUSTOM MENU COMMANDS
-            if(popup and msg.src == popup)
-            {
-              int i;
-              for(i = 0; i < customMenus.size(); i++)
-                customMenus[i].ProcessMessage(msg.minor);
-            }
-          }
+          if(CurrentMenu)
+            CurrentMenu.ProcessMessage(msg.minor);
         }
       }
       msg.src = null;

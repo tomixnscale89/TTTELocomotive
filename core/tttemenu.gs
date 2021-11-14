@@ -58,6 +58,14 @@ class CustomScriptMenu
   }
 
   // ============================================================================
+  // Name: PostRefresh()
+  // Desc: Called after the menu has been refreshed.
+  // ============================================================================
+  public void PostRefresh()
+  {
+  }
+
+  // ============================================================================
   // Name: Tick()
   // Desc: The primary menu thread - will be called at the interval specified by GetTickInterval()
   // ============================================================================

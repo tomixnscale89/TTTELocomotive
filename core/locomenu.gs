@@ -79,6 +79,12 @@ class LocoMenu isclass CustomScriptMenu
 
   public void Open()
   {
+    //base.popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
+    //base.popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
+  }
+
+  public void PostRefresh()
+  {
     base.popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
     base.popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
   }

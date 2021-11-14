@@ -8,6 +8,7 @@ include "liverymenu.gs"
 include "facemenu.gs"
 include "locomenu.gs"
 include "smokemenu.gs"
+include "socialmenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
@@ -101,8 +102,13 @@ class TTTEBase isclass TTTEHelpers
 
   //Smoke stuff
   public Soup SmokeEdits;
-  int BoundWheesh = -1;
+  public int BoundWheesh = -1;
 
+  //Social stuff
+  public string assignedFriend;
+
+  int eyeQueueFrame = 0;
+  EyeFrame[] eyeQueue;
 
   public define int HEADCODE_BL = 1;
   public define int HEADCODE_BC = 2;
@@ -150,8 +156,12 @@ class TTTEBase isclass TTTEHelpers
 
   public void RefreshBrowser()
   {
+    TrainzScript.Log("refreshing browser");
     if(CurrentMenu != null)
+    {
       popup.LoadHTMLString(self.GetAsset(), CurrentMenu.GetMenuHTML());
+      CurrentMenu.PostRefresh();
+    }
     
     // if(CurrentMenu >= BROWSER_CUSTOMMENU_0)
     // {
@@ -283,6 +293,8 @@ class TTTEBase isclass TTTEHelpers
 
     if(GetOnlineLibrary())
     {
+      SocialMenu = new SocialMenu();
+      customMenus[customMenus.size()] = SocialMenu;
     }
 
     CustomScriptMenu[] override_menus = GetCustomMenus();
@@ -344,12 +356,6 @@ class TTTEBase isclass TTTEHelpers
       return TTTELocoLibrary.GetOnlineLibrary();
 
     return null;
-  }
-
-  OnlineGroup GetSocialGroup()
-  {
-    TTTEOnline onlineLibrary = GetOnlineLibrary();
-    return onlineLibrary.GetPersonalGroup();
   }
 
   int GetTTTETrainIndex()
@@ -625,6 +631,76 @@ class TTTEBase isclass TTTEHelpers
         }
       }
     }
+  }
+
+  void OnlineUpdate(Message msg)
+  {
+    Soup parameters = msg.paramSoup;
+    string user = parameters.GetNamedTag("username");
+    Str.ToLower(user);
+    string friendLower = Str.CloneString(assignedFriend);
+    Str.ToLower(friendLower);
+
+    if(user == friendLower)
+    {
+      EyeFrame[] eyeQueueTemp = new EyeFrame[0];
+      //eyeQueue
+
+      int newSelection = parameters.GetNamedTagAsInt("faceSelection", faceSelection);
+      if(newSelection != faceSelection)
+      {
+        faceSelection = newSelection;
+        if(faceSelection >= FacesContainer.CountTags())
+          faceSelection = FacesContainer.CountTags() - 1;
+        ConfigureFaces();
+      }
+
+      float dccValue = parameters.GetNamedTagAsFloat("dccValue", 0.0);
+      self.GetMyTrain().SetDCCThrottle(dccValue);
+
+      int packetSize = parameters.GetNamedTagAsInt("packetSize", 50);
+      int i;
+      for(i = 0; i < packetSize; i++)
+      {
+        Soup frameSoup = parameters.GetNamedSoup((string)i);
+        EyeFrame frame = new EyeFrame();
+        frame.x = frameSoup.GetNamedTagAsFloat("eyeX");
+        frame.y = frameSoup.GetNamedTagAsFloat("eyeY");
+        eyeQueueTemp[eyeQueueTemp.size()] = frame;
+      }
+      //eyeX = parameters.GetNamedTagAsFloat("eyeX");
+      //eyeY = parameters.GetNamedTagAsFloat("eyeY");
+
+      //decide whether to append or replace
+      int dist = eyeQueue.size() - eyeQueueFrame;
+
+      //if we get more than 30 frames behind, replace
+      if(dist > 30)
+      {
+        eyeQueueFrame = 0;
+        eyeQueue = eyeQueueTemp;
+      }
+      else
+      {
+        for(i = 0; i < eyeQueueTemp.size(); i++)
+          eyeQueue[eyeQueue.size()] = eyeQueueTemp[i];
+      }
+    }
+  }
+
+  public Soup GetOnlineDesc()
+  {
+    Soup soup = Constructors.NewSoup();
+    soup.SetNamedTag("type", "locoDesc");
+    soup.SetNamedTag("targetUser", assignedFriend);
+
+    //config soups are locked
+    Soup facesSoup = Constructors.NewSoup();
+    facesSoup.Copy(FacesContainer);
+
+    soup.SetNamedSoup("facesContainer", facesSoup);
+
+    return soup;
   }
 
   public void BaseInit(Asset asset)
