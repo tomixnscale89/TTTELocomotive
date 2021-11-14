@@ -8,6 +8,7 @@ include "world.gs"
 class CustomScriptMenu
 {
   public TTTEBase base;
+  public bool _tick_running = false;
 
   // ============================================================================
   // Custom Override Functions
@@ -73,6 +74,15 @@ class CustomScriptMenu
     return -1.0;
   }
 
+  // ============================================================================
+  // Name: AlwaysTick()
+  // Desc: Whether this menu should always tick, regardless of its selection status. Warning: this will prevent Close() from being called until you call StopTick().
+  // ============================================================================
+  public bool AlwaysTick()
+  {
+    return false;
+  }
+
   //DO NOT OVERRIDE THESE!
 
   // public CustomScriptMenu Init(TTTEBase _base)
@@ -88,5 +98,10 @@ class CustomScriptMenu
   public bool IsCore()
   {
     return false;
+  }
+
+  void StopTick()
+  {
+    _tick_running = false;
   }
 };

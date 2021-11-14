@@ -118,7 +118,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   int DetermineCarPosition(void);
   void SniffMyTrain(void);
   string HeadcodeDescription(int headcode);
-  void ConfigureFaces();
   public void SetProperties(Soup soup);
   public Soup GetProperties(void);
   public string GetDescriptionHTML(void);
@@ -171,16 +170,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   float trainzVersion = World.GetTrainzVersion();
 
 
-  // Faces Options
-  int faceSelection;
-  int DLSfaceSelection;
-
-
-  Asset[] InstalledDLSFaces;
-  Asset[] DLSFaces;
-  Asset[] InstalledDLSLiveries;
-  Asset[] DLSLiveries;
-
   Soup SmokeEdits;
   int BoundWheesh = -1;
   // ACS Stuff
@@ -215,18 +204,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   bool HasFocus = false;
   bool BrowserClosed;
   bool PopupClosed = true;
-
-
-  //tab specific Options
-  bool b_WheelslipEnabled = false;
-  bool b_ShakeEnabled = false;
-  float b_ShakeIntensity = 0.02;
-  float b_ShakePeriod = 0.04;
-  bool b_CoupleLockEnabled = false;
-  float normal_maxtractiveeffort;
-  float normal_traction;
-  float normal_momentum;
-
 
 
   // Options for headcode lights;
@@ -1153,56 +1130,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
 
   // ============================================================================
-  // Name: ConfigureFaces()
-  // Parm:  None
-  // Desc: Configures the locomotive face. Uses a switch with faceSelection to determine the correct face to display.
-  // ============================================================================
-  void ConfigureFaces()
-  {
-    TrainzScript.Log("Setting face to " + (string)faceSelection);
-    //clear our faces
-    int i;
-    for(i = 0; i < FacesContainer.CountTags(); i++)
-    {
-        SetMeshVisible(FacesContainer.GetIndexedTagName(i), false, 0.0);
-    }
-
-    //DLS faces
-    SetFXAttachment("face", null);
-
-    bool showEyes = true;
-    //set our active face to be visible
-    if(faceSelection > -1)
-    {
-      SetMeshVisible(FacesContainer.GetIndexedTagName(faceSelection), true, 0.0);
-      string activeFaceMesh = FacesContainer.GetIndexedTagName(faceSelection);
-
-      showEyes = (SmokeboxContainer.GetIndexForNamedTag(activeFaceMesh) == -1);
-    }
-    else if(DLSfaceSelection > -1)
-    {
-      Asset FaceAsset = InstalledDLSFaces[DLSfaceSelection];
-      SetFXAttachment("face", FaceAsset);
-      Soup FaceExtensions = FaceAsset.GetConfigSoup().GetNamedSoup("extensions");
-      string type = FaceExtensions.GetNamedTag("type");
-      showEyes = (type != "smokebox");
-    }
-
-    //determine if this is a smokebox mesh
-    if(showEyes)
-    {
-      SetMeshVisible("eye_l", true, 0.0);
-      SetMeshVisible("eye_r", true, 0.0);
-    }
-    else
-    {
-      SetMeshVisible("eye_l", false, 0.0);
-      SetMeshVisible("eye_r", false, 0.0);
-    }
-  }
-
-
-  // ============================================================================
   // Name: ACSHandler()
   // Parm: msg - Message to handle
   // Desc: Message handler for "ACS", "" messages
@@ -2014,54 +1941,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
     }
   }
 
-  float Lerp(float from, float to, float t)
-	{
-		return (from + (to - from)*t);
-	}
-
-  thread void ShakeThread()
-  {
-    int ShakeTime = 0;
-    float ShakeTargetX = 0;
-    float ShakeTargetY = 0;
-    float ShakeTargetZ = 0;
-    float LastShakeTargetX = 0;
-    float LastShakeTargetY = 0;
-    float LastShakeTargetZ = 0;
-    while(b_ShakeEnabled)
-    {
-      if(browser and CurrentMenu == LocoMenu)
-      {
-        b_ShakeIntensity = Str.UnpackFloat(popup.GetElementProperty("shakeintensity", "value"));
-        b_ShakePeriod = Str.UnpackFloat(popup.GetElementProperty("shakeperiod", "text")); //seconds to tenths
-      }
-
-      //prevent divide by zero
-      int localPeriod = (b_ShakePeriod * 100.0);
-      if(localPeriod < 2) localPeriod = 2;
-
-      float Along = (float)ShakeTime/(float)localPeriod;
-      float InterpX = Lerp(LastShakeTargetX, ShakeTargetX, Along);
-      float InterpY = Lerp(LastShakeTargetY, ShakeTargetY, Along);
-      float InterpZ = Lerp(LastShakeTargetZ, ShakeTargetZ, Along);
-      SetMeshOrientation("default", InterpX, InterpY, InterpZ);
-
-      if(ShakeTime == localPeriod)
-			{
-				ShakeTime = 0;
-				LastShakeTargetX = ShakeTargetX;
-				LastShakeTargetY = ShakeTargetY;
-				LastShakeTargetZ = ShakeTargetZ;
-				ShakeTargetX = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
-				ShakeTargetY = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
-				ShakeTargetZ = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
-			}
-
-      ShakeTime++;
-      Sleep(0.01);
-    }
-  }
-
   // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
@@ -2220,162 +2099,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
   // 	return output.AsString();
   // }
-
-  string GetFaceWindowHTML()
-  {
-    HTMLBuffer output = HTMLBufferStatic.Construct();
-    output.Print("<html><body>");
-    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("<br>");
-    output.Print(strTable.GetString("faces_description"));
-    output.Print("<br>");
-    output.Print("<table>");
-    output.Print("<tr> <td width='300'></td> </tr>");
-    bool rowParity = false;
-    int i;
-    for(i = 0; i < FacesContainer.CountTags(); i++)
-    {
-      rowParity = !rowParity;
-      string faceName = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
-      if (rowParity)
-        output.Print("<tr bgcolor=#0E2A35>");
-      else
-        output.Print("<tr bgcolor=#05171E>");
-
-      output.Print("<td>");
-      if(i != faceSelection)
-        output.Print("<a href='live://face_set/" + i + "'>");
-      output.Print(faceName);
-      if(i != faceSelection)
-        output.Print("</a>");
-
-      output.Print("</td>");
-      output.Print("</tr>");
-    }
-
-    Soup TTTESettings = GetTTTELocomotiveSettings();
-    bool UseDLSContent = TTTESettings.GetNamedSoup("dls-content/").GetNamedTagAsBool("value", false) and !World.IsAssetRestrictionInEffect();
-    //TrainzScript.Log("use DLS " + (string)UseDLSContent + " from soup " + TTTESettings.GetNamedSoup("dls-content/").AsString());
-
-    if(UseDLSContent and InstalledDLSFaces)
-    {
-      for(i = 0; i < InstalledDLSFaces.size(); i++)
-      {
-        rowParity = !rowParity;
-        Asset DLSFace = InstalledDLSFaces[i];
-        StringTable FaceStrTable = DLSFace.GetStringTable();
-        //Soup FaceExtensions = DLSFace.GetConfigSoup().GetNamedSoup("extensions");
-        string faceName = FaceStrTable.GetString("displayname");
-        if(!faceName or faceName == "")
-          faceName = DLSFace.GetLocalisedName();
-
-        if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>"); // height='100'
-        else
-          output.Print("<tr bgcolor=#05171E>");
-
-        output.Print("<td>");
-        output.Print("<trainz-object width=20 height=20 style=preview asset='" + DLSFace.GetKUID().GetHTMLString() + "'></trainz-object>");
-
-        if(i != DLSfaceSelection)
-          output.Print("<a href='live://face_set_dls/" + i + "'>");
-        output.Print(faceName);
-        if(i != DLSfaceSelection)
-          output.Print("</a>");
-
-
-        output.Print("</td>");
-        output.Print("</tr>");
-      }
-    }
-    output.Print("</table>");
-
-    if(UseDLSContent and DLSFaces and DLSFaces.size())
-    {
-      output.Print("<br>");
-      output.Print("Download custom faces:");
-      output.Print("<br>");
-      rowParity = false;
-      output.Print("<table>");
-      for(i = 0; i < DLSFaces.size(); i++)
-      {
-        rowParity = !rowParity;
-        Asset DLSFace = DLSFaces[i];
-        string faceName = DLSFace.GetLocalisedName();
-
-        if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>"); // height='100'
-        else
-          output.Print("<tr bgcolor=#05171E>");
-
-        output.Print("<td>");
-        //output.Print(faceName);
-        //output.Print("<br>");
-
-
-        output.Print("<a href='live://dlc_download/" + i + "' tooltip='" + DLSFace.GetLocalisedDescription() + "'>");//GetHTMLString()
-        //output.Print("<a href='trainz://install/" + DLSFace.GetKUID().GetHTMLString() + "'>");
-        output.Print(faceName);
-        output.Print("</a>");
-
-        output.Print("</td>");
-
-        //output.Print("<td>");
-        //output.Print(DLSFace.GetLocalisedDescription());
-        //output.Print("</td>");
-
-        output.Print("<td align='right'>");
-        output.Print("<trainz-object width=100 height=100 style=thumbnail-downloader asset='" + DLSFace.GetKUID().GetHTMLString() + "'></trainz-object>");
-        output.Print("</td>");
-        output.Print("</tr>");
-      }
-      output.Print("</table>");
-    }
-
-    output.Print("</body></html>");
-    return output.AsString();
-  }
-
-  string GetLocoWindowHTML()
-  {
-    HTMLBuffer output = HTMLBufferStatic.Construct();
-  	output.Print("<html><body>");
-  	output.Print("<table>");
-
-    //output.Print("<tr><td>");
-    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    //output.Print("</tr></td>");
-
-    output.Print("<tr><td>");
-    output.Print(HTMLWindow.CheckBox("live://property/loco-wheelslip", b_WheelslipEnabled));
-    output.Print(" " + strTable.GetString("wheelslip"));
-    output.Print("</tr></td>");
-
-    output.Print("<tr><td>");
-    output.Print(HTMLWindow.CheckBox("live://property/loco-shake", b_ShakeEnabled));
-    output.Print(" " + strTable.GetString("shake"));
-    if(b_ShakeEnabled)
-    {
-      output.Print("<br>");
-      output.Print(strTable.GetString("shake_intensity"));
-      output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='shakeintensity' min=0.0 max=0.2 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
-      output.Print("<br>");
-      output.Print(strTable.GetString("shake_period"));
-      output.Print("<trainz-object style=edit-box link-on-focus-loss id=shakeperiod width=60 height=16></trainz-object>");
-    }
-    output.Print("</tr></td>");
-
-    output.Print("<tr><td>");
-    output.Print(HTMLWindow.CheckBox("live://property/loco-couple", b_CoupleLockEnabled));
-    output.Print(" " + strTable.GetString("couple_disable"));
-    output.Print("</tr></td>");
-
-    output.Print("</table>");
-    output.Print("</body></html>");
-
-    return output.AsString();
-  }
 
   string GetSmokeWindowHTML()
   {
@@ -2615,12 +2338,16 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
   thread void TickThread(CustomScriptMenu menu)
   {
-    while(CurrentMenu == menu)
+    if(menu._tick_running)
+      return;
+    menu._tick_running = true;
+
+    while(CurrentMenu == menu or (menu.AlwaysTick() and menu._tick_running))
     {
-      if(CurrentMenu and CurrentMenu.GetTickInterval() > 0.0)
+      if(menu and menu.GetTickInterval() > 0.0 and menu._tick_running)
       {
-        CurrentMenu.Tick();
-        Sleep(CurrentMenu.GetTickInterval());
+        menu.Tick();
+        Sleep(menu.GetTickInterval());
       }
       else
         Sleep(0.1);
@@ -2628,6 +2355,8 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
     //tell the menu to close
     menu.Close();
+
+    menu._tick_running = false;
   }
 
   // ============================================================================
@@ -2748,57 +2477,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
       // }
       // msg.src = null;
       // continue;
-
-      on "Browser-URL", "live://property/loco-wheelslip", msg:
-      if ( popup and msg.src == popup )
-      {
-          b_WheelslipEnabled = !b_WheelslipEnabled;
-          if(b_WheelslipEnabled)
-          {
-            normal_maxtractiveeffort = GetMaximumTractiveEffort();
-            normal_traction = GetWheelslipTractionMultiplier();
-            normal_momentum = GetWheelslipMomentumMultiplier();
-
-            SetMaximumTractiveEffort(0.01);
-            SetWheelslipTractionMultiplier(1.0);
-            SetWheelslipMomentumMultiplier(0.1);
-          }
-          else
-          {
-            SetMaximumTractiveEffort(normal_maxtractiveeffort);
-            SetWheelslipTractionMultiplier(normal_traction);
-            SetWheelslipMomentumMultiplier(normal_momentum);
-          }
-          RefreshBrowser();
-      }
-      msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://property/loco-shake", msg:
-      if ( popup and msg.src == popup )
-      {
-          b_ShakeEnabled = !b_ShakeEnabled;
-          if(b_ShakeEnabled)
-          {
-            ShakeThread();
-          }
-          else
-          {
-            SetMeshOrientation("default", 0.0, 0.0, 0.0);
-          }
-          RefreshBrowser();
-      }
-      msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://property/loco-couple", msg:
-      if ( popup and msg.src == popup )
-      {
-          b_CoupleLockEnabled = !b_CoupleLockEnabled;
-          RefreshBrowser();
-      }
-      msg.src = null;
-      continue;
 
       // //Smoke Window
       // on "Browser-URL", "live://open_smoke", msg:
@@ -2948,39 +2626,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
             {
                BoundWheesh = Str.UnpackInt(command);
                RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://face_set/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://face_set/")[0];
-            if(command)
-            {
-               faceSelection = Str.UnpackInt(command);
-               DLSfaceSelection = -1;
-               ConfigureFaces();
-               RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://face_set_dls/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://face_set_dls/")[0];
-            if(command)
-            {
-               faceSelection = -1;
-               DLSfaceSelection = Str.UnpackInt(command);
-               ConfigureFaces();
-               RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://dlc_download/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://dlc_download/")[0];
-            if(command)
-            {
-              Asset DLSFace = DLSFaces[Str.UnpackInt(command)];
-              TrainzScript.OpenURL("trainz://install/" + DLSFace.GetKUID().GetHTMLString());
-              CurrentMenu = null;
-              RefreshBrowser();
             }
           }
           else if(TrainUtil.HasPrefix(msg.minor, "live://assign_friend/"))

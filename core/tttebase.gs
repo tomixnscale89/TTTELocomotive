@@ -5,6 +5,8 @@ include "eyescriptmenu.gs"
 include "joystickmenu.gs"
 include "lampmenu.gs"
 include "liverymenu.gs"
+include "facemenu.gs"
+include "locomenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
@@ -57,7 +59,7 @@ class TTTEBase isclass TTTEHelpers
   public define int BROWSER_WIDTH = 40;
   Browser browser;
   
-  CustomScriptMenu CurrentMenu = null;
+  public CustomScriptMenu CurrentMenu = null;
 
   CustomScriptMenu EyescriptMenu  = null;
   CustomScriptMenu JoystickMenu   = null;
@@ -84,6 +86,18 @@ class TTTEBase isclass TTTEHelpers
   public int skinSelection; // Integer used to store the current skin of the asset. This will default to zero, unless forced in Init().
   int m_copySkin; // May not be needed..
   int m_copySkinBogey;
+  Asset[] InstalledDLSLiveries;
+  Asset[] DLSLiveries;
+
+  //Face stuff
+  public int faceSelection;
+  public int DLSfaceSelection;
+  public Asset[] InstalledDLSFaces;
+  public Asset[] DLSFaces;
+
+  //Loco stuff
+  public bool b_CoupleLockEnabled = false;
+
 
   public define int HEADCODE_BL = 1;
   public define int HEADCODE_BC = 2;
@@ -117,8 +131,8 @@ class TTTEBase isclass TTTEHelpers
   CustomScriptMenu[] customMenus = new CustomScriptMenu[0];
 
   //Functions
-  Soup GetTTTELocomotiveSettings();
-  TTTEOnline GetOnlineLibrary();
+  public Soup GetTTTELocomotiveSettings();
+  public TTTEOnline GetOnlineLibrary();
   int GetTTTETrainIndex();
   int GetTTTETrainSize();
 
@@ -247,9 +261,13 @@ class TTTEBase isclass TTTEHelpers
     //face window
     if(GetFeatureSupported(FEATURE_FACES))
     {
+      FaceMenu = new FaceMenu();
+      customMenus[customMenus.size()] = FaceMenu;
     }
 
     //loco window
+    LocoMenu = new LocoMenu();
+    customMenus[customMenus.size()] = LocoMenu;
 
     //smoke window
     if(GetFeatureSupported(FEATURE_SMOKE))
@@ -304,7 +322,7 @@ class TTTEBase isclass TTTEHelpers
   // Name: GetTTTELocomotiveSettings()
   // Desc: Retrieves the settings Soup from the TTTELocomotive Settings asset.
   // ============================================================================
-  Soup GetTTTELocomotiveSettings()
+  public Soup GetTTTELocomotiveSettings()
   {
     if(TTTELocoLibrary)
       return TTTELocoLibrary.GetSettings();
@@ -313,7 +331,7 @@ class TTTEBase isclass TTTEHelpers
   }
 
   //Online fuctions
-  TTTEOnline GetOnlineLibrary()
+  public TTTEOnline GetOnlineLibrary()
   {
     if(TTTELocoLibrary)
       return TTTELocoLibrary.GetOnlineLibrary();
@@ -523,8 +541,53 @@ class TTTEBase isclass TTTEHelpers
         }
       }
     }
+  }
 
+  // ============================================================================
+  // Name: ConfigureFaces()
+  // Parm:  None
+  // Desc: Configures the locomotive face. Uses a switch with faceSelection to determine the correct face to display.
+  // ============================================================================
+  public void ConfigureFaces()
+  {
+    TrainzScript.Log("Setting face to " + (string)faceSelection);
+    //clear our faces
+    int i;
+    for(i = 0; i < FacesContainer.CountTags(); i++)
+      self.SetMeshVisible(FacesContainer.GetIndexedTagName(i), false, 0.0);
 
+    //DLS faces
+    self.SetFXAttachment("face", null);
+
+    bool showEyes = true;
+    //set our active face to be visible
+    if(faceSelection > -1)
+    {
+      self.SetMeshVisible(FacesContainer.GetIndexedTagName(faceSelection), true, 0.0);
+      string activeFaceMesh = FacesContainer.GetIndexedTagName(faceSelection);
+
+      showEyes = (SmokeboxContainer.GetIndexForNamedTag(activeFaceMesh) == -1);
+    }
+    else if(DLSfaceSelection > -1)
+    {
+      Asset FaceAsset = InstalledDLSFaces[DLSfaceSelection];
+      self.SetFXAttachment("face", FaceAsset);
+      Soup FaceExtensions = FaceAsset.GetConfigSoup().GetNamedSoup("extensions");
+      string type = FaceExtensions.GetNamedTag("type");
+      showEyes = (type != "smokebox");
+    }
+
+    //determine if this is a smokebox mesh
+    if(showEyes)
+    {
+      self.SetMeshVisible("eye_l", true, 0.0);
+      self.SetMeshVisible("eye_r", true, 0.0);
+    }
+    else
+    {
+      self.SetMeshVisible("eye_l", false, 0.0);
+      self.SetMeshVisible("eye_r", false, 0.0);
+    }
   }
 
   public void BaseInit(Asset asset)
