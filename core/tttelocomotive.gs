@@ -161,8 +161,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
    // ****************************************************************************/
   // Define Variables
   // ****************************************************************************/
-  Asset ScriptAsset;
-  StringTable strTable; // This asset's string table, saved for convenient fast access
   bool AssetObsolete = false;
   KUID ObsoletedBy;
 
@@ -240,9 +238,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   bool eye_isrecording = false;
   bool eye_isanimating = false;
 
-  bool useLockTarget = false;
-  bool selectingTarget = false;
-  MapObject eyeLockTarget;
 
   //unimplemented keyboard control vars
   define bool eye_ControllerAbsolute = true; //unimplemented
@@ -252,17 +247,7 @@ class tttelocomotive isclass Locomotive, TTTEBase
   //Browser interface
   Browser browser;
   //define int BROWSER_MAINMENU     = 0;
-  public Browser popup;
-  define int BROWSER_NONE         = 0;
-  define int BROWSER_EYEMENU      = 1;
-  define int BROWSER_JOYSTICKMENU = 2;
-  define int BROWSER_LAMPMENU     = 3;
-  define int BROWSER_LIVERYMENU   = 4;
-  define int BROWSER_FACEMENU     = 5;
-  define int BROWSER_LOCOMENU     = 6;
-  define int BROWSER_SMOKEMENU    = 7;
-  define int BROWSER_SOCIALMENU   = 8;
-  define int BROWSER_CUSTOMMENU_0 = 9;
+
 
   public int CurrentMenu = BROWSER_NONE;
   bool HasFocus = false;
@@ -378,6 +363,8 @@ public define int SURVEYOR_MENU_OFFSET = 250;
   {
     // call the parent
     inherited(asset);
+    self = me;
+    
     TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
 
     customMenus = GetCustomMenus();

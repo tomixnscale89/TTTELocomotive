@@ -1,4 +1,5 @@
 include "tttebase.gs"
+include "world.gs"
 
 // ============================================================================
 // Name: CustomScriptMenu
@@ -128,9 +129,8 @@ class EyeScriptMenu isclass CustomScriptMenu
     }
     else if (cmd == "live://eye-lock-select")
     {
-      World.SetTargetObserver(base);
+      World.SetTargetObserver(base.self);
       base.selectingTarget = true;
-      
     }
 
     base.RefreshBrowser();
