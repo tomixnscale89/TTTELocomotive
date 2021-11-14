@@ -2,13 +2,14 @@
 include "vehicle.gs"
 include "meshobject.gs"
 include "tttelib.gs"
+include "tttebase.gs"
 include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 
 // ============================================================================
 // Name: tttewagon
 // Desc: Script class for a generic TTTE Wagon
 // ============================================================================
-class tttewagon isclass Vehicle
+class tttewagon isclass Vehicle, TTTEBase
 {
   tttelib TTTEWagonLibrary;
 
