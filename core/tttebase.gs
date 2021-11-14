@@ -7,6 +7,7 @@ include "lampmenu.gs"
 include "liverymenu.gs"
 include "facemenu.gs"
 include "locomenu.gs"
+include "smokemenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
@@ -97,6 +98,10 @@ class TTTEBase isclass TTTEHelpers
 
   //Loco stuff
   public bool b_CoupleLockEnabled = false;
+
+  //Smoke stuff
+  public Soup SmokeEdits;
+  int BoundWheesh = -1;
 
 
   public define int HEADCODE_BL = 1;
@@ -272,6 +277,8 @@ class TTTEBase isclass TTTEHelpers
     //smoke window
     if(GetFeatureSupported(FEATURE_SMOKE))
     {
+      SmokeMenu = new SmokeMenu();
+      customMenus[customMenus.size()] = SmokeMenu;
     }
 
     if(GetOnlineLibrary())
@@ -587,6 +594,36 @@ class TTTEBase isclass TTTEHelpers
     {
       self.SetMeshVisible("eye_l", false, 0.0);
       self.SetMeshVisible("eye_r", false, 0.0);
+    }
+  }
+
+  // ============================================================================
+  // Name: UpdateSmoke()
+  // Desc: Update all smoke values.
+  // ============================================================================
+  public void UpdateSmoke()
+  {
+    int i;
+    for(i = 0; i < SmokeEdits.CountTags(); i++)
+    {
+      Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
+      int curProperty;
+      for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
+      {
+        string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
+        if(curTagName != "active" and curTagName != "expanded")
+        {
+          float value = CurrentSmoke.GetNamedTagAsFloat(curTagName);
+          int phase = 0;
+          TrainzScript.Log("Attempting to set " + curTagName + " to " + (string)value + " for smoke" + (string)i);
+          if(curTagName == "rate") self.SetPFXEmitterRate(i, phase, value);
+          if(curTagName == "velocity") self.SetPFXEmitterVelocity(i, phase, value);
+          if(curTagName == "lifetime") self.SetPFXEmitterLifetime(i, phase, value);
+          if(curTagName == "minsize") self.SetPFXEmitterMinSize(i, phase, value);
+          if(curTagName == "maxsize") self.SetPFXEmitterMaxSize(i, phase, value);
+
+        }
+      }
     }
   }
 

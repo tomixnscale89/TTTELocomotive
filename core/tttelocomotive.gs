@@ -169,9 +169,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
   float trainzVersion = World.GetTrainzVersion();
 
-
-  Soup SmokeEdits;
-  int BoundWheesh = -1;
   // ACS Stuff
   Library     ACSlib;   // reference to the Advanced Coupling System Library
   GSObject[] ACSParams; // not sure what this is
@@ -1888,60 +1885,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 	}
 
   // ============================================================================
-  // Name: UpdateSmoke()
-  // Desc: Update all smoke values.
-  // ============================================================================
-  void UpdateSmoke()
-  {
-    int i;
-    for(i = 0; i < SmokeEdits.CountTags(); i++)
-    {
-      Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
-      int curProperty;
-      for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
-      {
-        string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
-        if(curTagName != "active" and curTagName != "expanded")
-        {
-          float value = CurrentSmoke.GetNamedTagAsFloat(curTagName);
-          int phase = 0;
-          TrainzScript.Log("Attempting to set " + curTagName + " to " + (string)value + " for smoke" + (string)i);
-          if(curTagName == "rate") SetPFXEmitterRate(i, phase, value);
-          if(curTagName == "velocity") SetPFXEmitterVelocity(i, phase, value);
-          if(curTagName == "lifetime") SetPFXEmitterLifetime(i, phase, value);
-          if(curTagName == "minsize") SetPFXEmitterMinSize(i, phase, value);
-          if(curTagName == "maxsize") SetPFXEmitterMaxSize(i, phase, value);
-
-        }
-      }
-    }
-  }
-
-  // ============================================================================
-  // Name: RefreshSmokeTags()
-  // Desc: Updates all smoke sliders.
-  // ============================================================================
-
-  void RefreshSmokeTags()
-  {
-    int i;
-    for(i = 0; i < SmokeEdits.CountTags(); i++)
-    {
-      Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
-      int curProperty;
-      for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
-      {
-        string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
-        if(curTagName != "active" and curTagName != "expanded")
-        {
-          string id = (string)i + curTagName;
-          popup.SetElementProperty(id, "value", (string)CurrentSmoke.GetNamedTagAsFloat(curTagName));
-        }
-      }
-    }
-  }
-
-  // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
   // ============================================================================
@@ -2099,73 +2042,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
   // 	return output.AsString();
   // }
-
-  string GetSmokeWindowHTML()
-  {
-    HTMLBuffer output = HTMLBufferStatic.Construct();
-    output.Print("<html><body>");
-    output.Print("<table>");
-
-    //output.Print("<tr><td>");
-    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    //output.Print("</tr></td>");
-
-    //Generate smoke containers
-    int i;
-    for(i = 0; i < SmokeEdits.CountTags(); i++)
-    {
-      Soup CurrentSmoke = SmokeEdits.GetNamedSoup((string)i);
-      output.Print("<tr><td>");
-      output.Print("<b>");
-      output.Print("smoke" + (string)i + " ");
-      output.Print("</b>");
-
-      if(CurrentSmoke.GetNamedTagAsBool("expanded")) output.Print("<a href='live://contract/" + (string)i + "'>-</a>");
-      else output.Print("<a href='live://expand/" + (string)i + "'>+</a>");
-
-      output.Print("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-      if(i != BoundWheesh)
-      {
-        output.Print("<i><a href='live://smoke-bind/" + (string)i + "'>" + strTable.GetString("bind_wheesh") + "</a></i>");
-      }
-
-      output.Print("</b>");
-      output.Print("<br>");
-      if(CurrentSmoke.GetNamedTagAsBool("expanded"))
-      {
-        output.Print("<table>");
-        int curProperty;
-        for(curProperty = 0; curProperty < CurrentSmoke.CountTags(); curProperty++)
-        {
-          string curTagName = CurrentSmoke.GetIndexedTagName(curProperty);
-          if(curTagName != "active" and curTagName != "expanded")
-          {
-            output.Print("<tr><td>");
-            output.Print(curTagName);
-            output.Print("<br>");
-            output.Print("<a href='live://smoke-update/" + (string)i + curTagName + "'>");
-            output.Print("<trainz-object style=slider horizontal theme=standard-slider width=200 height=16 id='" + (string)i + curTagName + "' min=0.0 max=50.0 value=0.0 page-size=0.1 draw-marks=0 draw-lines=0></trainz-object>");
-            output.Print("</a>");
-            output.Print("<br>");
-            output.Print("<trainz-text id='" + (string)i + curTagName + "-text" + "' text='" + (string)CurrentSmoke.GetNamedTagAsFloat(curTagName) + "'></trainz-text>");
-            output.Print("<br>");
-            output.Print("</tr></td>");
-          }
-        }
-        output.Print("</table>");
-      }
-      output.Print("</tr></td>");
-    }
-
-    //output.Print("<tr><td>");
-    //output.Print("<a href='live://smoke-apply'>Apply</a>");
-    //output.Print("</tr></td>");
-
-    output.Print("</table>");
-    output.Print("</body></html>");
-
-    return output.AsString();
-  }
 
   string GetStatusString(int status)
   {
@@ -2576,59 +2452,7 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
         if ( popup and msg.src == popup )
         {
-
-          if(TrainUtil.HasPrefix(msg.minor, "live://smoke-update/"))
-          {
-            string command = msg.minor;
-            Str.TrimLeft(command, "live://smoke-update/");
-            if(command)
-            {
-              //unpackint removes the integer from the original string
-              string[] propertytokens = Str.Tokens(command, "0123456789");
-              string propertyname = propertytokens[propertytokens.size() - 1];
-              string smokeid = Str.UnpackInt(Str.CloneString(command));
-              Soup smoke = SmokeEdits.GetNamedSoup(smokeid);
-
-              float value = Str.ToFloat(popup.GetElementProperty(command, "value"));
-
-              smoke.SetNamedTag(propertyname, value);
-
-              popup.SetTrainzText(command + "-text", (string)value);
-
-              RefreshSmokeTags();
-              UpdateSmoke();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://contract/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://contract/")[0];
-            if(command)
-            {
-              Soup smoke = SmokeEdits.GetNamedSoup(command);
-              smoke.SetNamedTag("expanded", false);
-              RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://expand/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://expand/")[0];
-            if(command)
-            {
-              Soup smoke = SmokeEdits.GetNamedSoup(command);
-              smoke.SetNamedTag("expanded", true);
-              RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://smoke-bind/"))
-          {
-            string command = Str.Tokens(msg.minor, "live://smoke-bind/")[0];
-            if(command)
-            {
-               BoundWheesh = Str.UnpackInt(command);
-               RefreshBrowser();
-            }
-          }
-          else if(TrainUtil.HasPrefix(msg.minor, "live://assign_friend/"))
+          if(TrainUtil.HasPrefix(msg.minor, "live://assign_friend/"))
           {
             string command = Str.Tokens(msg.minor, "live://assign_friend/")[0];
             if(command)
