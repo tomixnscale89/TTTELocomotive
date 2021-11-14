@@ -43,7 +43,7 @@ class CustomScriptMenu
 
   // ============================================================================
   // Name: Open()
-  // Desc: Called when the menu is opened.
+  // Desc: Called when the menu is opened. Will be called each time the menu is opened, don't do any one-time initialization here.
   // ============================================================================
   public void Open()
   {

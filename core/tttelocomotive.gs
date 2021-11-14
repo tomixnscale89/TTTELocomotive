@@ -2564,9 +2564,9 @@ class tttelocomotive isclass Locomotive, TTTEBase
               {
                 CurrentMenu = customMenus[menuID];
                 createPopupWindow();
+                RefreshBrowser();
                 CurrentMenu.Open();
                 TickThread(CurrentMenu);
-                RefreshBrowser();
               }
               else
                 closePopup();
