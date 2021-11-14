@@ -7,7 +7,7 @@ include "world.gs"
 // ============================================================================
 class CustomScriptMenu
 {
-  TTTEBase base;
+  public TTTEBase base;
 
   public string GetMenuHTML()
   {
@@ -25,10 +25,14 @@ class CustomScriptMenu
 
   //DO NOT OVERRIDE THESE!
 
-  public CustomScriptMenu Init(TTTEBase _base)
+  // public CustomScriptMenu Init(TTTEBase _base)
+  // {
+  //   base = _base;
+  //   return me;
+  // }
+
+  public CustomScriptMenu Init()
   {
-    base = _base;
-    return me;
   }
 
   public bool IsCore()

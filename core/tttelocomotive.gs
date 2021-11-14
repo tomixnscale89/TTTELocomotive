@@ -115,9 +115,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   // Define Functions
   // ****************************************************************************/
 
-  tttelib TTTELocoLibrary;
-  TTTEOnline onlineLibrary;
-
   int DetermineCarPosition(void);
   void SniffMyTrain(void);
   void ConfigureHeadcodeLamps(int headcode);
@@ -134,8 +131,7 @@ class tttelocomotive isclass Locomotive, TTTEBase
   void SetLampEffects(MeshObject headlightMeshObject,bool headlighton, bool highbeam_state);
   thread void CheckScriptAssetObsolete();
   thread void CheckDLSAdditionalFaces();
-  Soup GetTTTELocomotiveSettings();
-  TTTEOnline GetOnlineLibrary();
+
   string assignedFriend;
   int eyeQueueFrame = 0;
   EyeFrame[] eyeQueue;
@@ -164,7 +160,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   bool AssetObsolete = false;
   KUID ObsoletedBy;
 
-  CustomScriptMenu[] customMenus;
 
   Asset headlight_asset;      // headlight asset used by the loco
   Asset rear_headlight_asset; // Backup headlight (not sure if we want this)
@@ -249,7 +244,7 @@ class tttelocomotive isclass Locomotive, TTTEBase
   //define int BROWSER_MAINMENU     = 0;
 
 
-  public int CurrentMenu = BROWSER_NONE;
+  //public int CurrentMenu = BROWSER_NONE;
   bool HasFocus = false;
   bool BrowserClosed;
   bool PopupClosed = true;
@@ -288,16 +283,6 @@ public define int SURVEYOR_MENU_OFFSET = 250;
   define int HEADCODE_THROUGH_FREIGHT = HEADCODE_TC | HEADCODE_BC;
   define int HEADCODE_TVS = HEADCODE_BR;
 
-  //Supported features
-  int SupportedFeatureset = 0;
-  int SupportedHeadcode = 0;
-
-  define int FEATURE_EYES         = 1;
-  define int FEATURE_LAMPS        = 1 << 1;
-  define int FEATURE_LIVERIES     = 1 << 2;
-  define int FEATURE_FACES        = 1 << 3;
-  define int FEATURE_SMOKE        = 1 << 4;
-  define int FEATURE_BUFFERS      = 1 << 5;
 
 
   // Options for headcode lights;
@@ -329,32 +314,6 @@ public define int SURVEYOR_MENU_OFFSET = 250;
   Train train;
 
 
-  //bitwise utilities
-  bool FlagTest(int flags, int mask)
-  {
-    return flags == mask;
-  }
-
-  void SetFeatureSupported(int feature)
-  {
-    SupportedFeatureset = SupportedFeatureset | feature;
-  }
-
-  void SetHeadcodeSupported(int flag)
-  {
-    SupportedHeadcode = SupportedHeadcode | flag;
-  }
-
-  bool GetFeatureSupported(int features)
-  {
-    return (SupportedFeatureset & features) == features;
-  }
-
-  bool GetHeadcodeSupported(int flags)
-  {
-    return (SupportedHeadcode & flags) == flags;
-  }
-
   // ============================================================================
   // Name: Init()
   // Desc: The Init function is called when the object is created
@@ -366,8 +325,6 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     self = me;
     
     TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
-
-    customMenus = GetCustomMenus();
 
     ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
     myConfig = asset.GetConfigSoup();
@@ -381,226 +338,229 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     // ****************************************************************************/
    // Grab assets from the Locomotive
    // ****************************************************************************/
-  strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
+    strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
 
-  myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
+    myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
 
-  faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
-  DLSfaceSelection = -1;
+    faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
+    DLSfaceSelection = -1;
 
-  eyeQueue = new EyeFrame[0];
+    eyeQueue = new EyeFrame[0];
 
-  BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
-  if(BuffersContainer.CountTags() > 0)
-  {
-    SetFeatureSupported(FEATURE_BUFFERS);
-    BufferThread();
-  }
-  FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
-  LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
-  ExtraLampsContainer = ExtensionsContainer.GetNamedSoup("extra-lamps");
-  LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
-  BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
-
-  if(FacesContainer.CountTags()) SetFeatureSupported(FEATURE_FACES);
-  if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
-  if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
-
-  Soup TTTESettings = GetTTTELocomotiveSettings();
-  bool RandomizeFaces = TTTESettings.GetNamedSoup("random-faces/").GetNamedTagAsBool("value", false);
-  if(RandomizeFaces and FacesContainer.CountTags()) faceSelection = Math.Rand(0, FacesContainer.CountTags());
-
-  //check lamp support, a bit hacky
-  Soup MeshTable = myConfig.GetNamedSoup("mesh-table");
-  int i;
-  for(i = 0; i < MeshTable.CountTags(); i++)
-  {
-    Soup mesh = MeshTable.GetNamedSoup(MeshTable.GetIndexedTagName(i));
-    Soup effects = mesh.GetNamedSoup("effects");
-    int j;
-    for(j = 0; j < effects.CountTags(); j++)
+    BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
+    if(BuffersContainer.CountTags() > 0)
     {
-      string effect = effects.GetIndexedTagName(j);
-      if(effect == "lamp_tc") SetHeadcodeSupported(HEADCODE_TC);
-      else if (effect == "lamp_bl") SetHeadcodeSupported(HEADCODE_BL);
-      else if (effect == "lamp_bc") SetHeadcodeSupported(HEADCODE_BC);
-      else if (effect == "lamp_br") SetHeadcodeSupported(HEADCODE_BR);
+      SetFeatureSupported(FEATURE_BUFFERS);
+      BufferThread();
     }
-  }
-  if(SupportedHeadcode != 0 or ExtraLampsContainer.CountTags()) SetFeatureSupported(FEATURE_LAMPS);
+    FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
+    LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
+    ExtraLampsContainer = ExtensionsContainer.GetNamedSoup("extra-lamps");
+    LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
+    BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
 
-  //liverytextureoptions defines the texture autofill behavior
-  //SUPPORTED OPTIONS: none, diffusenormal, pbrstandard
+    if(FacesContainer.CountTags()) SetFeatureSupported(FEATURE_FACES);
+    if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
+    if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
 
-  //set initial extra lamp states to none
-  if(ExtraLampsContainer)
-  {
-    int TagCount = ExtraLampsContainer.CountTags();
-    ExtraLampAssets = new Asset[TagCount];
-    ExtraLampVisibility = new bool[TagCount];
-    //int i;
-    for(i = 0; i < TagCount; i++)
+    Soup TTTESettings = GetTTTELocomotiveSettings();
+    bool RandomizeFaces = TTTESettings.GetNamedSoup("random-faces/").GetNamedTagAsBool("value", false);
+    if(RandomizeFaces and FacesContainer.CountTags()) faceSelection = Math.Rand(0, FacesContainer.CountTags());
+
+    //check lamp support, a bit hacky
+    Soup MeshTable = myConfig.GetNamedSoup("mesh-table");
+    int i;
+    for(i = 0; i < MeshTable.CountTags(); i++)
     {
-      string effectName = ExtraLampsContainer.GetIndexedTagName(i);
-      MeshObject lampMesh = GetFXAttachment(effectName);
-      ExtraLampVisibility[i] = false;
-      if(lampMesh)
+      Soup mesh = MeshTable.GetNamedSoup(MeshTable.GetIndexedTagName(i));
+      Soup effects = mesh.GetNamedSoup("effects");
+      int j;
+      for(j = 0; j < effects.CountTags(); j++)
       {
-        ExtraLampAssets[i] = lampMesh.GetAsset();
-        SetFXAttachment(effectName, null);
+        string effect = effects.GetIndexedTagName(j);
+        if(effect == "lamp_tc") SetHeadcodeSupported(HEADCODE_TC);
+        else if (effect == "lamp_bl") SetHeadcodeSupported(HEADCODE_BL);
+        else if (effect == "lamp_bc") SetHeadcodeSupported(HEADCODE_BC);
+        else if (effect == "lamp_br") SetHeadcodeSupported(HEADCODE_BR);
       }
-      else
-        ExtraLampAssets[i] = null;
     }
-  }
+    if(SupportedHeadcode != 0 or ExtraLampsContainer.CountTags()) SetFeatureSupported(FEATURE_LAMPS);
 
-  SmokeboxContainer = ExtensionsContainer.GetNamedSoup("smokeboxes");
+    //liverytextureoptions defines the texture autofill behavior
+    //SUPPORTED OPTIONS: none, diffusenormal, pbrstandard
 
-  SmokeEdits = Constructors.NewSoup();
-  int ParticleCount = 0;
-  int curTag;
-  for(curTag = 0; curTag < myConfig.CountTags(); curTag++)
-  {
-    string tagName = myConfig.GetIndexedTagName(curTag);
-    if(TrainUtil.HasPrefix(tagName, "smoke"))
+    //set initial extra lamp states to none
+    if(ExtraLampsContainer)
     {
-      SetFeatureSupported(FEATURE_SMOKE);
-      Soup curSmoke = myConfig.GetNamedSoup(tagName);
-
-      Soup NewContainer = Constructors.NewSoup();
-      NewContainer.SetNamedTag("active", false); //whether to override
-      NewContainer.SetNamedTag("expanded", false);
-      SetNamedFloatFromExisting(curSmoke, NewContainer, "rate");
-      SetNamedFloatFromExisting(curSmoke, NewContainer, "velocity");
-      SetNamedFloatFromExisting(curSmoke, NewContainer, "lifetime");
-      SetNamedFloatFromExisting(curSmoke, NewContainer, "minsize");
-      SetNamedFloatFromExisting(curSmoke, NewContainer, "maxsize");
-
-      //TrainzScript.Log(NewContainer.AsString());
-      SmokeEdits.SetNamedSoup((string)ParticleCount, NewContainer);
-      ParticleCount++;
+      int TagCount = ExtraLampsContainer.CountTags();
+      ExtraLampAssets = new Asset[TagCount];
+      ExtraLampVisibility = new bool[TagCount];
+      //int i;
+      for(i = 0; i < TagCount; i++)
+      {
+        string effectName = ExtraLampsContainer.GetIndexedTagName(i);
+        MeshObject lampMesh = GetFXAttachment(effectName);
+        ExtraLampVisibility[i] = false;
+        if(lampMesh)
+        {
+          ExtraLampAssets[i] = lampMesh.GetAsset();
+          SetFXAttachment(effectName, null);
+        }
+        else
+          ExtraLampAssets[i] = null;
+      }
     }
-  }
 
-  //typical extensions container example
-  //faces
-  //{
-  //  happy "Happy"
-  //  sad "Sad"
-  //  smokebox1 "Red Smokebox"
-  //  smokebox2 "Green Smokebox"
-  //}
-  //smokeboxes
-  //{
-  //  smokebox1 "static"
-  //  smokebox2 "animated"
-  //}
-  //liveries
-  //{
-  //  red "Red"
-  //  green "Green"
-  //}
+    SmokeboxContainer = ExtensionsContainer.GetNamedSoup("smokeboxes");
+
+    SmokeEdits = Constructors.NewSoup();
+    int ParticleCount = 0;
+    int curTag;
+    for(curTag = 0; curTag < myConfig.CountTags(); curTag++)
+    {
+      string tagName = myConfig.GetIndexedTagName(curTag);
+      if(TrainUtil.HasPrefix(tagName, "smoke"))
+      {
+        SetFeatureSupported(FEATURE_SMOKE);
+        Soup curSmoke = myConfig.GetNamedSoup(tagName);
+
+        Soup NewContainer = Constructors.NewSoup();
+        NewContainer.SetNamedTag("active", false); //whether to override
+        NewContainer.SetNamedTag("expanded", false);
+        SetNamedFloatFromExisting(curSmoke, NewContainer, "rate");
+        SetNamedFloatFromExisting(curSmoke, NewContainer, "velocity");
+        SetNamedFloatFromExisting(curSmoke, NewContainer, "lifetime");
+        SetNamedFloatFromExisting(curSmoke, NewContainer, "minsize");
+        SetNamedFloatFromExisting(curSmoke, NewContainer, "maxsize");
+
+        //TrainzScript.Log(NewContainer.AsString());
+        SmokeEdits.SetNamedSoup((string)ParticleCount, NewContainer);
+        ParticleCount++;
+      }
+    }
+
+    //Setup menus after all features are setup
+    SetupMenus();
+
+    //typical extensions container example
+    //faces
+    //{
+    //  happy "Happy"
+    //  sad "Sad"
+    //  smokebox1 "Red Smokebox"
+    //  smokebox2 "Green Smokebox"
+    //}
+    //smokeboxes
+    //{
+    //  smokebox1 "static"
+    //  smokebox2 "animated"
+    //}
+    //liveries
+    //{
+    //  red "Red"
+    //  green "Green"
+    //}
 
 
-	//Eyescript
-  AddHandler(me, "ControlSet", "eye-xaxis", "HandleXAxis");
-  AddHandler(me, "ControlSet", "eye-yaxis", "HandleYAxis");
+    //Eyescript
+    AddHandler(me, "ControlSet", "eye-xaxis", "HandleXAxis");
+    AddHandler(me, "ControlSet", "eye-yaxis", "HandleYAxis");
 
-  AddHandler(me, "ControlSet", "eye-faceleft", "HandleKeyFLeft");
-  AddHandler(me, "ControlSet", "eye-faceright", "HandleKeyFRight");
-  AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh"); //now analog
+    AddHandler(me, "ControlSet", "eye-faceleft", "HandleKeyFLeft");
+    AddHandler(me, "ControlSet", "eye-faceright", "HandleKeyFRight");
+    AddHandler(me, "ControlSet", "eye-wheesh", "HandleWheesh"); //now analog
 
-  AddHandler(me, "Interface-Event", "Left-Click", "EyeTargetChanged");
-  AddHandler(me, "Interface", "LayoutChanged", "UpdateInterfacePositionHandler");
+    AddHandler(me, "Interface-Event", "Left-Click", "EyeTargetChanged");
+    AddHandler(me, "Interface", "LayoutChanged", "UpdateInterfacePositionHandler");
 
-  //Multiplayer Message! Important!
-  AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
+    //Multiplayer Message! Important!
+    AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
 
-  EyeScriptCheckThread();
-  if(MultiplayerGame.IsActive()){
-    MultiplayerBroadcast();
-  }
+    EyeScriptCheckThread();
+    if(MultiplayerGame.IsActive()){
+      MultiplayerBroadcast();
+    }
 
+    // ****************************************************************************/
+  // Define Camera Handlers for hiding/showing the low poly exterior cab on steam locos.
   // ****************************************************************************/
- // Define Camera Handlers for hiding/showing the low poly exterior cab on steam locos.
- // ****************************************************************************/
-  AddHandler(Interface, "Camera", "Internal-View", "CameraInternalViewHandler");
-  AddHandler(Interface, "Camera", "External-View", "CameraInternalViewHandler");
-  AddHandler(Interface, "Camera", "Tracking-View", "CameraInternalViewHandler");
-  AddHandler(Interface, "Camera", "Roaming-View", "CameraInternalViewHandler");
-  AddHandler(Interface, "Camera", "Target-Changed", "CameraTargetChangedHandler");
+    AddHandler(Interface, "Camera", "Internal-View", "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "External-View", "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "Tracking-View", "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "Roaming-View", "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "Target-Changed", "CameraTargetChangedHandler");
 
 
 
-   // ****************************************************************************/
-  // Define ACS Stuff
-  // ****************************************************************************/
-  ACSlib = World.GetLibrary(GetAsset().LookupKUIDTable("acslib"));
-  ACSParams = new GSObject[1];
-  ACSParams[0] = me;
+    // ****************************************************************************/
+    // Define ACS Stuff
+    // ****************************************************************************/
+    ACSlib = World.GetLibrary(GetAsset().LookupKUIDTable("acslib"));
+    ACSParams = new GSObject[1];
+    ACSParams[0] = me;
 
-  //Procedural Coupler System
-  FrontCoupler = cast<IKCoupler>(GetFXAttachment("couple_front"));
-  BackCoupler = cast<IKCoupler>(GetFXAttachment("couple_back"));
-  //important
-  if(FrontCoupler)
-    FrontCoupler.PostInit(me, "front");
-  if(BackCoupler)
-    BackCoupler.PostInit(me, "back");
+    //Procedural Coupler System
+    FrontCoupler = cast<IKCoupler>(GetFXAttachment("couple_front"));
+    BackCoupler = cast<IKCoupler>(GetFXAttachment("couple_back"));
+    //important
+    if(FrontCoupler)
+      FrontCoupler.PostInit(me, "front");
+    if(BackCoupler)
+      BackCoupler.PostInit(me, "back");
 
-  //FrontCoupler.ParentVehicle = me;
-  //BackCoupler.ParentVehicle = me;
-  //FrontCoupler.Position = "front";
-  //BackCoupler.Position = "back";
-  //FrontCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
-  //BackCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
+    //FrontCoupler.ParentVehicle = me;
+    //BackCoupler.ParentVehicle = me;
+    //FrontCoupler.Position = "front";
+    //BackCoupler.Position = "back";
+    //FrontCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
+    //BackCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
 
-  //create the browser menu - this could be changed later to link to a pantograph or keybind
-  createMenuWindow();
-  ScanBrowser();
-  BrowserThread();
+    //create the browser menu - this could be changed later to link to a pantograph or keybind
+    createMenuWindow();
+    ScanBrowser();
+    BrowserThread();
 
-  Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
-  // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
-  if(SoupHasTag(KUIDTable, "coupler_idle")) coupler_idle = GetAsset().FindAsset("coupler_idle");
-  if(SoupHasTag(KUIDTable, "coupler_coupled")) coupler_coupled = GetAsset().FindAsset("coupler_coupled");
+    Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
+    // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
+    if(SoupHasTag(KUIDTable, "coupler_idle")) coupler_idle = GetAsset().FindAsset("coupler_idle");
+    if(SoupHasTag(KUIDTable, "coupler_coupled")) coupler_coupled = GetAsset().FindAsset("coupler_coupled");
 
-  if(SoupHasTag(KUIDTable, "lamp")) headlight_asset = GetAsset().FindAsset("lamp");
-  m_carPosition = DetermineCarPosition();
+    if(SoupHasTag(KUIDTable, "lamp")) headlight_asset = GetAsset().FindAsset("lamp");
+    m_carPosition = DetermineCarPosition();
 
-  if(SoupHasTag(KUIDTable, "liveries")) textureSet = GetAsset().FindAsset("liveries"); // Grab the textures we need for the livery swapping
+    if(SoupHasTag(KUIDTable, "liveries")) textureSet = GetAsset().FindAsset("liveries"); // Grab the textures we need for the livery swapping
 
 
-   // message handlers for ACS entry points and tail lights
-  AddHandler(me, "Vehicle", "Coupled", "VehicleCoupleHandler");
-  AddHandler(me, "Vehicle", "Decoupled", "VehicleDecoupleHandler");
-  AddHandler(me, "Vehicle", "Derailed", "VehicleDerailHandler");
-  // lashed on as it happens to do the right thing
-  AddHandler(me, "World", "ModuleInit", "VehicleDecoupleHandler");
-  AddHandler(me, "World", "ModuleInit", "ModuleInitHandler");
+    // message handlers for ACS entry points and tail lights
+    AddHandler(me, "Vehicle", "Coupled", "VehicleCoupleHandler");
+    AddHandler(me, "Vehicle", "Decoupled", "VehicleDecoupleHandler");
+    AddHandler(me, "Vehicle", "Derailed", "VehicleDerailHandler");
+    // lashed on as it happens to do the right thing
+    AddHandler(me, "World", "ModuleInit", "VehicleDecoupleHandler");
+    AddHandler(me, "World", "ModuleInit", "ModuleInitHandler");
 
-  // ACS callback handler
-  AddHandler(me, "ACScallback", "", "ACShandler");
+    // ACS callback handler
+    AddHandler(me, "ACScallback", "", "ACShandler");
 
-  // headcode / reporting number handler
+    // headcode / reporting number handler
 
-  // handler necessary for tail lights
-  AddHandler(me, "Train", "Turnaround", "TrainTurnaroundHandler");
+    // handler necessary for tail lights
+    AddHandler(me, "Train", "Turnaround", "TrainTurnaroundHandler");
 
-  // Handler for Secondary Whistle PFX
-  // AddHandler(me.GetMyTrain(), "Train", "NotifyHorn", "WhistleMonitor");
+    // Handler for Secondary Whistle PFX
+    // AddHandler(me.GetMyTrain(), "Train", "NotifyHorn", "WhistleMonitor");
 
-  //listen for user change messages in the online group
-  //although this message is sent to OnlineGroup objects, it is forwarded to the online group library through Sniff
-  if(GetOnlineLibrary())
-  {
-    AddHandler(GetOnlineLibrary(), "TTTEOnline", "UsersChange", "UsersChangeHandler");
-    AddHandler(GetOnlineLibrary(), "TTTEOnline", "Update", "OnlineUpdateHandler");
-    OnlineEyeThread();
-  }
+    //listen for user change messages in the online group
+    //although this message is sent to OnlineGroup objects, it is forwarded to the online group library through Sniff
+    if(GetOnlineLibrary())
+    {
+      AddHandler(GetOnlineLibrary(), "TTTEOnline", "UsersChange", "UsersChangeHandler");
+      AddHandler(GetOnlineLibrary(), "TTTEOnline", "Update", "OnlineUpdateHandler");
+      OnlineEyeThread();
+    }
 
-	train = me.GetMyTrain(); // Get the train
-	SniffMyTrain(); // Then sniff it
+    train = me.GetMyTrain(); // Get the train
+    SniffMyTrain(); // Then sniff it
 
     HeadlightMonitor();
 
@@ -657,33 +617,6 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     }
 
     return num_vehicles;
-  }
-
-  // ============================================================================
-  // Name: GetTTTELocomotiveSettings()
-  // Desc: Retrieves the settings Soup from the TTTELocomotive Settings asset.
-  // ============================================================================
-  Soup GetTTTELocomotiveSettings()
-  {
-    if(TTTELocoLibrary)
-      return TTTELocoLibrary.GetSettings();
-
-    return Constructors.NewSoup();
-  }
-
-  //Online fuctions
-  TTTEOnline GetOnlineLibrary()
-  {
-    if(TTTELocoLibrary)
-      return TTTELocoLibrary.GetOnlineLibrary();
-
-    return null;
-  }
-
-  OnlineGroup GetSocialGroup()
-  {
-    TTTEOnline onlineLibrary = GetOnlineLibrary();
-    return onlineLibrary.GetPersonalGroup();
   }
 
   void UsersChangeHandler(Message msg)
@@ -2169,7 +2102,7 @@ public define int SURVEYOR_MENU_OFFSET = 250;
         }
 
         //Get rotation from Menu
-        if (CurrentMenu == BROWSER_EYEMENU and !BrowserClosed and browser)
+        if (EyescriptMenu != null and CurrentMenu == EyescriptMenu and !BrowserClosed and browser)
         {
           eyeX = Str.ToFloat(popup.GetElementProperty("eyeX", "value")) * Math.PI / 180;
           eyeY = Str.ToFloat(popup.GetElementProperty("eyeY", "value")) * Math.PI / 180;
@@ -2362,7 +2295,7 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     float LastShakeTargetZ = 0;
     while(b_ShakeEnabled)
     {
-      if(browser and CurrentMenu == BROWSER_LOCOMENU)
+      if(browser and CurrentMenu == LocoMenu)
       {
         b_ShakeIntensity = Str.UnpackFloat(popup.GetElementProperty("shakeintensity", "value"));
         b_ShakePeriod = Str.UnpackFloat(popup.GetElementProperty("shakeperiod", "text")); //seconds to tenths
@@ -2423,7 +2356,7 @@ define float Joystick_Range = 44.0;
   	Joystick.SetWindowPosition(BrowserCenterX - HalfSize, BrowserCenterY - HalfSize);
   	Joystick.SetWindowSize(Joystick_Size, Joystick_Size);
   	Joystick.SetWindowVisible(true);
-    while(CurrentMenu == BROWSER_JOYSTICKMENU)
+    while(CurrentMenu == JoystickMenu)
     {
       Joystick.BringToFront();
       int BrowserTop = popup.GetWindowTop();
@@ -2502,61 +2435,61 @@ define float Joystick_Range = 44.0;
       output.Print("</tr></td>");
     }
 
-    //eye window
-    if(GetFeatureSupported(FEATURE_EYES))
-    {
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
-      //joystick window
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
-    }
+    // //eye window
+    // if(GetFeatureSupported(FEATURE_EYES))
+    // {
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    //   //joystick window
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    // }
 
-    //lamp window
-    if(GetFeatureSupported(FEATURE_LAMPS))
-    {
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
-    }
+    // //lamp window
+    // if(GetFeatureSupported(FEATURE_LAMPS))
+    // {
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    // }
 
-    //livery window
-    if(GetFeatureSupported(FEATURE_LIVERIES))
-    {
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
-    }
+    // //livery window
+    // if(GetFeatureSupported(FEATURE_LIVERIES))
+    // {
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    // }
 
-    //face window
-    if(GetFeatureSupported(FEATURE_FACES))
-    {
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
-    }
+    // //face window
+    // if(GetFeatureSupported(FEATURE_FACES))
+    // {
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    // }
 
-    //loco window
-    output.Print("<tr><td>");
-    output.Print("<a href='live://open_loco'><img kuid='<kuid:414976:103611>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    output.Print("</tr></td>");
+    // //loco window
+    // output.Print("<tr><td>");
+    // output.Print("<a href='live://open_loco'><img kuid='<kuid:414976:103611>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    // output.Print("</tr></td>");
 
-    //smoke window
-    if(GetFeatureSupported(FEATURE_SMOKE))
-    {
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
-    }
+    // //smoke window
+    // if(GetFeatureSupported(FEATURE_SMOKE))
+    // {
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    // }
 
-    if(GetOnlineLibrary())
-    {
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_social'><img kuid='<kuid:414976:102857>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
-    }
+    // if(GetOnlineLibrary())
+    // {
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://open_social'><img kuid='<kuid:414976:102857>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    // }
 
     int i;
     for(i = 0; i < customMenus.size(); i++)
@@ -2573,69 +2506,69 @@ define float Joystick_Range = 44.0;
   }
 
 
-  string GetEyeWindowHTML()
-  {
-  	HTMLBuffer output = HTMLBufferStatic.Construct();
-  	output.Print("<html><body>");
-  	output.Print("<table>");
+  // string GetEyeWindowHTML()
+  // {
+  // 	HTMLBuffer output = HTMLBufferStatic.Construct();
+  // 	output.Print("<html><body>");
+  // 	output.Print("<table>");
 
-    //output.Print("<tr><td>");
-    //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    //output.Print("</tr></td>");
+  //   //output.Print("<tr><td>");
+  //   //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+  //   //output.Print("</tr></td>");
 
-    //Options
-    output.Print("<tr><td>");
-    output.Print("<font><b>" + strTable.GetString("eye_menu") + "</font>");
-    output.Print("<br>");
-    output.Print("<a href='live://eye-reset' tooltip='" + strTable.GetString("tooltip_reset") + "'><font>" + strTable.GetString("reset_controls") + "</font></a>");
-    output.Print("</tr></td>");
+  //   //Options
+  //   output.Print("<tr><td>");
+  //   output.Print("<font><b>" + strTable.GetString("eye_menu") + "</font>");
+  //   output.Print("<br>");
+  //   output.Print("<a href='live://eye-reset' tooltip='" + strTable.GetString("tooltip_reset") + "'><font>" + strTable.GetString("reset_controls") + "</font></a>");
+  //   output.Print("</tr></td>");
 
-    //controls
-    output.Print("<tr><td>");
-    output.Print(strTable.GetString("eye_rotation_h"));
-    output.Print("<br>");
-    output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+  //   //controls
+  //   output.Print("<tr><td>");
+  //   output.Print(strTable.GetString("eye_rotation_h"));
+  //   output.Print("<br>");
+  //   output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+  //   output.Print("</tr></td>");
 
-    output.Print("<tr><td>");
-    output.Print(strTable.GetString("eye_rotation_v"));
-    output.Print("<br>");
-    output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+  //   output.Print("<tr><td>");
+  //   output.Print(strTable.GetString("eye_rotation_v"));
+  //   output.Print("<br>");
+  //   output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+  //   output.Print("</tr></td>");
 
-    //dial is no longer advanced lol
-    output.Print("<tr><td>");
-    output.Print("<trainz-object style=dial width=100 height=100 id='eyeZ' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
-    output.Print("</tr></td>");
+  //   //dial is no longer advanced lol
+  //   output.Print("<tr><td>");
+  //   output.Print("<trainz-object style=dial width=100 height=100 id='eyeZ' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
+  //   output.Print("</tr></td>");
 
-    output.Print("<tr><td>");
-    output.Print("<a href='live://record'><font>" + strTable.GetString("recording_start") + "</font></a>");
-    output.Print("<br>");
-    output.Print("<a href='live://record-stop'><font>" + strTable.GetString("recording_stop") + "</font></a>");
-    output.Print("<br>");
-    output.Print("<a href='live://play'><font>" + strTable.GetString("recording_anim") + "</font></a>");
-    output.Print("</tr></td>");
+  //   output.Print("<tr><td>");
+  //   output.Print("<a href='live://record'><font>" + strTable.GetString("recording_start") + "</font></a>");
+  //   output.Print("<br>");
+  //   output.Print("<a href='live://record-stop'><font>" + strTable.GetString("recording_stop") + "</font></a>");
+  //   output.Print("<br>");
+  //   output.Print("<a href='live://play'><font>" + strTable.GetString("recording_anim") + "</font></a>");
+  //   output.Print("</tr></td>");
 
-    output.Print("</table>");
+  //   output.Print("</table>");
 
-    output.Print("<br>");
-    output.Print(HTMLWindow.CheckBox("live://eye-lock", useLockTarget));
-  	output.Print(strTable.GetString("target_lock") + "</tr></td>");
-    if(useLockTarget)
-  	{
-      string targetText = strTable.GetString("target_select");
-      if(selectingTarget)
-        targetText = strTable.GetString("target_looking");
-      else if(eyeLockTarget != null)
-        targetText = eyeLockTarget.GetAsset().GetLocalisedName();
-  		output.Print("<br>");
-  		output.Print("<a href='live://eye-lock-select' tooltip='" + strTable.GetString("target_select_eye") + "'>" + targetText + "</a>");
-  	}
+  //   output.Print("<br>");
+  //   output.Print(HTMLWindow.CheckBox("live://eye-lock", useLockTarget));
+  // 	output.Print(strTable.GetString("target_lock") + "</tr></td>");
+  //   if(useLockTarget)
+  // 	{
+  //     string targetText = strTable.GetString("target_select");
+  //     if(selectingTarget)
+  //       targetText = strTable.GetString("target_looking");
+  //     else if(eyeLockTarget != null)
+  //       targetText = eyeLockTarget.GetAsset().GetLocalisedName();
+  // 		output.Print("<br>");
+  // 		output.Print("<a href='live://eye-lock-select' tooltip='" + strTable.GetString("target_select_eye") + "'>" + targetText + "</a>");
+  // 	}
 
-  	output.Print("</body></html>");
+  // 	output.Print("</body></html>");
 
-  	return output.AsString();
-  }
+  // 	return output.AsString();
+  // }
 
   string GetJoystickWindowHTML()
   {
@@ -3151,7 +3084,7 @@ public define int BROWSER_WIDTH = 40;
 
   void closePopup()
   {
-    CurrentMenu = BROWSER_NONE;
+    CurrentMenu = null;
     RefreshBrowser();
   }
 
@@ -3188,66 +3121,69 @@ public define int BROWSER_WIDTH = 40;
 
   public void RefreshBrowser()
   {
-    if(CurrentMenu >= BROWSER_CUSTOMMENU_0)
-    {
-      int menuID = CurrentMenu - BROWSER_CUSTOMMENU_0;
-      popup.LoadHTMLString(GetAsset(), customMenus[menuID].GetMenuHTML());
-    }
-    else
-    {
-      bool isTransparent = false;
+    if(CurrentMenu != null)
+      popup.LoadHTMLString(GetAsset(), CurrentMenu.GetMenuHTML());
+    
+    // if(CurrentMenu >= BROWSER_CUSTOMMENU_0)
+    // {
+    //   int menuID = CurrentMenu - BROWSER_CUSTOMMENU_0;
+    //   popup.LoadHTMLString(GetAsset(), customMenus[menuID].GetMenuHTML());
+    // }
+    // else
+    // {
+    //   bool isTransparent = false;
 
-      switch(CurrentMenu)
-      {
-        case BROWSER_NONE:
-          PopupClosed = true;
-          popup = null;
-          break;
-        case BROWSER_EYEMENU:
-          popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
-          break;
-        case BROWSER_JOYSTICKMENU:
-          isTransparent = true;
-          popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
-          JoystickThread();
-          break;
-        case BROWSER_LAMPMENU:
-          popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
-          break;
-        case BROWSER_LIVERYMENU:
-          popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
-          break;
-        case BROWSER_FACEMENU:
-          popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
-          break;
-        case BROWSER_LOCOMENU:
-          popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
-          popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
-          popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
-          break;
-        case BROWSER_SMOKEMENU:
-          popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
-          RefreshSmokeTags();
-          break;
-        case BROWSER_SOCIALMENU:
-          popup.LoadHTMLString(GetAsset(), GetSocialWindowHTML());
-          break;
-        default:
-          PopupClosed = true;
-          popup = null;
-      }
+    //   switch(CurrentMenu)
+    //   {
+    //     case BROWSER_NONE:
+    //       PopupClosed = true;
+    //       popup = null;
+    //       break;
+    //     case BROWSER_EYEMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
+    //       break;
+    //     case BROWSER_JOYSTICKMENU:
+    //       isTransparent = true;
+    //       popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
+    //       JoystickThread();
+    //       break;
+    //     case BROWSER_LAMPMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
+    //       break;
+    //     case BROWSER_LIVERYMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
+    //       break;
+    //     case BROWSER_FACEMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
+    //       break;
+    //     case BROWSER_LOCOMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
+    //       popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
+    //       popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
+    //       break;
+    //     case BROWSER_SMOKEMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
+    //       RefreshSmokeTags();
+    //       break;
+    //     case BROWSER_SOCIALMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetSocialWindowHTML());
+    //       break;
+    //     default:
+    //       PopupClosed = true;
+    //       popup = null;
+    //   }
 
-      if(popup)
-      {
-        // if(isTransparent)
-        //   popup.SetWindowStyle(Browser.STYLE_POPOVER);
-        // else
-        //   popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
-      }
+    //   if(popup)
+    //   {
+    //     // if(isTransparent)
+    //     //   popup.SetWindowStyle(Browser.STYLE_POPOVER);
+    //     // else
+    //     //   popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
+    //   }
       
-    }
+    // }
 
-    if(popup and CurrentMenu != BROWSER_JOYSTICKMENU)
+    if(popup and CurrentMenu != JoystickMenu)
       popup.ResizeHeightToFit();
   }
 
@@ -3262,7 +3198,7 @@ public define int BROWSER_WIDTH = 40;
     {
       if (!(HasFocus or IsTargetLoco()))
       {
-        CurrentMenu = BROWSER_NONE;
+        CurrentMenu = null;
         browser = null;
         popup = null;
         BrowserClosed = true;
@@ -3305,88 +3241,88 @@ public define int BROWSER_WIDTH = 40;
       msg.src = null;
       continue;
 
-      //Eye Window
-      on "Browser-URL", "live://open_eye", msg:
-      if ( browser and msg.src == browser )
-      {
-          if(CurrentMenu != BROWSER_EYEMENU)
-          {
-            CurrentMenu = BROWSER_EYEMENU;
-            createPopupWindow();
-            RefreshBrowser();
-          }
-          else
-            closePopup();
-      }
-      msg.src = null;
-      continue;
+      // //Eye Window
+      // on "Browser-URL", "live://open_eye", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //     if(CurrentMenu != BROWSER_EYEMENU)
+      //     {
+      //       CurrentMenu = BROWSER_EYEMENU;
+      //       createPopupWindow();
+      //       RefreshBrowser();
+      //     }
+      //     else
+      //       closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
-      //Joystick Window
-      on "Browser-URL", "live://open_joystick", msg:
-      if ( browser and msg.src == browser )
-      {
-        if(CurrentMenu != BROWSER_JOYSTICKMENU)
-        {
-          CurrentMenu = BROWSER_JOYSTICKMENU;
-          eyeZ = 0.0; //clear any rotation beforehand
-          createPopupWindow();
-          RefreshBrowser();
-        }
-        else
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+      // //Joystick Window
+      // on "Browser-URL", "live://open_joystick", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //   if(CurrentMenu != BROWSER_JOYSTICKMENU)
+      //   {
+      //     CurrentMenu = BROWSER_JOYSTICKMENU;
+      //     eyeZ = 0.0; //clear any rotation beforehand
+      //     createPopupWindow();
+      //     RefreshBrowser();
+      //   }
+      //   else
+      //     closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
-      //Lamp Window
-      on "Browser-URL", "live://open_lamp", msg:
-      if ( browser and msg.src == browser )
-      {
-        if(CurrentMenu != BROWSER_LAMPMENU)
-        {
-          CurrentMenu = BROWSER_LAMPMENU;
-          createPopupWindow();
-          RefreshBrowser();
-        }
-        else
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+      // //Lamp Window
+      // on "Browser-URL", "live://open_lamp", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //   if(CurrentMenu != BROWSER_LAMPMENU)
+      //   {
+      //     CurrentMenu = BROWSER_LAMPMENU;
+      //     createPopupWindow();
+      //     RefreshBrowser();
+      //   }
+      //   else
+      //     closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
-      //Livery Window
-      on "Browser-URL", "live://open_livery", msg:
-      if ( browser and msg.src == browser )
-      {
-        if(CurrentMenu != BROWSER_LIVERYMENU)
-        {
-          CurrentMenu = BROWSER_LIVERYMENU;
-          createPopupWindow();
-          RefreshBrowser();
-        }
-        else
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+      // //Livery Window
+      // on "Browser-URL", "live://open_livery", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //   if(CurrentMenu != BROWSER_LIVERYMENU)
+      //   {
+      //     CurrentMenu = BROWSER_LIVERYMENU;
+      //     createPopupWindow();
+      //     RefreshBrowser();
+      //   }
+      //   else
+      //     closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
-      //Face Window
-      on "Browser-URL", "live://open_face", msg:
-      if ( browser and msg.src == browser )
-      {
-        if(CurrentMenu != BROWSER_FACEMENU)
-        {
-          CurrentMenu = BROWSER_FACEMENU;
-          createPopupWindow();
-          RefreshBrowser();
+      // //Face Window
+      // on "Browser-URL", "live://open_face", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //   if(CurrentMenu != BROWSER_FACEMENU)
+      //   {
+      //     CurrentMenu = BROWSER_FACEMENU;
+      //     createPopupWindow();
+      //     RefreshBrowser();
 
-          CheckDLSAdditionalFaces();
-        }
-        else
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+      //     CheckDLSAdditionalFaces();
+      //   }
+      //   else
+      //     closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
       on "Browser-URL", "live://lamp_tc", msg:
       if ( popup and msg.src == popup )
@@ -3440,21 +3376,21 @@ public define int BROWSER_WIDTH = 40;
       msg.src = null;
       continue;
 
-      //Loco Window
-      on "Browser-URL", "live://open_loco", msg:
-      if ( browser and msg.src == browser )
-      {
-        if(CurrentMenu != BROWSER_LOCOMENU)
-        {
-          CurrentMenu = BROWSER_LOCOMENU;
-          createPopupWindow();
-          RefreshBrowser();
-        }
-        else
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+      // //Loco Window
+      // on "Browser-URL", "live://open_loco", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //   if(CurrentMenu != BROWSER_LOCOMENU)
+      //   {
+      //     CurrentMenu = BROWSER_LOCOMENU;
+      //     createPopupWindow();
+      //     RefreshBrowser();
+      //   }
+      //   else
+      //     closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
       on "Browser-URL", "live://property/loco-wheelslip", msg:
       if ( popup and msg.src == popup )
@@ -3507,37 +3443,37 @@ public define int BROWSER_WIDTH = 40;
       msg.src = null;
       continue;
 
-      //Smoke Window
-      on "Browser-URL", "live://open_smoke", msg:
-      if ( browser and msg.src == browser )
-      {
-        if(CurrentMenu != BROWSER_SMOKEMENU)
-        {
-          CurrentMenu = BROWSER_SMOKEMENU;
-          createPopupWindow();
-          RefreshBrowser();
-        }
-        else
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+      // //Smoke Window
+      // on "Browser-URL", "live://open_smoke", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //   if(CurrentMenu != BROWSER_SMOKEMENU)
+      //   {
+      //     CurrentMenu = BROWSER_SMOKEMENU;
+      //     createPopupWindow();
+      //     RefreshBrowser();
+      //   }
+      //   else
+      //     closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
-      //Social Window
-      on "Browser-URL", "live://open_social", msg:
-      if ( browser and msg.src == browser )
-      {
-        if(CurrentMenu != BROWSER_SOCIALMENU)
-        {
-          CurrentMenu = BROWSER_SOCIALMENU;
-          createPopupWindow();
-          RefreshBrowser();
-        }
-        else
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+      // //Social Window
+      // on "Browser-URL", "live://open_social", msg:
+      // if ( browser and msg.src == browser )
+      // {
+      //   if(CurrentMenu != BROWSER_SOCIALMENU)
+      //   {
+      //     CurrentMenu = BROWSER_SOCIALMENU;
+      //     createPopupWindow();
+      //     RefreshBrowser();
+      //   }
+      //   else
+      //     closePopup();
+      // }
+      // msg.src = null;
+      // continue;
 
       //invite_friend
       on "Browser-URL", "live://invite_friend", msg:
@@ -3575,60 +3511,6 @@ public define int BROWSER_WIDTH = 40;
       msg.src = null;
       continue;
 
-      on "Browser-URL", "live://eye-reset", msg:
-      if ( popup and msg.src == popup )
-      {
-  		  popup.SetElementProperty("eyeX","value",(string)0.0);
-  		  popup.SetElementProperty("eyeY","value",(string)0.0);
-  		  popup.SetElementProperty("eyeZ","value",(string)0.0);
-      }
-      msg.src = null;
-      continue;
-
-		  on "Browser-URL", "live://record", msg:
-      if ( popup and msg.src == popup )
-      {
-  			//recording = true;
-  			//record();
-      }
-      msg.src = null;
-      continue;
-
-	    on "Browser-URL", "live://record-stop", msg:
-      if ( popup and msg.src == popup )
-      {
-			     //recording = false;
-      }
-      msg.src = null;
-      continue;
-
-	    on "Browser-URL", "live://play", msg:
-      if ( popup and msg.src == popup )
-      {
-		       //playanim();
-      }
-      msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://eye-lock", msg:
-      if ( popup and msg.src == popup )
-      {
-        useLockTarget = !useLockTarget;
-        RefreshBrowser();
-      }
-      msg.src = null;
-      continue;
-
-      on "Browser-URL", "live://eye-lock-select", msg:
-      if ( popup and msg.src == popup )
-      {
-        World.SetTargetObserver(me);
-        selectingTarget = true;
-        RefreshBrowser();
-      }
-      msg.src = null;
-      continue;
-
       //other messages
       on "Browser-URL", "", msg:
       {
@@ -3641,11 +3523,11 @@ public define int BROWSER_WIDTH = 40;
             string command = Str.Tokens(msg.minor, "live://open_custom/")[0];
             if(command)
             {
-              int menuID = BROWSER_CUSTOMMENU_0 + Str.UnpackInt(command);
+              int menuID = Str.UnpackInt(command);
               //CustomScriptMenu menu = customMenus[menuID];
-              if(CurrentMenu != menuID)
+              if(CurrentMenu != customMenus[menuID])
               {
-                CurrentMenu = menuID;
+                CurrentMenu = customMenus[menuID];
                 createPopupWindow();
                 RefreshBrowser();
               }
@@ -3758,7 +3640,7 @@ public define int BROWSER_WIDTH = 40;
             {
               Asset DLSFace = DLSFaces[Str.UnpackInt(command)];
               TrainzScript.OpenURL("trainz://install/" + DLSFace.GetKUID().GetHTMLString());
-              CurrentMenu = BROWSER_NONE;
+              CurrentMenu = null;
               RefreshBrowser();
             }
           }
