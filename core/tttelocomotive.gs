@@ -245,10 +245,12 @@ class tttelocomotive isclass Locomotive, TTTEBase
     ExtraLampsContainer = ExtensionsContainer.GetNamedSoup("extra-lamps");
     LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
     BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
+    FaceChartContainer = ExtensionsContainer.GetNamedSoup("face-chart");
 
     if(FacesContainer.CountTags()) SetFeatureSupported(FEATURE_FACES);
     if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
     if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
+    if(FaceChartContainer.CountTags()) SetFeatureSupported(FEATURE_FACECHART);
 
     Soup TTTESettings = GetTTTELocomotiveSettings();
     bool RandomizeFaces = TTTESettings.GetNamedSoup("random-faces/").GetNamedTagAsBool("value", false);

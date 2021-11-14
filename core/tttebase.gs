@@ -9,6 +9,7 @@ include "facemenu.gs"
 include "locomenu.gs"
 include "smokemenu.gs"
 include "socialmenu.gs"
+include "facechartmenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
@@ -33,6 +34,7 @@ class TTTEBase isclass TTTEHelpers
   public Soup SmokeboxContainer;
   public Soup BuffersContainer;
   public Soup ExtraLampsContainer;
+  public Soup FaceChartContainer;
   public bool[] ExtraLampVisibility;
   public Asset[] ExtraLampAssets;
 
@@ -51,6 +53,7 @@ class TTTEBase isclass TTTEHelpers
   define int FEATURE_FACES        = 1 << 3;
   define int FEATURE_SMOKE        = 1 << 4;
   define int FEATURE_BUFFERS      = 1 << 5;
+  define int FEATURE_FACECHART    = 1 << 6;
 
   public Browser popup;
   public define int POPUP_WIDTH = 300;
@@ -70,6 +73,7 @@ class TTTEBase isclass TTTEHelpers
   CustomScriptMenu FaceMenu       = null;
   CustomScriptMenu LocoMenu       = null;
   CustomScriptMenu SmokeMenu      = null;
+  CustomScriptMenu FaceChartMenu  = null;
   CustomScriptMenu SocialMenu     = null;
 
   //Eye stuff
@@ -291,6 +295,12 @@ class TTTEBase isclass TTTEHelpers
       customMenus[customMenus.size()] = SmokeMenu;
     }
 
+    if(GetFeatureSupported(FEATURE_FACECHART))
+    {
+      FaceChartMenu = new FaceChartMenu();
+      customMenus[customMenus.size()] = FaceChartMenu;
+    }
+
     if(GetOnlineLibrary())
     {
       SocialMenu = new SocialMenu();
@@ -321,8 +331,13 @@ class TTTEBase isclass TTTEHelpers
     popup = null;
     popup = Constructors.NewBrowser();
     popup.SetCloseEnabled(false);
-    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2) + surveyorOffset);
-    popup.SetWindowSize(POPUP_WIDTH, POPUP_HEIGHT);
+    //popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2) + surveyorOffset);
+    int popupWidth = POPUP_WIDTH;
+    if(CurrentMenu != null)
+      popupWidth = CurrentMenu.GetMenuWidth();
+    
+    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - popupWidth - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2) + surveyorOffset);
+    popup.SetWindowSize(popupWidth, POPUP_HEIGHT);
     popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
     popup.SetMovableByDraggingBackground(true);
     popup.SetWindowVisible(true);

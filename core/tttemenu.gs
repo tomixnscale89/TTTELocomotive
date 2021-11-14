@@ -91,6 +91,15 @@ class CustomScriptMenu
     return false;
   }
 
+  // ============================================================================
+  // Name: GetMenuWidth()
+  // Desc: Returns the width required by this menu.
+  // ============================================================================
+  public int GetMenuWidth()
+  {
+    return TTTEBase.POPUP_WIDTH;
+  }
+
   //DO NOT OVERRIDE THESE!
 
   // public CustomScriptMenu Init(TTTEBase _base)
