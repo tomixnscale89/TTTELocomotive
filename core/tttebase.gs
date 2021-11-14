@@ -1,6 +1,8 @@
 include "gs.gs"
 include "tttehelpers.gs"
 include "tttemenu.gs"
+include "eyescriptmenu.gs"
+include "joystickmenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
@@ -36,7 +38,14 @@ class TTTEBase isclass TTTEHelpers
   define int FEATURE_BUFFERS      = 1 << 5;
 
   public Browser popup;
+  public define int POPUP_WIDTH = 300;
+  public define int POPUP_HEIGHT = 300;
+  public define int BROWSER_TRAIN_MARGIN = 15;
+  public define int SURVEYOR_MENU_OFFSET = 250;
 
+  public define int BROWSER_WIDTH = 40;
+  Browser browser;
+  
   CustomScriptMenu CurrentMenu = null;
 
   CustomScriptMenu EyescriptMenu  = null;
@@ -47,6 +56,12 @@ class TTTEBase isclass TTTEHelpers
   CustomScriptMenu LocoMenu       = null;
   CustomScriptMenu SmokeMenu      = null;
   CustomScriptMenu SocialMenu     = null;
+
+  //Eye stuff
+	//These variables keep track of the rotation of the eyes, and will be dynamically updated incrementally. Rotations are defined relative to 0, with 0 being the absolute center of each axis.
+	public float eyeX = 0.0; //Left-Right Eye Rotation
+	public float eyeY = 0.0; // Eye Roll
+	public float eyeZ = 0.0; // Up-Down Eye Rotation
 
   //public define int BROWSER_NONE         = -1;
   // public define int BROWSER_EYEMENU      = 1;
@@ -64,11 +79,82 @@ class TTTEBase isclass TTTEHelpers
   //Functions
   Soup GetTTTELocomotiveSettings();
   TTTEOnline GetOnlineLibrary();
+  int GetTTTETrainIndex();
+  int GetTTTETrainSize();
 
   public CustomScriptMenu[] GetCustomMenus();
 
+  // ============================================================================
+  // Name: RefreshBrowser()
+  // Desc: Updates all browser parameters by reloading the HTML strings.
+  // ============================================================================
+
   public void RefreshBrowser()
   {
+    if(CurrentMenu != null)
+      popup.LoadHTMLString(self.GetAsset(), CurrentMenu.GetMenuHTML());
+    
+    // if(CurrentMenu >= BROWSER_CUSTOMMENU_0)
+    // {
+    //   int menuID = CurrentMenu - BROWSER_CUSTOMMENU_0;
+    //   popup.LoadHTMLString(GetAsset(), customMenus[menuID].GetMenuHTML());
+    // }
+    // else
+    // {
+    //   bool isTransparent = false;
+
+    //   switch(CurrentMenu)
+    //   {
+    //     case BROWSER_NONE:
+    //       PopupClosed = true;
+    //       popup = null;
+    //       break;
+    //     case BROWSER_EYEMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
+    //       break;
+    //     case BROWSER_JOYSTICKMENU:
+    //       isTransparent = true;
+    //       popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
+    //       JoystickThread();
+    //       break;
+    //     case BROWSER_LAMPMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
+    //       break;
+    //     case BROWSER_LIVERYMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
+    //       break;
+    //     case BROWSER_FACEMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
+    //       break;
+    //     case BROWSER_LOCOMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
+    //       popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
+    //       popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
+    //       break;
+    //     case BROWSER_SMOKEMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
+    //       RefreshSmokeTags();
+    //       break;
+    //     case BROWSER_SOCIALMENU:
+    //       popup.LoadHTMLString(GetAsset(), GetSocialWindowHTML());
+    //       break;
+    //     default:
+    //       PopupClosed = true;
+    //       popup = null;
+    //   }
+
+    //   if(popup)
+    //   {
+    //     // if(isTransparent)
+    //     //   popup.SetWindowStyle(Browser.STYLE_POPOVER);
+    //     // else
+    //     //   popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
+    //   }
+      
+    // }
+
+    if(popup and CurrentMenu != JoystickMenu)
+      popup.ResizeHeightToFit();
   }
 
   void SetFeatureSupported(int feature)
@@ -100,7 +186,8 @@ class TTTEBase isclass TTTEHelpers
       customMenus[customMenus.size()] = EyescriptMenu;
     
       //joystick window
-
+      JoystickMenu = new JoystickMenu();
+      customMenus[customMenus.size()] = JoystickMenu;
     }
 
     //lamp window
@@ -142,6 +229,32 @@ class TTTEBase isclass TTTEHelpers
     }
   }
 
+  void createPopupWindow()
+  {
+    int popupLeftOffset = (GetTTTETrainSize() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
+
+    int surveyorOffset = 0;
+    if(World.GetCurrentModule() == World.SURVEYOR_MODULE)
+      surveyorOffset = SURVEYOR_MENU_OFFSET;
+
+    popup = null;
+    popup = Constructors.NewBrowser();
+    popup.SetCloseEnabled(false);
+    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2) + surveyorOffset);
+    popup.SetWindowSize(POPUP_WIDTH, POPUP_HEIGHT);
+    popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
+    popup.SetMovableByDraggingBackground(true);
+    popup.SetWindowVisible(true);
+    //popup.LoadHTMLString(GetAsset(), GetMenuHTML());
+  }
+
+  void closePopup()
+  {
+    if(CurrentMenu) CurrentMenu.Close();
+    CurrentMenu = null;
+    RefreshBrowser();
+  }
+
   
   // ============================================================================
   // Name: GetTTTELocomotiveSettings()
@@ -168,6 +281,44 @@ class TTTEBase isclass TTTEHelpers
   {
     TTTEOnline onlineLibrary = GetOnlineLibrary();
     return onlineLibrary.GetPersonalGroup();
+  }
+
+  int GetTTTETrainIndex()
+  {
+    //is_TTTELocomotive
+    Vehicle[] vehicles = self.GetMyTrain().GetVehicles();
+    int num_vehicles = 0;
+    int i;
+    for(i = 0; i < vehicles.size(); i++)
+    {
+      Soup properties = vehicles[i].GetProperties();
+      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
+
+      if(me == vehicles[i])
+        return num_vehicles;
+      
+      if(is_TTTE)
+        num_vehicles++;
+    }
+
+    return -1;
+  }
+
+  int GetTTTETrainSize()
+  {
+    //is_TTTELocomotive
+    Vehicle[] vehicles = self.GetMyTrain().GetVehicles();
+    int num_vehicles = 0;
+    int i;
+    for(i = 0; i < vehicles.size(); i++)
+    {
+      Soup properties = vehicles[i].GetProperties();
+      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
+      if(is_TTTE)
+        num_vehicles++;
+    }
+
+    return num_vehicles;
   }
 
   public void BaseInit(Asset asset)

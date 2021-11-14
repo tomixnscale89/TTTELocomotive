@@ -138,18 +138,17 @@ class tttelocomotive isclass Locomotive, TTTEBase
   thread void OnlineEyeThread();
 
   thread void EyeScriptCheckThread(void);
-  thread void JoystickThread(void);
+  //thread void JoystickThread(void);
   thread void BufferThread();
   void SetEyeMeshOrientation(float x, float y, float z);
   thread void MultiplayerBroadcast(void);
   void createMenuWindow();
   void RefreshMenuBrowser();
-  void createPopupWindow();
   void UpdateInterfacePosition();
   void UpdateInterfacePositionHandler(Message msg);
   thread void BrowserThread();
+  thread void TickThread(CustomScriptMenu menu);
   thread void ScanBrowser(void);
-  public void RefreshBrowser();
 
   void WhistleMonitor(Message msg);
   thread void HeadlightMonitor();
@@ -217,10 +216,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   //Eyescript Variables
   define bool eye_IsControllerSupportEnabled = true; //Is a controller currently bound and set to control the script?
 
-	//These variables keep track of the rotation of the eyes, and will be dynamically updated incrementally. Rotations are defined relative to 0, with 0 being the absolute center of each axis.
-	float eyeX = 0.0; //Left-Right Eye Rotation
-	float eyeY = 0.0; // Eye Roll
-	float eyeZ = 0.0; // Up-Down Eye Rotation
 
 	define float eye_UpdatePeriod = 0.01;
   define float MP_UpdatePeriod = 0.1;
@@ -237,20 +232,12 @@ class tttelocomotive isclass Locomotive, TTTEBase
   define float eye_Speed = 0.1;
   bool eye_UpPressed, eye_DownPressed, eye_LeftPressed, eye_RightPressed, eye_RollLeftPressed, eye_RollRightPressed;
 
-  //Browser interface
-  Browser browser;
-  //define int BROWSER_MAINMENU     = 0;
-
 
   //public int CurrentMenu = BROWSER_NONE;
   bool HasFocus = false;
   bool BrowserClosed;
   bool PopupClosed = true;
 
-public define int POPUP_WIDTH = 300;
-public define int POPUP_HEIGHT = 300;
-public define int BROWSER_TRAIN_MARGIN = 15;
-public define int SURVEYOR_MENU_OFFSET = 250;
 
   //tab specific Options
   bool b_WheelslipEnabled = false;
@@ -573,44 +560,6 @@ public define int SURVEYOR_MENU_OFFSET = 250;
   bool IsTargetLoco()
   {
     return GetMyTrain() == World.GetCurrentTrain();
-  }
-
-  int GetTTTETrainIndex()
-  {
-    //is_TTTELocomotive
-    Vehicle[] vehicles = GetMyTrain().GetVehicles();
-    int num_vehicles = 0;
-    int i;
-    for(i = 0; i < vehicles.size(); i++)
-    {
-      Soup properties = vehicles[i].GetProperties();
-      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
-
-      if(me == vehicles[i])
-        return num_vehicles;
-      
-      if(is_TTTE)
-        num_vehicles++;
-    }
-
-    return -1;
-  }
-
-  int GetTTTETrainSize()
-  {
-    //is_TTTELocomotive
-    Vehicle[] vehicles = GetMyTrain().GetVehicles();
-    int num_vehicles = 0;
-    int i;
-    for(i = 0; i < vehicles.size(); i++)
-    {
-      Soup properties = vehicles[i].GetProperties();
-      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
-      if(is_TTTE)
-        num_vehicles++;
-    }
-
-    return num_vehicles;
   }
 
   void UsersChangeHandler(Message msg)
@@ -2321,90 +2270,6 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     }
   }
 
-
-
-define int Joystick_Size = 75;
-define float Joystick_Range = 44.0;
-  string GetJoystickContentHTML()
-  {
-    HTMLBuffer output = HTMLBufferStatic.Construct();
-    output.Print("<html><body>");
-    output.Print("<img kuid='<kuid:414976:104990>' width=" + (string)Joystick_Size + " height=" + (string)Joystick_Size + ">");
-    output.Print("</body></html>");
-
-    return output.AsString();
-  }
-  thread void JoystickThread()
-  {
-    int BrowserCenterX = popup.GetWindowLeft() + (popup.GetWindowWidth() / 2);
-    int BrowserCenterY = popup.GetWindowTop() + (popup.GetWindowHeight() / 2);
-    int HalfSize = Joystick_Size / 2;
-    Browser Joystick = Constructors.NewBrowser();
-    Joystick.SetCloseEnabled(false);
-    Joystick.LoadHTMLString(GetAsset(), GetJoystickContentHTML());
-    //Joystick.SetWindowStyle(Browser.STYLE_NO_FRAME);
-    Joystick.SetWindowStyle(Browser.STYLE_POPOVER);
-    Joystick.SetWindowPriority(Browser.BP_Window); //must be called after style
-    //Joystick.SetWindowStyle(Browser.STYLE_SLIM_FRAME);
-    Joystick.SetMovableByDraggingBackground(true);
-  	Joystick.SetWindowPosition(BrowserCenterX - HalfSize, BrowserCenterY - HalfSize);
-  	Joystick.SetWindowSize(Joystick_Size, Joystick_Size);
-  	Joystick.SetWindowVisible(true);
-    while(CurrentMenu == JoystickMenu)
-    {
-      Joystick.BringToFront();
-      int BrowserTop = popup.GetWindowTop();
-      int BrowserBottom = popup.GetWindowBottom();
-      int BrowserLeft = popup.GetWindowLeft();
-      int BrowserRight = popup.GetWindowRight();
-      int JoystickTop = Joystick.GetWindowTop();
-      int JoystickBottom = Joystick.GetWindowBottom();
-      int JoystickLeft = Joystick.GetWindowLeft();
-      int JoystickRight = Joystick.GetWindowRight();
-
-      //update center position
-      int HalfBrowserWidth = popup.GetWindowWidth() / 2;
-      int HalfBrowserHeight = popup.GetWindowHeight() / 2;
-
-      //prevent divide by 0
-      if(HalfBrowserWidth == 0 or HalfBrowserHeight == 0)
-        continue;
-      
-      BrowserCenterX = BrowserLeft + HalfBrowserWidth;
-      BrowserCenterY = BrowserTop + HalfBrowserHeight;
-      //get relative
-      int CenterLeft = BrowserCenterX - HalfSize;
-      int CenterTop = BrowserCenterY - HalfSize;
-      int RelativeX = JoystickLeft - CenterLeft;
-      int RelativeY = JoystickTop - CenterTop;
-
-      if(JoystickLeft < BrowserLeft) Joystick.SetWindowPosition(BrowserLeft, JoystickTop);
-      if(JoystickTop < BrowserTop) Joystick.SetWindowPosition(JoystickLeft, BrowserTop);
-      if(JoystickRight > BrowserRight) Joystick.SetWindowPosition(BrowserRight - Joystick_Size, JoystickTop);
-      if(JoystickBottom > BrowserBottom) Joystick.SetWindowPosition(JoystickLeft, BrowserBottom - Joystick_Size);
-
-      float OffsetX = ((float)RelativeX / (float)HalfBrowserWidth);
-      float OffsetY = ((float)RelativeY / (float)HalfBrowserWidth); // HalfBrowserHeight different browser dimensions
-      //OffsetX = Math.Fmax(Math.Fmin(OffsetX, Joystick_Range), -Joystick_Range);
-      //OffsetY = Math.Fmax(Math.Fmin(OffsetY, Joystick_Range), -Joystick_Range);
-      //normalize the offset
-      float length = Math.Sqrt(OffsetX * OffsetX + OffsetY * OffsetY) + 0.001; //prevent divide by zero
-      if(length > 1.0)
-      {
-        OffsetX = OffsetX / length;
-        OffsetY = OffsetY / length;
-      }
-
-      eyeX = (OffsetX * Joystick_Range) * Math.PI / 180;
-      eyeY = (OffsetY * Joystick_Range) * Math.PI / 180;
-
-      //TrainzScript.Log("Browser offset is " + (string)OffsetX + " " + (string)OffsetY);
-      Sleep(0.01);
-    }
-    //clear when menu exits
-    Joystick = null;
-  }
-
   // ============================================================================
   // Name: GetMenuHTML()
   // Desc: Browser HTML tabs.
@@ -3035,8 +2900,6 @@ define float Joystick_Range = 44.0;
   // Name: createMenuWindow()
   // Desc: Creates the browser.
   // ============================================================================
-public define int BROWSER_WIDTH = 40;
-//public define int BROWSER_HEIGHT = 400;
   void createMenuWindow()
   {
     browser = null;
@@ -3055,31 +2918,6 @@ public define int BROWSER_WIDTH = 40;
       createPopupWindow();
 
     UpdateInterfacePosition();
-  }
-
-  void createPopupWindow()
-  {
-    int popupLeftOffset = (GetTTTETrainSize() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
-
-    int surveyorOffset = 0;
-    if(World.GetCurrentModule() == World.SURVEYOR_MODULE)
-      surveyorOffset = SURVEYOR_MENU_OFFSET;
-
-    popup = null;
-    popup = Constructors.NewBrowser();
-    popup.SetCloseEnabled(false);
-    popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2) + surveyorOffset);
-    popup.SetWindowSize(POPUP_WIDTH, POPUP_HEIGHT);
-    popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
-    popup.SetMovableByDraggingBackground(true);
-    popup.SetWindowVisible(true);
-    //popup.LoadHTMLString(GetAsset(), GetMenuHTML());
-  }
-
-  void closePopup()
-  {
-    CurrentMenu = null;
-    RefreshBrowser();
   }
 
   // ============================================================================
@@ -3107,78 +2945,6 @@ public define int BROWSER_WIDTH = 40;
   {
     browser.LoadHTMLString(GetAsset(), GetMenuHTML());
     browser.ResizeHeightToFit();
-  }
-  // ============================================================================
-  // Name: RefreshBrowser()
-  // Desc: Updates all browser parameters by reloading the HTML strings.
-  // ============================================================================
-
-  public void RefreshBrowser()
-  {
-    if(CurrentMenu != null)
-      popup.LoadHTMLString(GetAsset(), CurrentMenu.GetMenuHTML());
-    
-    // if(CurrentMenu >= BROWSER_CUSTOMMENU_0)
-    // {
-    //   int menuID = CurrentMenu - BROWSER_CUSTOMMENU_0;
-    //   popup.LoadHTMLString(GetAsset(), customMenus[menuID].GetMenuHTML());
-    // }
-    // else
-    // {
-    //   bool isTransparent = false;
-
-    //   switch(CurrentMenu)
-    //   {
-    //     case BROWSER_NONE:
-    //       PopupClosed = true;
-    //       popup = null;
-    //       break;
-    //     case BROWSER_EYEMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
-    //       break;
-    //     case BROWSER_JOYSTICKMENU:
-    //       isTransparent = true;
-    //       popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
-    //       JoystickThread();
-    //       break;
-    //     case BROWSER_LAMPMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
-    //       break;
-    //     case BROWSER_LIVERYMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
-    //       break;
-    //     case BROWSER_FACEMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
-    //       break;
-    //     case BROWSER_LOCOMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
-    //       popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
-    //       popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
-    //       break;
-    //     case BROWSER_SMOKEMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
-    //       RefreshSmokeTags();
-    //       break;
-    //     case BROWSER_SOCIALMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetSocialWindowHTML());
-    //       break;
-    //     default:
-    //       PopupClosed = true;
-    //       popup = null;
-    //   }
-
-    //   if(popup)
-    //   {
-    //     // if(isTransparent)
-    //     //   popup.SetWindowStyle(Browser.STYLE_POPOVER);
-    //     // else
-    //     //   popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
-    //   }
-      
-    // }
-
-    if(popup and CurrentMenu != JoystickMenu)
-      popup.ResizeHeightToFit();
   }
 
   // ============================================================================
@@ -3213,6 +2979,28 @@ public define int BROWSER_WIDTH = 40;
 
       Sleep(0.1);
     }
+  }
+
+  // ============================================================================
+  // Name: TickThread()
+  // Desc: Ticks the current menu
+  // ============================================================================
+
+  thread void TickThread(CustomScriptMenu menu)
+  {
+    while(CurrentMenu == menu)
+    {
+      if(CurrentMenu and CurrentMenu.GetTickInterval() > 0.0)
+      {
+        CurrentMenu.Tick();
+        Sleep(CurrentMenu.GetTickInterval());
+      }
+      else
+        Sleep(0.1);
+    }
+
+    //tell the menu to close
+    menu.Close();
   }
 
   // ============================================================================
@@ -3523,6 +3311,8 @@ public define int BROWSER_WIDTH = 40;
               {
                 CurrentMenu = customMenus[menuID];
                 createPopupWindow();
+                CurrentMenu.Open();
+                TickThread(CurrentMenu);
                 RefreshBrowser();
               }
               else
