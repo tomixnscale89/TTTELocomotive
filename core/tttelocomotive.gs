@@ -189,8 +189,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   int faceSelection;
   int DLSfaceSelection;
 
-  Soup myConfig;
-  Soup ExtensionsContainer;
   Soup FacesContainer;
   Soup LiveryContainer;
   Soup LiveryTextureOptions;
@@ -323,12 +321,9 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     // call the parent
     inherited(asset);
     self = me;
+    BaseInit(asset);
     
-    TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
 
-    ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
-    myConfig = asset.GetConfigSoup();
-    ExtensionsContainer = asset.GetConfigSoup().GetNamedSoup("extensions");
 
     CheckScriptAssetObsolete();
     //CheckDLSAdditionalContent();
@@ -336,9 +331,8 @@ public define int SURVEYOR_MENU_OFFSET = 250;
     //TrainzScript.Log("searching for ttte settings lib");
 
     // ****************************************************************************/
-   // Grab assets from the Locomotive
-   // ****************************************************************************/
-    strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
+    // Grab assets from the Locomotive
+    // ****************************************************************************/
 
     myBogies = me.GetBogeyList(); // Grab all of the bogies on the locomotive, specifically for swapping texture purposes.
 

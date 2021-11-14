@@ -31,7 +31,7 @@ class CustomScriptMenu
   //   return me;
   // }
 
-  public CustomScriptMenu Init()
+  public void Init()
   {
   }
 

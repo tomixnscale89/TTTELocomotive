@@ -3,6 +3,7 @@ include "tttehelpers.gs"
 include "tttemenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
+include "stringtable.gs"
 
 class TTTEBase isclass TTTEHelpers
 {
@@ -13,6 +14,11 @@ class TTTEBase isclass TTTEHelpers
 
   Asset ScriptAsset = null;
   public StringTable strTable = null; // This asset's string table, saved for convenient fast access
+
+  //Config data
+  Soup myConfig;
+  Soup ExtensionsContainer;
+
 
   public bool useLockTarget = false;
   public bool selectingTarget = false;
@@ -162,6 +168,17 @@ class TTTEBase isclass TTTEHelpers
   {
     TTTEOnline onlineLibrary = GetOnlineLibrary();
     return onlineLibrary.GetPersonalGroup();
+  }
+
+  public void BaseInit(Asset asset)
+  {
+    TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
+
+    ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
+    myConfig = asset.GetConfigSoup();
+    ExtensionsContainer = asset.GetConfigSoup().GetNamedSoup("extensions");
+
+    strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
   }
   
   // ============================================================================

@@ -20,8 +20,6 @@ class tttewagon isclass Vehicle, TTTEBase
   // Define Variables
   // ****************************************************************************/
 
-  Soup myConfig;
-  Soup ExtensionsContainer;
   Soup LiveryContainer;
   Soup LiveryTextureOptions;
   Soup BogeyLiveryTextureOptions;
@@ -56,13 +54,8 @@ class tttewagon isclass Vehicle, TTTEBase
     // call the parent
     inherited(asset);
     self = me;
-    
-    TTTEWagonLibrary = cast<tttelib>(World.GetLibrary(asset.LookupKUIDTable("tttewagon")));
-    ScriptAsset = TTTEWagonLibrary.GetAsset();
+    BaseInit(asset);
 
-    myConfig = asset.GetConfigSoup();
-    ExtensionsContainer = asset.GetConfigSoup().GetNamedSoup("extensions");
-    strTable = ScriptAsset.GetStringTable();
 
     myBogies = me.GetBogeyList();
 
