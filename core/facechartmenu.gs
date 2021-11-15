@@ -22,6 +22,7 @@ class FaceChartMenu isclass CustomScriptMenu
   define int face_width = 48;
   define int face_height = 48;
   define int face_margin = 2;
+  define int name_width = 144;
 
   public string GetMenuHTML()
   {
@@ -55,15 +56,17 @@ class FaceChartMenu isclass CustomScriptMenu
       //Str.ToUpper(pretty_name[0]);
 
       //output.Print("<td><b>" + (string)(i + 1) + "</b></td>");
-      output.Print("<td width='72'><b>" + pretty_name + "</b></td>");
+      output.Print("<td width=" + (string)name_width + "><b>" + pretty_name + "</b></td>");
       for(j = 0; j < headers.CountTags(); j++)
       {
         string suffix = headers.GetIndexedTagName(j);
         output.Print("<td bgcolor=#2C3D4D width=" + (string)face_width + ">");
         if(SoupHasTag(face_soup, suffix))
         {
-          output.Print("<a href='live://face_set/" +  face_name + suffix + "'>");
-          output.Print("<img src='facechart/" + face_name + suffix + ".png' width=" + (string)face_width + " height=" + (string)face_height + ">");
+          string face_mesh = face_name + suffix;
+          string face_label = base.FacesContainer.GetNamedTag(face_mesh);
+          output.Print("<a href='live://face_set/" +  face_mesh + "' tooltip='" + face_label + "'>");
+          output.Print("<img src='facechart/" + face_mesh + ".png' width=" + (string)face_width + " height=" + (string)face_height + ">");
           output.Print("</a>");
         }
         output.Print("</td>");
@@ -110,7 +113,7 @@ class FaceChartMenu isclass CustomScriptMenu
         //string label = headers.GetNamedTag(suffix);
         if(TrainUtil.HasSufix(name, suffix))
         {
-          name = Str.Tokens(name, suffix)[0];
+          name = name[,name.size() - suffix.size()];
           RegisterFace(name, suffix);
           break;
         }
@@ -124,7 +127,7 @@ class FaceChartMenu isclass CustomScriptMenu
     if(headers == null)
       return TTTEBase.POPUP_WIDTH;
     
-    return (face_width + face_margin) * (headers.CountTags() + 3) + face_margin;
+    return (face_width + face_margin) * (headers.CountTags() + 3) + face_margin + name_width;
   }
 
   public void ProcessMessage(string cmd)
