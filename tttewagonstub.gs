@@ -1,6 +1,6 @@
-include "tttewagon.gs"
+include "TTTEWagon.gs"
 
-class tttewagonstub isclass tttewagon
+class tttewagonstub isclass TTTEWagon
 {
 	public void Init()
 	{

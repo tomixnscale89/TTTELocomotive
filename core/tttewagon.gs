@@ -6,10 +6,10 @@ include "tttebase.gs"
 include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 
 // ============================================================================
-// Name: tttewagon
+// Name: TTTEWagon
 // Desc: Script class for a generic TTTE Wagon
 // ============================================================================
-class tttewagon isclass Vehicle, TTTEBase
+class TTTEWagon isclass Vehicle, TTTEBase
 {
   tttelib TTTEWagonLibrary;
 
@@ -20,24 +20,12 @@ class tttewagon isclass Vehicle, TTTEBase
   // Define Variables
   // ****************************************************************************/
 
-  Soup LiveryContainer;
-  Soup LiveryTextureOptions;
-  Soup BogeyLiveryTextureOptions;
-
-  bool m_cameraTarget; // Is this the camera target?
-
   Library ACSlib;   // reference to the Advanced Coupling System Library
   GSObject[] ACSParams;
 
   IKCoupler FrontCoupler;
   IKCoupler BackCoupler;
   Vehicle LastCoupleInteraction;
-
-  public define int CAR_DERAILED = -1;
-  public define int CAR_CENTER   =  0;
-  public define int CAR_FRONT    =  1;
-  public define int CAR_BACK     =  2;
-  public define int CAR_SINGLE   =  3; // CAR_FRONT + CAR_BACK == CAR_SINGLE. Yes, this is intentional.
 
   int m_carPosition; // position of car in train - one of the options above
   Train train;
@@ -53,12 +41,7 @@ class tttewagon isclass Vehicle, TTTEBase
     self = me;
     BaseInit(asset);
 
-
-    LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
-    LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
-    BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
-
-    AddHandler(Interface, "Camera", "Target-Changed", "CameraTargetChangedHandler");
+    AddHandler(me, "TTTESetLivery", "", "SetLiveryHandler");
 
     // message handlers for ACS entry points and tail lights
     AddHandler(me, "Vehicle", "Coupled", "VehicleCoupleHandler");
@@ -93,14 +76,14 @@ class tttewagon isclass Vehicle, TTTEBase
 
   }
 
-  // ============================================================================
-  // Name: CameraTargetChangedHandler(Message msg)
-  // Parm:  Message msg
-  // Desc:
-  // ============================================================================
-  void CameraTargetChangedHandler(Message msg)
+  void SetLiveryHandler(Message msg)
   {
-    m_cameraTarget = (msg.src == me);
+    int skin = LiveryContainer.GetIndexForNamedTag(msg.minor);
+    if(skin != -1)
+    {
+      skinSelection = skin;
+      ConfigureSkins();
+    }
   }
 
   // ============================================================================
@@ -334,4 +317,278 @@ class tttewagon isclass Vehicle, TTTEBase
       Sniff(train, "Train", "", true);
     }
   }
+
+  
+  // ============================================================================
+  // Name: SetProperties()
+  // Parm: soup - properties soup to set internal state from
+  // Desc: SetProperties is called by Trainz to load script state
+  // ============================================================================
+  public void SetProperties(Soup soup)
+  {
+    inherited(soup);
+
+    // faceSelection = soup.GetNamedTagAsInt("faces", faceSelection);
+    // DLSfaceSelection = -1;
+    // ConfigureFaces();
+
+    skinSelection = soup.GetNamedTagAsInt("skin", skinSelection);
+    ConfigureSkins();
+    // load headcode
+    //m_headCode = soup.GetNamedTagAsInt("headcode-lamps", m_headCode);
+  }
+
+
+  // ============================================================================
+  // Name: GetProperties()
+  // Retn: Soup - properties soup containing the current internal state
+  // Desc: GetProperties is called by Trainz to save script state
+  // ============================================================================
+  public Soup GetProperties(void)
+  {
+    Soup soup = inherited();
+
+    soup.SetNamedTag("is_TTTEWagon", true);
+
+    // Save the headcode as a soup tag so we can access it in other locations.
+    //soup.SetNamedTag("headcode-lamps", m_headCode);
+
+    //soup.SetNamedTag("faces", faceSelection);
+
+    soup.SetNamedTag("skin",skinSelection);
+
+    return soup;
+  }
+
+
+  // ============================================================================
+  // Name: GetDescriptionHTML()
+  // Retn: string - HTML for a description pane
+  // Desc: GetDescriptionHTML is
+  // ============================================================================
+  public string GetDescriptionHTML(void)
+  {
+    string html = inherited();
+
+    //StringTable strTable = GetAsset().GetStringTable();
+    html = html + "<html><body>";
+    html = html + "<table cellspacing=2>";
+
+
+    //lamp icon
+    // // option to change headcode, this displays inside the ? HTML window in surveyor.
+    // html = html + "<tr><td>";
+    // html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
+    // html = html + "</tr></td>";
+    //lamp status
+    // string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+    // html = html + "<tr><td>";
+    // html = html + strTable.GetString1("headcode_select", headcodeLampStr);
+    // html = html + "</tr></td>";
+
+    //livery window
+    html = html + "<tr><td>";
+    html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
+    html = html + "</tr></td>";
+    
+    //livery status
+    string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
+    html = html + "<tr><td>";
+    html = html + strTable.GetString1("skin_select", classSkinStr);
+    html = html + "</tr></td>";
+
+    //face window
+    // html = html + "<tr><td>";
+    // html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
+    // html = html + "</tr></td>";
+
+    //face status
+    // string FaceStr = "";
+    // if(faceSelection > -1)
+    //   FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
+    // else if(DLSfaceSelection > -1)
+    // {
+    //   Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
+    //   StringTable FaceStrTable = DLSFace.GetStringTable();
+    //   FaceStr = FaceStrTable.GetString("displayname");
+    //   if(!FaceStr or FaceStr == "")
+    //     FaceStr = DLSFace.GetLocalisedName();
+    // }
+
+    // string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
+    // html = html + "<tr><td>";
+    // html = html + strTable.GetString1("faces_select", classFaceStr);
+    // html = html + "</tr></td>";
+
+    return html;
+  }
+
+  // ============================================================================
+  // Name: GetPropertyType()
+  // Parm: p_propertyID - name of property
+  // Retn: string - type of property
+  // Desc: GetPropertyType is a utility function used by the properties display
+  //       system, allowing the user to edit properties of the vehicle via the
+  //       description window.
+  // ============================================================================
+  string GetPropertyType(string p_propertyID)
+  {
+    // if (p_propertyID == "headcode_lamps")
+    // {
+    //   return "list";
+    // }
+    // else if (p_propertyID == "faces")
+    // {
+    //   return "list";
+    // }
+    if (p_propertyID == "skin")
+    {
+      return "list";
+    }
+
+    return inherited(p_propertyID);
+  }
+
+
+  // ============================================================================
+  // Name: GetPropertyName()
+  // Parm: p_propertyID - name of property
+  // Retn: string - user friendly display name of property
+  // Desc: GetPropertyName is a utility function used by the properties display
+  //       system, allowing the user to edit properties of the vehicle via the
+  //       description window.
+  // ============================================================================
+  string GetPropertyName(string p_propertyID)
+  {
+    // if (p_propertyID == "headcode_lamps")
+    // {
+    //   return strTable.GetString("headcode_name");
+    // }
+    // if (p_propertyID == "faces")
+    // {
+    //   return strTable.GetString("faces_name");
+    // }
+    if (p_propertyID == "skin")
+    {
+      return strTable.GetString("skin_name");
+    }
+
+    return inherited(p_propertyID);
+  }
+
+
+
+  // ============================================================================
+  // Name: GetPropertyDescription()
+  // Parm: p_propertyID - name of property
+  // Retn: string - user friendly description of property
+  // Desc: GetPropertyDescription is a utility function used by the properties display
+  //       system, allowing the user to edit properties of the vehicle via the
+  //       description window.
+  // ============================================================================
+  string GetPropertyDescription(string p_propertyID)
+  {
+    // if (p_propertyID == "headcode_lamps")
+    // {
+    //   return strTable.GetString("headcode_description");
+    // }
+    // else if(p_propertyID == "faces")
+    // {
+    //   return strTable.GetString("faces_description");
+    // }
+    if(p_propertyID == "skin")
+    {
+      return strTable.GetString("skin_description");
+    }
+
+    return inherited(p_propertyID);
+  }
+
+
+  // ============================================================================
+  // Name: GetPropertyElementList()
+  // Parm: p_propertyID - name of property
+  // Retn: string[] - array of string descriptions for each value
+  // Desc: GetPropertyElementList is a utility function used by the properties display
+  //       system, allowing the user to edit properties of the vehicle via the
+  //       description window.
+  // ============================================================================
+  public string[] GetPropertyElementList(string p_propertyID)
+  {
+    int i;
+    string [] result = new string[0];
+
+    // if (p_propertyID == "headcode_lamps")
+    // {
+    //   for (i = 0; i < 12; i++) // Let us loop through the entire possible headcodes and list them all.
+    //   {
+    //     result[i] = HeadcodeDescription(GetHeadcodeFlags(i));
+    //   }
+    // }
+    // else if (p_propertyID == "faces")
+    // {
+    //   for(i = 0; i < FacesContainer.CountTags(); i++) // Let us loop through the entire possible faces and list them all.
+    //   {
+    //     result[i] = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
+    //   }
+    // }
+    if (p_propertyID == "skin")
+    {
+      for(i = 0; i < LiveryContainer.CountTags(); i++) // Let us loop through the entire possible skins and list them all.
+          result[i] = LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(i));
+    }
+    else
+    {
+      result = inherited(p_propertyID);
+    }
+
+    return result;
+  }
+
+
+  // ============================================================================
+  // Name: SetPropertyValue()
+  // Parm: p_propertyID - name of property
+  // Parm: p_value - string name of property value chosen
+  // Parm: p_index - integer index of property value chosen
+  // Desc: SetPropertyValue is a utility function used by the properties display
+  //       system, allowing the user to edit properties of the vehicle via the
+  //       description window.
+  // ============================================================================
+  void SetPropertyValue(string p_propertyID, string p_value, int p_index)
+  {
+    // if (p_propertyID == "headcode_lamps")
+    // {
+    //   if (p_index > -1 and p_index < 12)
+    //   {
+    //     m_headCode = GetHeadcodeFlags(p_index);
+    //     ConfigureHeadcodeLamps();
+    //   }
+    // }
+    // else if (p_propertyID == "faces")
+    // {
+    //   if (p_index > -1 and p_index < FacesContainer.CountTags())
+    //   {
+    //     faceSelection = p_index;
+    //     DLSfaceSelection = -1;
+    //     ConfigureFaces();
+    //   }
+    // }
+    if (p_propertyID == "skin")
+    {
+      if (p_index > -1 and p_index < LiveryContainer.CountTags())
+      {
+        skinSelection = p_index;
+        ConfigureSkins();
+      }
+    }
+    else
+    {
+      inherited(p_propertyID, p_value, p_index);
+    }
+  }
+
 };
+
+//Legacy tttestub compat
+class tttewagon isclass TTTEWagon {};

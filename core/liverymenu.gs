@@ -53,8 +53,8 @@ class LiveryMenu isclass CustomScriptMenu
       string command = Str.Tokens(cmd, "live://livery_set/")[0];
       if(command)
       {
-         base.skinSelection = Str.UnpackInt(command);
-         base.ConfigureSkins();
+        base.skinSelection = Str.UnpackInt(command);
+        base.ConfigureSkins();
       }
     }
 

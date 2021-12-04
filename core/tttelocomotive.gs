@@ -28,6 +28,7 @@ include "soup.gs"
 include "tttelib.gs"
 include "tttebase.gs"
 include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
+include "tttewagon.gs"
 
 // ============================================================================
 // IMPORTANT INFORMATION:
@@ -105,13 +106,13 @@ include "couple.gs" //procedural coupler <kuid:414976:104101> Procedural Coupler
 // ============================================================================
 
 // ============================================================================
-// Name: tttelocomotive
+// Name: TTTELocomotive
 // Desc: Script class for a generic TTTE Locomotive
 // ============================================================================
 
-class tttelocomotive isclass Locomotive, TTTEBase
+class TTTELocomotive isclass Locomotive, TTTEBase
 {
-   // ****************************************************************************/
+  // ****************************************************************************/
   // Define Functions
   // ****************************************************************************/
 
@@ -154,8 +155,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   bool AssetObsolete = false;
   KUID ObsoletedBy;
 
-
-  Asset coupler_idle, coupler_coupled;											// two options for the coupler
   Asset driver, fireman;	// fireman and driver meshes
 
 
@@ -196,13 +195,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
   bool BrowserClosed;
   bool PopupClosed = true;
 
-
-  public define int CAR_DERAILED = -1;
-  public define int CAR_CENTER   =  0;
-  public define int CAR_FRONT    =  1;
-  public define int CAR_BACK     =  2;
-  public define int CAR_SINGLE   =  3; // CAR_FRONT + CAR_BACK == CAR_SINGLE. Yes, this is intentional.
-
   int m_carPosition; // position of car in train - one of the options above
 
   Train train;
@@ -229,26 +221,14 @@ class tttelocomotive isclass Locomotive, TTTEBase
     // ****************************************************************************/
     // Grab assets from the Locomotive
     // ****************************************************************************/
-    faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
-    DLSfaceSelection = -1;
 
     eyeQueue = new EyeFrame[0];
 
-    BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
-    if(BuffersContainer.CountTags() > 0)
-    {
-      SetFeatureSupported(FEATURE_BUFFERS);
-      BufferThread();
-    }
     FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
-    LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
     ExtraLampsContainer = ExtensionsContainer.GetNamedSoup("extra-lamps");
-    LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
-    BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
     FaceChartContainer = ExtensionsContainer.GetNamedSoup("face-chart");
 
     if(FacesContainer.CountTags()) SetFeatureSupported(FEATURE_FACES);
-    if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
     if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
     if(FaceChartContainer.CountTags()) SetFeatureSupported(FEATURE_FACECHART);
 
@@ -364,20 +344,20 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
     //Multiplayer Message! Important!
     AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
+    AddHandler(me, "TTTESetLivery", "", "SetLiveryHandler");
 
     EyeScriptCheckThread();
-    if(MultiplayerGame.IsActive()){
+    if(MultiplayerGame.IsActive())
       MultiplayerBroadcast();
-    }
 
     // ****************************************************************************/
-  // Define Camera Handlers for hiding/showing the low poly exterior cab on steam locos.
-  // ****************************************************************************/
-    AddHandler(Interface, "Camera", "Internal-View", "CameraInternalViewHandler");
-    AddHandler(Interface, "Camera", "External-View", "CameraInternalViewHandler");
-    AddHandler(Interface, "Camera", "Tracking-View", "CameraInternalViewHandler");
-    AddHandler(Interface, "Camera", "Roaming-View", "CameraInternalViewHandler");
-    AddHandler(Interface, "Camera", "Target-Changed", "CameraTargetChangedHandler");
+    // Define Camera Handlers for hiding/showing the low poly exterior cab on steam locos.
+    // ****************************************************************************/
+    AddHandler(Interface, "Camera", "Internal-View",    "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "External-View",    "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "Tracking-View",    "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "Roaming-View",     "CameraInternalViewHandler");
+    AddHandler(Interface, "Camera", "Target-Changed",   "CameraTargetChangedHandler");
 
 
 
@@ -397,28 +377,13 @@ class tttelocomotive isclass Locomotive, TTTEBase
     if(BackCoupler)
       BackCoupler.PostInit(me, "back");
 
-    //FrontCoupler.ParentVehicle = me;
-    //BackCoupler.ParentVehicle = me;
-    //FrontCoupler.Position = "front";
-    //BackCoupler.Position = "back";
-    //FrontCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
-    //BackCoupler.SetCoupleTarget(0.0, -1.0, 0.0, 0.0);
 
     //create the browser menu - this could be changed later to link to a pantograph or keybind
     createMenuWindow();
     ScanBrowser();
     BrowserThread();
 
-    Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
-    // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
-    if(SoupHasTag(KUIDTable, "coupler_idle")) coupler_idle = GetAsset().FindAsset("coupler_idle");
-    if(SoupHasTag(KUIDTable, "coupler_coupled")) coupler_coupled = GetAsset().FindAsset("coupler_coupled");
-
-    if(SoupHasTag(KUIDTable, "lamp")) headlight_asset = GetAsset().FindAsset("lamp");
     m_carPosition = DetermineCarPosition();
-
-    if(SoupHasTag(KUIDTable, "liveries")) textureSet = GetAsset().FindAsset("liveries"); // Grab the textures we need for the livery swapping
-
 
     // message handlers for ACS entry points and tail lights
     AddHandler(me, "Vehicle", "Coupled", "VehicleCoupleHandler");
@@ -471,18 +436,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
     return GetMyTrain() == World.GetCurrentTrain();
   }
 
-
-  int[] GetKuidData(KUID FoundKUID)
-  {
-    int[] ret;
-    string kuidStr = FoundKUID.GetLogString();
-    string[] tokens = Str.Tokens(kuidStr, "<:>");
-    ret = new int[tokens.size() - 1]; //remove kuid/kuid2 token
-    int i;
-    for(i = 1; i < tokens.size(); i++)
-      ret[i - 1] = Str.ToInt(tokens[i]);
-    return ret;
-  }
 
   void ShowUpdatePrompt()
   {
@@ -809,6 +762,49 @@ class tttelocomotive isclass Locomotive, TTTEBase
     return "front";
   }
 
+  void SetLiveryHandler(Message msg)
+  {
+    int skin = LiveryContainer.GetIndexForNamedTag(msg.minor);
+    if(skin != -1)
+    {
+      skinSelection = skin;
+      ConfigureSkins();
+    }
+  }
+
+  // ============================================================================
+  // Name: PropagateSkins()
+  // Desc: Propagates the current skin to all tenders.
+  // ============================================================================
+  public void PropagateSkins()
+  {
+    TrainzScript.Log("Propagating skin");
+    string liveryName = LiveryContainer.GetIndexedTagName(skinSelection);
+
+    Train train = GetMyTrain();
+    Vehicle[] vehicles = train.GetVehicles();
+
+    int i;
+    for(i = 0; i < vehicles.size(); i++)
+    {
+      if(vehicles[i] == self or (vehicles[i].GetVehicleTypeFlags() & Vehicle.TYPE_TENDER) != Vehicle.TYPE_TENDER)
+        continue;
+
+      PostMessage(vehicles[i], "TTTESetLivery", liveryName, 0.0);
+    }
+  }
+
+  // ============================================================================
+  // Name: ConfigureSkins()
+  // Parm:  None
+  // Desc:
+  // ============================================================================
+  public void ConfigureSkins()
+  {
+    inherited();
+    PropagateSkins();
+  }
+
   // ============================================================================
   // Name: PlayCoupleAnimation(string direction)
   // Desc:
@@ -971,7 +967,7 @@ class tttelocomotive isclass Locomotive, TTTEBase
         CachedBackVehicle = BackVehicle;
       }
 
-      Sleep(0.03);
+      Sleep(0.08);
     }
   }
 
@@ -1266,114 +1262,114 @@ class tttelocomotive isclass Locomotive, TTTEBase
     return returnFlags;
   }
 
-    // ============================================================================
-    // Name: SetProperties()
-    // Parm: soup - properties soup to set internal state from
-    // Desc: SetProperties is called by Trainz to load script state
-    // ============================================================================
-    public void SetProperties(Soup soup)
+  // ============================================================================
+  // Name: SetProperties()
+  // Parm: soup - properties soup to set internal state from
+  // Desc: SetProperties is called by Trainz to load script state
+  // ============================================================================
+  public void SetProperties(Soup soup)
+  {
+    inherited(soup);
+
+    faceSelection = soup.GetNamedTagAsInt("faces", faceSelection);
+    DLSfaceSelection = -1;
+    ConfigureFaces();
+
+    skinSelection = soup.GetNamedTagAsInt("skin", skinSelection);
+    ConfigureSkins();
+    // load headcode
+    m_headCode = soup.GetNamedTagAsInt("headcode-lamps", m_headCode);
+  }
+
+
+  // ============================================================================
+  // Name: GetProperties()
+  // Retn: Soup - properties soup containing the current internal state
+  // Desc: GetProperties is called by Trainz to save script state
+  // ============================================================================
+  public Soup GetProperties(void)
+  {
+    Soup soup = inherited();
+
+    soup.SetNamedTag("is_TTTELocomotive", true);
+
+    // Save the headcode as a soup tag so we can access it in other locations.
+    soup.SetNamedTag("headcode-lamps", m_headCode);
+
+    soup.SetNamedTag("faces", faceSelection);
+
+    soup.SetNamedTag("skin",skinSelection);
+
+    return soup;
+  }
+
+
+  // ============================================================================
+  // Name: GetDescriptionHTML()
+  // Retn: string - HTML for a description pane
+  // Desc: GetDescriptionHTML is
+  // ============================================================================
+  public string GetDescriptionHTML(void)
+  {
+    string html = inherited();
+
+    //StringTable strTable = GetAsset().GetStringTable();
+    html = html + "<html><body>";
+    html = html + "<table cellspacing=2>";
+
+    // debugging
+    // Let's post the current Trainz version for debugging purposes.
+    html = html + "<tr><td>";
+    html = html + strTable.GetString("trainz_ver_debug") + trainzVersion;
+    html = html + "</tr></td>";
+
+    //lamp icon
+    // // option to change headcode, this displays inside the ? HTML window in surveyor.
+    html = html + "<tr><td>";
+    html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
+    html = html + "</tr></td>";
+    //lamp status
+    string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+    html = html + "<tr><td>";
+    html = html + strTable.GetString1("headcode_select", headcodeLampStr);
+    html = html + "</tr></td>";
+
+    //livery window
+    html = html + "<tr><td>";
+    html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
+    html = html + "</tr></td>";
+    
+    //livery status
+    string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
+    html = html + "<tr><td>";
+    html = html + strTable.GetString1("skin_select", classSkinStr);
+    html = html + "</tr></td>";
+
+    //face window
+    html = html + "<tr><td>";
+    html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
+    html = html + "</tr></td>";
+
+    //face status
+    string FaceStr = "";
+    if(faceSelection > -1)
+      FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
+    else if(DLSfaceSelection > -1)
     {
-      inherited(soup);
-
-      faceSelection = soup.GetNamedTagAsInt("faces", faceSelection);
-      DLSfaceSelection = -1;
-      ConfigureFaces();
-
-      skinSelection = soup.GetNamedTagAsInt("skin", skinSelection);
-      ConfigureSkins();
-      // load headcode
-      m_headCode = soup.GetNamedTagAsInt("headcode-lamps", m_headCode);
+      Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
+      StringTable FaceStrTable = DLSFace.GetStringTable();
+      FaceStr = FaceStrTable.GetString("displayname");
+      if(!FaceStr or FaceStr == "")
+        FaceStr = DLSFace.GetLocalisedName();
     }
 
+    string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
+    html = html + "<tr><td>";
+    html = html + strTable.GetString1("faces_select", classFaceStr);
+    html = html + "</tr></td>";
 
-    // ============================================================================
-    // Name: GetProperties()
-    // Retn: Soup - properties soup containing the current internal state
-    // Desc: GetProperties is called by Trainz to save script state
-    // ============================================================================
-    public Soup GetProperties(void)
-    {
-      Soup soup = inherited();
-
-      soup.SetNamedTag("is_TTTELocomotive", true);
-
-      // Save the headcode as a soup tag so we can access it in other locations.
-      soup.SetNamedTag("headcode-lamps", m_headCode);
-
-      soup.SetNamedTag("faces", faceSelection);
-
-      soup.SetNamedTag("skin",skinSelection);
-
-      return soup;
-    }
-
-
-    // ============================================================================
-    // Name: GetDescriptionHTML()
-    // Retn: string - HTML for a description pane
-    // Desc: GetDescriptionHTML is
-    // ============================================================================
-    public string GetDescriptionHTML(void)
-    {
-      string html = inherited();
-
-      //StringTable strTable = GetAsset().GetStringTable();
-      html = html + "<html><body>";
-      html = html + "<table cellspacing=2>";
-
-      // debugging
-      // Let's post the current Trainz version for debugging purposes.
-      html = html + "<tr><td>";
-      html = html + strTable.GetString("trainz_ver_debug") + trainzVersion;
-      html = html + "</tr></td>";
-
-      //lamp icon
-      // // option to change headcode, this displays inside the ? HTML window in surveyor.
-      html = html + "<tr><td>";
-      html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
-      html = html + "</tr></td>";
-      //lamp status
-      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
-      html = html + "<tr><td>";
-      html = html + strTable.GetString1("headcode_select", headcodeLampStr);
-      html = html + "</tr></td>";
-
-      //livery window
-      html = html + "<tr><td>";
-      html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
-      html = html + "</tr></td>";
-      
-      //livery status
-      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
-      html = html + "<tr><td>";
-      html = html + strTable.GetString1("skin_select", classSkinStr);
-      html = html + "</tr></td>";
-
-      //face window
-      html = html + "<tr><td>";
-      html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
-      html = html + "</tr></td>";
-
-      //face status
-      string FaceStr = "";
-      if(faceSelection > -1)
-        FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
-      else if(DLSfaceSelection > -1)
-      {
-        Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
-        StringTable FaceStrTable = DLSFace.GetStringTable();
-        FaceStr = FaceStrTable.GetString("displayname");
-        if(!FaceStr or FaceStr == "")
-          FaceStr = DLSFace.GetLocalisedName();
-      }
-
-      string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
-      html = html + "<tr><td>";
-      html = html + strTable.GetString1("faces_select", classFaceStr);
-      html = html + "</tr></td>";
-
-      return html;
-    }
+    return html;
+  }
 
   // ============================================================================
   // Name: GetPropertyType()
@@ -2030,137 +2026,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
       msg.src = null;
       continue;
 
-      // //Eye Window
-      // on "Browser-URL", "live://open_eye", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //     if(CurrentMenu != BROWSER_EYEMENU)
-      //     {
-      //       CurrentMenu = BROWSER_EYEMENU;
-      //       createPopupWindow();
-      //       RefreshBrowser();
-      //     }
-      //     else
-      //       closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
-      // //Joystick Window
-      // on "Browser-URL", "live://open_joystick", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //   if(CurrentMenu != BROWSER_JOYSTICKMENU)
-      //   {
-      //     CurrentMenu = BROWSER_JOYSTICKMENU;
-      //     eyeZ = 0.0; //clear any rotation beforehand
-      //     createPopupWindow();
-      //     RefreshBrowser();
-      //   }
-      //   else
-      //     closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
-      // //Lamp Window
-      // on "Browser-URL", "live://open_lamp", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //   if(CurrentMenu != BROWSER_LAMPMENU)
-      //   {
-      //     CurrentMenu = BROWSER_LAMPMENU;
-      //     createPopupWindow();
-      //     RefreshBrowser();
-      //   }
-      //   else
-      //     closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
-      // //Livery Window
-      // on "Browser-URL", "live://open_livery", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //   if(CurrentMenu != BROWSER_LIVERYMENU)
-      //   {
-      //     CurrentMenu = BROWSER_LIVERYMENU;
-      //     createPopupWindow();
-      //     RefreshBrowser();
-      //   }
-      //   else
-      //     closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
-      // //Face Window
-      // on "Browser-URL", "live://open_face", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //   if(CurrentMenu != BROWSER_FACEMENU)
-      //   {
-      //     CurrentMenu = BROWSER_FACEMENU;
-      //     createPopupWindow();
-      //     RefreshBrowser();
-
-      //     CheckDLSAdditionalFaces();
-      //   }
-      //   else
-      //     closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
-      // //Loco Window
-      // on "Browser-URL", "live://open_loco", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //   if(CurrentMenu != BROWSER_LOCOMENU)
-      //   {
-      //     CurrentMenu = BROWSER_LOCOMENU;
-      //     createPopupWindow();
-      //     RefreshBrowser();
-      //   }
-      //   else
-      //     closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
-      // //Smoke Window
-      // on "Browser-URL", "live://open_smoke", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //   if(CurrentMenu != BROWSER_SMOKEMENU)
-      //   {
-      //     CurrentMenu = BROWSER_SMOKEMENU;
-      //     createPopupWindow();
-      //     RefreshBrowser();
-      //   }
-      //   else
-      //     closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
-      // //Social Window
-      // on "Browser-URL", "live://open_social", msg:
-      // if ( browser and msg.src == browser )
-      // {
-      //   if(CurrentMenu != BROWSER_SOCIALMENU)
-      //   {
-      //     CurrentMenu = BROWSER_SOCIALMENU;
-      //     createPopupWindow();
-      //     RefreshBrowser();
-      //   }
-      //   else
-      //     closePopup();
-      // }
-      // msg.src = null;
-      // continue;
-
       //Main Window
       on "Browser-URL", "live://return", msg:
       if ( popup and msg.src == popup )
@@ -2202,10 +2067,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 
         if ( popup and msg.src == popup )
         {
-          // int i;
-          // for(i = 0; i < customMenus.size(); i++)
-          //   customMenus[i].ProcessMessage(msg.minor);
-
           if(CurrentMenu)
             CurrentMenu.ProcessMessage(msg.minor);
         }
@@ -2232,3 +2093,6 @@ class tttelocomotive isclass Locomotive, TTTEBase
 		}
 	}
 };
+
+//Legacy tttestub compat
+class tttelocomotive isclass TTTELocomotive {};

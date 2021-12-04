@@ -37,6 +37,8 @@ class TTTEBase isclass TTTEHelpers
   public Soup FaceChartContainer;
   public bool[] ExtraLampVisibility;
   public Asset[] ExtraLampAssets;
+  
+  Asset coupler_idle, coupler_coupled; // legacy couplers
 
 
   public bool useLockTarget = false;
@@ -54,6 +56,12 @@ class TTTEBase isclass TTTEHelpers
   define int FEATURE_SMOKE        = 1 << 4;
   define int FEATURE_BUFFERS      = 1 << 5;
   define int FEATURE_FACECHART    = 1 << 6;
+
+  public define int CAR_DERAILED = -1;
+  public define int CAR_CENTER   =  0;
+  public define int CAR_FRONT    =  1;
+  public define int CAR_BACK     =  2;
+  public define int CAR_SINGLE   =  3; // CAR_FRONT + CAR_BACK == CAR_SINGLE. Yes, this is intentional.
 
   public Browser popup;
   public define int POPUP_WIDTH = 300;
@@ -166,65 +174,6 @@ class TTTEBase isclass TTTEHelpers
       popup.LoadHTMLString(self.GetAsset(), CurrentMenu.GetMenuHTML());
       CurrentMenu.PostRefresh();
     }
-    
-    // if(CurrentMenu >= BROWSER_CUSTOMMENU_0)
-    // {
-    //   int menuID = CurrentMenu - BROWSER_CUSTOMMENU_0;
-    //   popup.LoadHTMLString(GetAsset(), customMenus[menuID].GetMenuHTML());
-    // }
-    // else
-    // {
-    //   bool isTransparent = false;
-
-    //   switch(CurrentMenu)
-    //   {
-    //     case BROWSER_NONE:
-    //       PopupClosed = true;
-    //       popup = null;
-    //       break;
-    //     case BROWSER_EYEMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetEyeWindowHTML());
-    //       break;
-    //     case BROWSER_JOYSTICKMENU:
-    //       isTransparent = true;
-    //       popup.LoadHTMLString(GetAsset(), GetJoystickWindowHTML());
-    //       JoystickThread();
-    //       break;
-    //     case BROWSER_LAMPMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetLampWindowHTML());
-    //       break;
-    //     case BROWSER_LIVERYMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetLiveryWindowHTML());
-    //       break;
-    //     case BROWSER_FACEMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetFaceWindowHTML());
-    //       break;
-    //     case BROWSER_LOCOMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetLocoWindowHTML());
-    //       popup.SetElementProperty("shakeintensity", "value", (string)b_ShakeIntensity);
-    //       popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
-    //       break;
-    //     case BROWSER_SMOKEMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetSmokeWindowHTML());
-    //       RefreshSmokeTags();
-    //       break;
-    //     case BROWSER_SOCIALMENU:
-    //       popup.LoadHTMLString(GetAsset(), GetSocialWindowHTML());
-    //       break;
-    //     default:
-    //       PopupClosed = true;
-    //       popup = null;
-    //   }
-
-    //   if(popup)
-    //   {
-    //     // if(isTransparent)
-    //     //   popup.SetWindowStyle(Browser.STYLE_POPOVER);
-    //     // else
-    //     //   popup.SetWindowStyle(Browser.STYLE_HUD_FRAME);
-    //   }
-      
-    // }
 
     if(popup and CurrentMenu != JoystickMenu)
       popup.ResizeHeightToFit();
@@ -445,6 +394,14 @@ class TTTEBase isclass TTTEHelpers
       self.SetFXAttachment(effectName, null);
   }
 
+  // ============================================================================
+  // Name: BufferThread()
+  // Desc: Buffer management thread
+  // ============================================================================
+  thread void BufferThread()
+  {
+
+  }
   
   // ============================================================================
   // Name: ConfigureSkins()
@@ -727,6 +684,34 @@ class TTTEBase isclass TTTEHelpers
     ExtensionsContainer = asset.GetConfigSoup().GetNamedSoup("extensions");
 
     strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
+
+
+    faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
+    DLSfaceSelection = -1;
+
+    
+    BuffersContainer = ExtensionsContainer.GetNamedSoup("buffers");
+    if(BuffersContainer.CountTags() > 0)
+    {
+      SetFeatureSupported(FEATURE_BUFFERS);
+      BufferThread();
+    }
+
+    LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
+    LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
+    BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
+
+    if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
+
+    Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
+
+    // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
+    if(SoupHasTag(KUIDTable, "coupler_idle")) coupler_idle = asset.FindAsset("coupler_idle");
+    if(SoupHasTag(KUIDTable, "coupler_coupled")) coupler_coupled = asset.FindAsset("coupler_coupled");
+
+    if(SoupHasTag(KUIDTable, "lamp")) headlight_asset = asset.FindAsset("lamp");
+
+    if(SoupHasTag(KUIDTable, "liveries")) textureSet = asset.FindAsset("liveries"); // Grab the textures we need for the livery swapping
   }
   
   // ============================================================================

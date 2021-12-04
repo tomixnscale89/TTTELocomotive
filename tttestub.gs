@@ -1,6 +1,6 @@
-include "tttelocomotive.gs"
+include "TTTELocomotive.gs"
 
-class tttestub isclass tttelocomotive
+class tttestub isclass TTTELocomotive
 {
 	public void Init()
 	{
