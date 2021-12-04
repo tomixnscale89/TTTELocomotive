@@ -5,6 +5,7 @@ class LocoMenu isclass CustomScriptMenu
 {
   bool b_WheelslipEnabled = false;
   bool b_ShakeEnabled = false;
+  bool b_ShakeAll = false;
   float b_ShakeIntensity = 0.02;
   float b_ShakePeriod = 0.04;
   float normal_maxtractiveeffort;
@@ -12,12 +13,8 @@ class LocoMenu isclass CustomScriptMenu
   float normal_momentum;
 
   int ShakeTime = 0;
-  float ShakeTargetX = 0;
-  float ShakeTargetY = 0;
-  float ShakeTargetZ = 0;
-  float LastShakeTargetX = 0;
-  float LastShakeTargetY = 0;
-  float LastShakeTargetZ = 0;
+  Orientation[] lastShakeTargets = new Orientation[0];
+  Orientation[] shakeTargets = new Orientation[0];
 
   public bool IsCore() { return true; }
   
@@ -48,6 +45,10 @@ class LocoMenu isclass CustomScriptMenu
       output.Print("<br>");
       output.Print(base.strTable.GetString("shake_period"));
       output.Print("<trainz-object style=edit-box link-on-focus-loss id=shakeperiod width=60 height=16></trainz-object>");
+
+      output.Print("<br>");
+      output.Print(HTMLWindow.CheckBox("live://property/loco-shake-all", b_ShakeAll));
+      output.Print(" " + base.strTable.GetString("shake_all"));
     }
     output.Print("</tr></td>");
 
@@ -94,6 +95,15 @@ class LocoMenu isclass CustomScriptMenu
 		return (from + (to - from)*t);
 	}
 
+  Orientation Lerp(Orientation a, Orientation b, float t)
+  {
+    Orientation x = new Orientation();
+    x.rx = Lerp(a.rx, b.rx, t);
+    x.ry = Lerp(a.ry, b.ry, t);
+    x.rz = Lerp(a.rz, b.rz, t);
+    return x;
+  }
+
   public void Tick()
   {
     if(b_ShakeEnabled)
@@ -108,22 +118,45 @@ class LocoMenu isclass CustomScriptMenu
       int localPeriod = (b_ShakePeriod * 100.0);
       if(localPeriod < 2) localPeriod = 2;
 
-      float Along = (float)ShakeTime/(float)localPeriod;
-      float InterpX = Lerp(LastShakeTargetX, ShakeTargetX, Along);
-      float InterpY = Lerp(LastShakeTargetY, ShakeTargetY, Along);
-      float InterpZ = Lerp(LastShakeTargetZ, ShakeTargetZ, Along);
-      base.self.SetMeshOrientation("default", InterpX, InterpY, InterpZ);
+      float along = (float)ShakeTime / (float)localPeriod;
+
+      Vehicle[] vehicles;
+
+      if(!b_ShakeAll)
+      {
+        vehicles = new Vehicle[1];
+        vehicles[0] = base.self;
+      }
+      else
+      {
+        vehicles = base.self.GetMyTrain().GetVehicles();
+      }
+
+      int i;
+      for(i = 0; i < vehicles.size(); i++)
+      {
+        if(i >= lastShakeTargets.size())
+          lastShakeTargets[i] = new Orientation();
+        if(i >= shakeTargets.size())
+          shakeTargets[i] = new Orientation();
+
+        Orientation target = Lerp(lastShakeTargets[i], shakeTargets[i], along);
+        vehicles[i].SetMeshOrientation("default", target.rx, target.ry, target.rz);
+
+        if(ShakeTime == localPeriod)
+        {
+          lastShakeTargets[i] = shakeTargets[i];
+
+          Orientation newTarget = new Orientation();
+          newTarget.rx = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
+          newTarget.ry = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
+          newTarget.rz = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
+          shakeTargets[i] = newTarget;
+        }
+      }
 
       if(ShakeTime == localPeriod)
-			{
-				ShakeTime = 0;
-				LastShakeTargetX = ShakeTargetX;
-				LastShakeTargetY = ShakeTargetY;
-				LastShakeTargetZ = ShakeTargetZ;
-				ShakeTargetX = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
-				ShakeTargetY = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
-				ShakeTargetZ = Math.Rand(-b_ShakeIntensity, b_ShakeIntensity);
-			}
+        ShakeTime = 0;
 
       ShakeTime++;
     }
@@ -161,6 +194,17 @@ class LocoMenu isclass CustomScriptMenu
       b_ShakeEnabled = !b_ShakeEnabled;
       if(!b_ShakeEnabled)
         base.self.SetMeshOrientation("default", 0.0, 0.0, 0.0);
+    }
+    else if(cmd == "live://property/loco-shake-all")
+    {
+      b_ShakeAll = !b_ShakeAll;
+      if(!b_ShakeAll)
+      {
+        Vehicle[] vehicles = base.self.GetMyTrain().GetVehicles();
+        int i;
+        for(i = 0; i < vehicles.size(); i++)
+          vehicles[i].SetMeshOrientation("default", 0.0, 0.0, 0.0);
+      }
     }
     else if(cmd == "live://property/loco-couple")
     {
