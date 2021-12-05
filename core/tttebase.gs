@@ -8,6 +8,7 @@ include "liverymenu.gs"
 include "facemenu.gs"
 include "locomenu.gs"
 include "smokemenu.gs"
+include "submeshmenu.gs"
 include "socialmenu.gs"
 include "facechartmenu.gs"
 include "tttelib.gs"
@@ -35,6 +36,7 @@ class TTTEBase isclass TTTEHelpers
   public Soup BuffersContainer;
   public Soup ExtraLampsContainer;
   public Soup FaceChartContainer;
+  public Soup SubmeshContainer;
   public bool[] ExtraLampVisibility;
   public Asset[] ExtraLampAssets;
   
@@ -56,6 +58,7 @@ class TTTEBase isclass TTTEHelpers
   define int FEATURE_SMOKE        = 1 << 4;
   define int FEATURE_BUFFERS      = 1 << 5;
   define int FEATURE_FACECHART    = 1 << 6;
+  define int FEATURE_SUBMESHES    = 1 << 7;
 
   public define int CAR_DERAILED = -1;
   public define int CAR_CENTER   =  0;
@@ -81,6 +84,7 @@ class TTTEBase isclass TTTEHelpers
   CustomScriptMenu FaceMenu       = null;
   CustomScriptMenu LocoMenu       = null;
   CustomScriptMenu SmokeMenu      = null;
+  CustomScriptMenu SubmeshMenu    = null;
   CustomScriptMenu FaceChartMenu  = null;
   CustomScriptMenu SocialMenu     = null;
 
@@ -242,6 +246,12 @@ class TTTEBase isclass TTTEHelpers
     {
       SmokeMenu = new SmokeMenu();
       customMenus[customMenus.size()] = SmokeMenu;
+    }
+
+    if(GetFeatureSupported(FEATURE_SUBMESHES))
+    {
+      SubmeshMenu = new SubmeshMenu();
+      customMenus[customMenus.size()] = SubmeshMenu;
     }
 
     if(GetFeatureSupported(FEATURE_FACECHART))
@@ -700,8 +710,10 @@ class TTTEBase isclass TTTEHelpers
     LiveryContainer = ExtensionsContainer.GetNamedSoup("liveries");
     LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
     BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
+    SubmeshContainer = ExtensionsContainer.GetNamedSoup("submeshes");
 
     if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
+    if(SubmeshContainer.CountTags()) SetFeatureSupported(FEATURE_SUBMESHES);
 
     Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
 
