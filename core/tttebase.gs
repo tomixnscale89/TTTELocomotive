@@ -94,6 +94,12 @@ class TTTEBase isclass TTTEHelpers
 	public float eyeY = 0.0; // Eye Roll
 	public float eyeZ = 0.0; // Up-Down Eye Rotation
 
+  //whether to translate the eyes instead of rotating them
+  public bool eyeTranslateX = false;
+  public bool eyeTranslateY = false;
+  public float eyeTranslateXScale = 1.0;
+  public float eyeTranslateYScale = 1.0;
+
   //Headcode stuff
   public Asset headlight_asset;      // headlight asset used by the loco
   public int m_headCode = 0;   // Stores the current state of the headcode lamps
@@ -711,6 +717,12 @@ class TTTEBase isclass TTTEHelpers
     LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
     BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
     SubmeshContainer = ExtensionsContainer.GetNamedSoup("submeshes");
+
+    eyeTranslateX = ExtensionsContainer.GetNamedTagAsBool("eye-translate-x", false);
+    eyeTranslateY = ExtensionsContainer.GetNamedTagAsBool("eye-translate-y", false);
+
+    eyeTranslateXScale = ExtensionsContainer.GetNamedTagAsFloat("eye-translate-x-scale", eyeTranslateXScale);
+    eyeTranslateYScale = ExtensionsContainer.GetNamedTagAsFloat("eye-translate-y-scale", eyeTranslateYScale);
 
     if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
     if(SubmeshContainer.CountTags()) SetFeatureSupported(FEATURE_SUBMESHES);

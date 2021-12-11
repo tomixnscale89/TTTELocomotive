@@ -91,6 +91,16 @@ class CustomScriptMenu
     return false;
   }
 
+  // Helper functions
+  // ============================================================================
+  // Name: GetBrowser()
+  // Desc: Returns the Browser object that contains this menu.
+  // ============================================================================
+  public Browser GetBrowser()
+  {
+    return base.popup;
+  }
+
   // ============================================================================
   // Name: GetMenuWidth()
   // Desc: Returns the width required by this menu.

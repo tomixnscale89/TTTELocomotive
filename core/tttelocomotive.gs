@@ -1545,6 +1545,26 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
   void SetEyeMeshOrientation(float x, float y, float z)
 	{
+    if(eyeTranslateX or eyeTranslateY)
+    {
+      float translateX = 0.0;
+      float translateZ = 0.0;
+
+      if(eyeTranslateX)
+      {
+        translateX = z * eyeTranslateXScale / 4.0;
+        z = 0.0;
+      }
+      if(eyeTranslateY)
+      {
+        translateZ = -x * eyeTranslateYScale / 4.0;
+        x = 0.0;
+      }
+
+      SetMeshTranslation("eye_l", translateX, 0.0, translateZ);
+      SetMeshTranslation("eye_r", translateX, 0.0, translateZ);
+    }
+
     SetMeshOrientation("eye_l", x, y, z);
 		SetMeshOrientation("eye_r", x, y, z);
 	}

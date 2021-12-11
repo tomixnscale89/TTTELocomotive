@@ -78,11 +78,14 @@ class TTTEWagon isclass Vehicle, TTTEBase
 
   void SetLiveryHandler(Message msg)
   {
-    int skin = LiveryContainer.GetIndexForNamedTag(msg.minor);
-    if(skin != -1)
+    if(msg.dst == me)
     {
-      skinSelection = skin;
-      ConfigureSkins();
+      int skin = LiveryContainer.GetIndexForNamedTag(msg.minor);
+      if(skin != -1)
+      {
+        skinSelection = skin;
+        ConfigureSkins();
+      }
     }
   }
 
