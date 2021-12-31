@@ -144,7 +144,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   void UpdateInterfacePositionHandler(Message msg);
   thread void BrowserThread();
   thread void TickThread(CustomScriptMenu menu);
-  thread void ScanBrowser(void);
+  //thread void ScanBrowser(void);
 
   void WhistleMonitor(Message msg);
   thread void HeadlightMonitor();
@@ -191,7 +191,6 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
 
   //public int CurrentMenu = BROWSER_NONE;
-  bool HasFocus = false;
   bool BrowserClosed;
   bool PopupClosed = true;
 
@@ -380,7 +379,8 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
     //create the browser menu - this could be changed later to link to a pantograph or keybind
     createMenuWindow();
-    ScanBrowser();
+    //ScanBrowser();
+    AddHandler(me, "Browser-URL", "", "BrowserHandler");
     BrowserThread();
 
     m_carPosition = DetermineCarPosition();
@@ -425,6 +425,11 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   {
     //regenerate browser
     BrowserClosed = true;
+  }
+
+  public bool HasFocus()
+  {
+    return m_cameraTarget;
   }
 
   // ============================================================================
@@ -685,63 +690,63 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   }
 
 
-    // ============================================================================
-    // Name: HeadlightMonitor()
-    // Desc: Sets the vehicle up for the required headlight
-    // ============================================================================
-    thread void HeadlightMonitor()
+  // ============================================================================
+  // Name: HeadlightMonitor()
+  // Desc: Sets the vehicle up for the required headlight
+  // ============================================================================
+  thread void HeadlightMonitor()
+  {
+    // Start off with legacy mode assumed. If we get a modern message we cancel it.
+    bool bIsLegacyModeActive = true;
+    PostMessage(me, "Updater", "LegacyTick", 1.0);
+    wait()
     {
-      // Start off with legacy mode assumed. If we get a modern message we cancel it.
-      bool bIsLegacyModeActive = true;
+      on "Updater", "LegacyTick":
+      // Legacy polling logic. Updates lights every second.
+      ConfigureHeadLightCorona(me.GetMyTrain().GetHeadlightState(), me.GetHighBeams());
       PostMessage(me, "Updater", "LegacyTick", 1.0);
-      wait()
+      continue;
+
+      on "Train", "NotifyHeadlights":
+      // Modern reactive logic. Updates lights only when changed.
+      ConfigureHeadLightCorona(me.GetMyTrain().GetHeadlightState(), me.GetHighBeams());
+
+      // Cancel legacy logic if still active
+      if (bIsLegacyModeActive)
       {
-        on "Updater", "LegacyTick":
-        // Legacy polling logic. Updates lights every second.
-        ConfigureHeadLightCorona(me.GetMyTrain().GetHeadlightState(), me.GetHighBeams());
-        PostMessage(me, "Updater", "LegacyTick", 1.0);
-        continue;
-
-        on "Train", "NotifyHeadlights":
-        // Modern reactive logic. Updates lights only when changed.
-        ConfigureHeadLightCorona(me.GetMyTrain().GetHeadlightState(), me.GetHighBeams());
-
-        // Cancel legacy logic if still active
-        if (bIsLegacyModeActive)
-        {
-          ClearMessages("Updater", "LegacyTick");
-          bIsLegacyModeActive = false;
-        }
-        continue;
+        ClearMessages("Updater", "LegacyTick");
+        bIsLegacyModeActive = false;
       }
+      continue;
     }
+  }
 
 
-    // ============================================================================
-    // Name: WhistleMonitor()
-    // Desc: Watches Whistle interactions specifically when the message NotifyHorn is posted.
-    //       Currently not working. Not sure of a way to obtain the Horn state.
-    // ============================================================================
-    void WhistleMonitor(Message msg)
+  // ============================================================================
+  // Name: WhistleMonitor()
+  // Desc: Watches Whistle interactions specifically when the message NotifyHorn is posted.
+  //       Currently not working. Not sure of a way to obtain the Horn state.
+  // ============================================================================
+  void WhistleMonitor(Message msg)
+  {
+    // Interface.Print("Entered WhistleMonitor" + "GetEngineParam HORN is: " + GetEngineParam("horn"));
+    if(msg.src == me)
     {
-      // Interface.Print("Entered WhistleMonitor" + "GetEngineParam HORN is: " + GetEngineParam("horn"));
-      if(msg.src == me)
+      if(GetEngineParam("horn") == 1)
       {
-        if(GetEngineParam("horn") == 1)
-        {
-          PostMessage(me, "pfx", "+5",0.0); // Blow extra whistle
-        }
-        else
-        {
-          PostMessage(me, "pfx", "-5",0.0); // No longer in wait, so stop blowing whistle.
-        }
+        PostMessage(me, "pfx", "+5",0.0); // Blow extra whistle
+      }
+      else
+      {
+        PostMessage(me, "pfx", "-5",0.0); // No longer in wait, so stop blowing whistle.
       }
     }
+  }
 
-    // ============================================================================
-    // Name: GetRelativeDirectionString(Vehicle targetvehicle, string location)
-    // Desc:
-    // ============================================================================
+  // ============================================================================
+  // Name: GetRelativeDirectionString(Vehicle targetvehicle, string location)
+  // Desc:
+  // ============================================================================
   string GetRelativeDirectionString(Vehicle targetvehicle, string location)
   {
     //front and same - back
@@ -1319,54 +1324,64 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
     // debugging
     // Let's post the current Trainz version for debugging purposes.
-    html = html + "<tr><td>";
-    html = html + strTable.GetString("trainz_ver_debug") + trainzVersion;
-    html = html + "</tr></td>";
+    // html = html + "<tr><td>";
+    // html = html + strTable.GetString("trainz_ver_debug") + trainzVersion;
+    // html = html + "</tr></td>";
 
-    //lamp icon
-    // // option to change headcode, this displays inside the ? HTML window in surveyor.
-    html = html + "<tr><td>";
-    html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
-    html = html + "</tr></td>";
-    //lamp status
-    string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
-    html = html + "<tr><td>";
-    html = html + strTable.GetString1("headcode_select", headcodeLampStr);
-    html = html + "</tr></td>";
-
-    //livery window
-    html = html + "<tr><td>";
-    html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
-    html = html + "</tr></td>";
-    
-    //livery status
-    string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
-    html = html + "<tr><td>";
-    html = html + strTable.GetString1("skin_select", classSkinStr);
-    html = html + "</tr></td>";
-
-    //face window
-    html = html + "<tr><td>";
-    html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
-    html = html + "</tr></td>";
-
-    //face status
-    string FaceStr = "";
-    if(faceSelection > -1)
-      FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
-    else if(DLSfaceSelection > -1)
+    if(GetFeatureSupported(FEATURE_LAMPS))
     {
-      Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
-      StringTable FaceStrTable = DLSFace.GetStringTable();
-      FaceStr = FaceStrTable.GetString("displayname");
-      if(!FaceStr or FaceStr == "")
-        FaceStr = DLSFace.GetLocalisedName();
+      //lamp icon
+      // // option to change headcode, this displays inside the ? HTML window in surveyor.
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
+      html = html + "</tr></td>";
+      //lamp status
+      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("headcode_select", headcodeLampStr);
+      html = html + "</tr></td>";
+    }
+    
+    if(GetFeatureSupported(FEATURE_LIVERIES))
+    {
+      //livery window
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
+      html = html + "</tr></td>";
+
+      //livery status
+      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("skin_select", classSkinStr);
+      html = html + "</tr></td>";
     }
 
-    string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
-    html = html + "<tr><td>";
-    html = html + strTable.GetString1("faces_select", classFaceStr);
-    html = html + "</tr></td>";
+    if(GetFeatureSupported(FEATURE_FACES))
+    {
+      //face window
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
+      html = html + "</tr></td>";
+
+      //face status
+      string FaceStr = "";
+      if(faceSelection > -1)
+        FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
+      else if(DLSfaceSelection > -1)
+      {
+        Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
+        StringTable FaceStrTable = DLSFace.GetStringTable();
+        FaceStr = FaceStrTable.GetString("displayname");
+        if(!FaceStr or FaceStr == "")
+          FaceStr = DLSFace.GetLocalisedName();
+      }
+
+      string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("faces_select", classFaceStr);
+      html = html + "</tr></td>";
+    }
+
 
     return html;
   }
@@ -1576,7 +1591,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   public void HandleXAxis(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus() or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       eyeX = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
@@ -1587,7 +1602,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   public void HandleYAxis(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus() or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       eyeY = -(parameters.GetNamedTagAsFloat("control-value") - 0.5) * 1.2;
@@ -1599,7 +1614,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   public void HandleKeyFLeft(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus() or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       if (faceSelection > 0)
       {
@@ -1612,7 +1627,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   public void HandleKeyFRight(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus() or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       if (faceSelection < FacesContainer.CountTags() - 1)
       {
@@ -1625,7 +1640,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   public void HandleWheesh(Message msg)
   {
     //Cabin Source = cast<Cabin>msg.src;
-    if(HasFocus or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
+    if(HasFocus() or IsTargetLoco()) // and Source and cast<Locomotive>Source.GetParentObject() == me
     {
       Soup parameters = msg.paramSoup;
       float Intensity = (parameters.GetNamedTagAsFloat("control-value") - 0.5) * 100;
@@ -1921,6 +1936,8 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   {
     browser = null;
     if ( !browser )	browser = Constructors.NewBrowser();
+    Sniff(browser, "Browser-URL", "", true);
+    
     browser.SetCloseEnabled(false);
   	//browser.SetWindowPosition(Interface.GetDisplayWidth()-450, Interface.GetDisplayHeight() - 625);
   	browser.SetWindowSize(BROWSER_WIDTH, 400);
@@ -1973,14 +1990,14 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   {
     while(true)
     {
-      if (!(HasFocus or IsTargetLoco()))
+      if (!(HasFocus() or IsTargetLoco()))
       {
         CurrentMenu = null;
         browser = null;
         popup = null;
         BrowserClosed = true;
       }
-      if ((HasFocus or IsTargetLoco()) and BrowserClosed)
+      if ((HasFocus() or IsTargetLoco()) and BrowserClosed)
       {
         //replace this with keybind
         createMenuWindow();
@@ -2027,91 +2044,136 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   }
 
   // ============================================================================
+  // Name: BrowserHandler(Message msg)
+  // Desc: Handles all browser input.
+  // ============================================================================
+  void BrowserHandler(Message msg)
+  {
+    TrainzScript.Log("handle browser message");
+    if(!(browser and msg.src == browser) and !(popup and msg.src == popup))
+      return;
+    
+    if (msg.minor == "live://update")
+    {
+      ShowUpdatePrompt();
+      AssetObsolete = false;
+      RefreshBrowser();
+    }
+    else if (msg.minor == "live://return")
+    {
+      closePopup();
+    }
+    else if(TrainUtil.HasPrefix(msg.minor, "live://open_custom/"))
+    {
+      TrainzScript.Log("Opening custom menu.");
+      string command = msg.minor["live://open_custom/".size(),];
+
+      int menuID = Str.UnpackInt(command);
+
+      if(CurrentMenu != customMenus[menuID])
+      {
+        CurrentMenu = customMenus[menuID];
+        createPopupWindow();
+        RefreshBrowser();
+        CurrentMenu.Open();
+        TickThread(CurrentMenu);
+      }
+      else
+        closePopup();
+    }
+    else
+    {
+      if(CurrentMenu)
+        CurrentMenu.ProcessMessage(msg.minor);
+    }
+  }
+
+  // ============================================================================
   // Name: ScanBrowser()
   // Desc: Handles all browser input.
   // ============================================================================
 
-  thread void ScanBrowser()
-  {
-		Message msg;
-		wait(){
-      //Eye Window
-      on "Browser-URL", "live://update", msg:
-      if ( browser and msg.src == browser )
-      {
-        ShowUpdatePrompt();
-        AssetObsolete = false;
-        RefreshBrowser();
-      }
-      msg.src = null;
-      continue;
+  // thread void ScanBrowser()
+  // {
+	// 	Message msg;
+	// 	wait(){
+  //     //Eye Window
+  //     on "Browser-URL", "live://update", msg:
+  //     if ( browser and msg.src == browser )
+  //     {
+  //       ShowUpdatePrompt();
+  //       AssetObsolete = false;
+  //       RefreshBrowser();
+  //     }
+  //     msg.src = null;
+  //     continue;
 
-      //Main Window
-      on "Browser-URL", "live://return", msg:
-      if ( popup and msg.src == popup )
-      {
-          //CurrentMenu = BROWSER_NONE;
-          //RefreshBrowser();
-          closePopup();
-      }
-      msg.src = null;
-      continue;
+  //     //Main Window
+  //     on "Browser-URL", "live://return", msg:
+  //     if ( popup and msg.src == popup )
+  //     {
+  //         //CurrentMenu = BROWSER_NONE;
+  //         //RefreshBrowser();
+  //         closePopup();
+  //     }
+  //     msg.src = null;
+  //     continue;
 
-      //other messages
-      on "Browser-URL", "", msg:
-      {
-        //doesn't require the source to be the popup
-        if ( (popup and msg.src == popup) or (browser and msg.src == browser) )
-        {
-          if(TrainUtil.HasPrefix(msg.minor, "live://open_custom/"))
-          {
-            TrainzScript.Log("Opening custom menu.");
-            string command = Str.Tokens(msg.minor, "live://open_custom/")[0];
-            if(command)
-            {
-              int menuID = Str.UnpackInt(command);
-              //CustomScriptMenu menu = customMenus[menuID];
-              if(CurrentMenu != customMenus[menuID])
-              {
-                CurrentMenu = customMenus[menuID];
-                createPopupWindow();
-                RefreshBrowser();
-                CurrentMenu.Open();
-                TickThread(CurrentMenu);
-              }
-              else
-                closePopup();
-            }
-          }
-        }
+  //     //other messages
+  //     on "Browser-URL", "", msg:
+  //     {
+  //       //doesn't require the source to be the popup
+  //       if ( (popup and msg.src == popup) or (browser and msg.src == browser) )
+  //       {
+  //         if(TrainUtil.HasPrefix(msg.minor, "live://open_custom/"))
+  //         {
+  //           TrainzScript.Log("Opening custom menu.");
+  //           string command = Str.Tokens(msg.minor, "live://open_custom/")[0];
+  //           if(command)
+  //           {
+  //             int menuID = Str.UnpackInt(command);
+  //             //CustomScriptMenu menu = customMenus[menuID];
+  //             if(CurrentMenu != customMenus[menuID])
+  //             {
+  //               CurrentMenu = customMenus[menuID];
+  //               createPopupWindow();
+  //               RefreshBrowser();
+  //               CurrentMenu.Open();
+  //               TickThread(CurrentMenu);
+  //             }
+  //             else
+  //               closePopup();
+  //           }
+  //         }
+  //       }
 
-        if ( popup and msg.src == popup )
-        {
-          if(CurrentMenu)
-            CurrentMenu.ProcessMessage(msg.minor);
-        }
-      }
-      msg.src = null;
-      continue;
+  //       if ( popup and msg.src == popup )
+  //       {
+  //         if(CurrentMenu)
+  //           CurrentMenu.ProcessMessage(msg.minor);
+  //       }
+  //     }
+  //     msg.src = null;
+  //     continue;
 
-      on "Browser-Closed", "", msg:
-      {
-      if ( browser and msg.src == browser ) browser = null;
-        //BrowserClosed = true;
-      }
-      msg.src = null;
-      continue;
-      on "Camera","Target-Changed", msg:
-      {
-        if(msg.src == me) HasFocus = true;
-        else HasFocus = false;
-      }
-      msg.src = null;
-      continue;
+  //     on "Browser-Closed", "", msg:
+  //     {
+  //     if ( browser and msg.src == browser ) browser = null;
+  //       //BrowserClosed = true;
+  //     }
+  //     msg.src = null;
+  //     continue;
+  //     on "Camera","Target-Changed", msg:
+  //     {
+  //       if(msg.src == me) HasFocus = true;
+  //       else HasFocus = false;
+  //     }
+  //     msg.src = null;
+  //     continue;
 
-      Sleep(0.5);
-		}
-	}
+  //     Sleep(0.5);
+	// 	}
+	// }
 };
 
 //Legacy tttestub compat

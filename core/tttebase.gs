@@ -295,6 +295,8 @@ class TTTEBase isclass TTTEHelpers
 
     popup = null;
     popup = Constructors.NewBrowser();
+    self.Sniff(popup, "Browser-URL", "", true);
+
     popup.SetCloseEnabled(false);
     //popup.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - POPUP_WIDTH - popupLeftOffset, (Interface.GetDisplayHeight() / 2) - (POPUP_HEIGHT / 2) + surveyorOffset);
     int popupWidth = POPUP_WIDTH;
@@ -696,8 +698,11 @@ class TTTEBase isclass TTTEHelpers
     TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
 
     ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
-    myConfig = asset.GetConfigSoup();
-    ExtensionsContainer = asset.GetConfigSoup().GetNamedSoup("extensions");
+    // myConfig = asset.GetConfigSoup();
+    //TRS22, trainzbuild 5.0
+    myConfig = asset.GetConfigSoupCached();
+
+    ExtensionsContainer = myConfig.GetNamedSoup("extensions");
 
     strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
 
