@@ -821,9 +821,11 @@ class TTTEBase isclass TTTEHelpers
     TTTELocoLibrary = cast<tttelib>World.GetLibrary(asset.LookupKUIDTable("tttelocomotive"));
 
     ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
-    // myConfig = asset.GetConfigSoup();
-    //TRS22, trainzbuild 5.0
-    myConfig = asset.GetConfigSoupCached();
+    myConfig = asset.GetConfigSoup();
+
+    // TRS22, trainzbuild 5.0
+    // at some point switch to this
+    // myConfig = asset.GetConfigSoupCached();
 
     ExtensionsContainer = myConfig.GetNamedSoup("extensions");
 
