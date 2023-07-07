@@ -4,6 +4,7 @@ include "noise.gs"
 class LocoMenu isclass CustomScriptMenu
 {
   bool b_WheelslipEnabled = false;
+  bool b_BrakesBroken = false;
   bool b_ShakeEnabled = false;
   bool b_ShakeAll = false;
   float b_ShakeIntensity = 0.02;
@@ -28,13 +29,14 @@ class LocoMenu isclass CustomScriptMenu
   Noise m_noise = new Noise();
   float m_wobbleIntensity = 0.5;
   float m_wobbleSpeed = 0.5;
+  float m_pitchIntensity = 0.5;
   float[] m_lastVelocity = new float[0];
   float[] m_smoothedAcceleration = new float[0];
 
   void CreateJoystick();
   void UpdateJoystick();
   void UpdateCGIConsist(float timestep);
-  void UpdateCGITraincar(Vehicle traincar, int seed, float velocity, float acceleration);
+  void UpdateCGITraincar(Vehicle traincar, int seed, float velocity, float pitchFactor);
 
   public bool IsCore() { return true; }
   
@@ -74,6 +76,11 @@ class LocoMenu isclass CustomScriptMenu
     output.Print("</td></tr>");
 
     output.Print("<tr><td>");
+    output.Print(HTMLWindow.CheckBox("live://property/brakes-broken", b_BrakesBroken));
+    output.Print(" Brakes Broken");
+    output.Print("</td></tr>");
+
+    output.Print("<tr><td>");
     output.Print("Rotation Method:<br>");
 
     if (m_rotationMode != ROTATION_NONE) output.Print("<a href='live://property/rotation-none'>");
@@ -108,6 +115,9 @@ class LocoMenu isclass CustomScriptMenu
       output.Print("<br>");
       output.Print("Wobble Speed:<br>");
       output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobblespeed' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<br>");
+      output.Print("Pitch Intensity:<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='pitchintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
       output.Print("</td></tr>");
     }
@@ -159,6 +169,7 @@ class LocoMenu isclass CustomScriptMenu
     base.popup.SetElementProperty("shakeperiod", "text", (string)b_ShakePeriod);
     base.popup.SetElementProperty("wobbleintensity", "value", (string)m_wobbleIntensity);
     base.popup.SetElementProperty("wobblespeed", "value", (string)m_wobbleSpeed);
+    base.popup.SetElementProperty("pitchintensity", "value", (string)m_pitchIntensity);
   }
 
   float Lerp(float from, float to, float t)
@@ -196,6 +207,7 @@ class LocoMenu isclass CustomScriptMenu
         {
           m_wobbleIntensity = Str.ToFloat(base.popup.GetElementProperty("wobbleintensity", "value"));
           m_wobbleSpeed = Str.ToFloat(base.popup.GetElementProperty("wobblespeed", "value"));
+          m_pitchIntensity = Str.ToFloat(base.popup.GetElementProperty("pitchintensity", "value"));
         }
 
         UpdateCGIConsist(GetTickInterval());
@@ -285,6 +297,11 @@ class LocoMenu isclass CustomScriptMenu
         base.self.SetWheelslipTractionMultiplier(normal_traction);
         base.self.SetWheelslipMomentumMultiplier(normal_momentum);
       }
+    }
+    else if(cmd == "live://property/brakes-broken")
+    {
+      b_BrakesBroken = !b_BrakesBroken;
+      base.self.SetBrokenBrakes(b_BrakesBroken);
     }
     else if(cmd == "live://property/loco-shake")
     {
@@ -412,6 +429,18 @@ class LocoMenu isclass CustomScriptMenu
 
     return m1 * m2;
   }
+  
+  float worldCoordDistance(WorldCoordinate a, WorldCoordinate b)
+  {
+    // put b in the same baseboard
+    b.x = b.x + (b.baseboardX - a.baseboardX) * 720.0;
+    b.y = b.y + (b.baseboardY - a.baseboardY) * 720.0;
+
+    float dx = b.x - a.x;
+    float dy = b.y - a.y;
+    float dz = b.z - a.z;
+    return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+  }
 
   bool wasStopped = false;
 
@@ -426,16 +455,22 @@ class LocoMenu isclass CustomScriptMenu
     {
       Vehicle traincar = vehicles[i];
 
+      float velocity = traincar.GetVelocity();
+      WorldCoordinate pos = traincar.GetMapObjectPosition();
+
       // prevent a jolt when we start
       if (i >= m_lastVelocity.size() or wasStopped)
-        m_lastVelocity[i] = traincar.GetVelocity();
-      
-      float acceleration = (traincar.GetVelocity() - m_lastVelocity[i]) / timestep;
+      m_lastVelocity[i] = velocity;
 
-      if (traincar != base.self)
-        acceleration = acceleration * -1;
       
-      float max_change = 3.0;
+      // m_smoothedVelocity[i] = m_smoothedVelocity[i] + (velocity - m_smoothedVelocity[i]) * 0.01;
+
+      // try to get a nicer derivative
+      // float acceleration1 = (velocity - m_lastVelocity[i]) / timestep;
+      // float acceleration2 = (m_lastVelocity[i] - m_lastVelocity2[i]) / timestep;
+      float acceleration = (velocity - m_lastVelocity[i]) / timestep;
+      
+      float max_change = 5.0;
       if (acceleration > max_change)
         acceleration = max_change;
       if (acceleration < -max_change)
@@ -443,26 +478,26 @@ class LocoMenu isclass CustomScriptMenu
       
       // dim the pitch change based on our velocity
       // float velocity_dim = remap(0.0, 2.0, 3.0, 7.0, Math.Abs(traincar.GetVelocity()));
-      float velocity_dim = smoothstep(Math.Abs(traincar.GetVelocity()), 6, 1);
-      acceleration = acceleration * velocity_dim * velocity_dim;
+      float velocity_dim = smoothstep(Math.Fabs(velocity), 5, 1);
+      // acceleration = acceleration * velocity_dim * velocity_dim;
 
       if (i >= m_smoothedAcceleration.size())
         m_smoothedAcceleration[i] = acceleration;
-      
       m_smoothedAcceleration[i] = m_smoothedAcceleration[i] + (acceleration - m_smoothedAcceleration[i]) * 0.01;
 
       // float jerk = (acceleration - m_lastAcceleration[i]) / timestep;
 
-      UpdateCGITraincar(traincar, i, traincar.GetVelocity(), m_smoothedAcceleration[i]);
-      m_lastVelocity[i] = traincar.GetVelocity();
+      UpdateCGITraincar(traincar, i, velocity, m_smoothedAcceleration[i] * 0.05 * m_pitchIntensity * velocity_dim);
 
+      m_lastVelocity[i] = velocity;
+      // m_lastPosition[i] = pos;
       // m_lastAcceleration[i] = acceleration;
     }
 
     wasStopped = base.self.GetMyTrain().IsStopped();
   }
 
-  void UpdateCGITraincar(Vehicle traincar, int seed, float velocity, float acceleration)
+  void UpdateCGITraincar(Vehicle traincar, int seed, float velocity, float pitchFactor)
   {
     float time = World.GetSeconds();
     Orientation target = new Orientation();
@@ -477,9 +512,13 @@ class LocoMenu isclass CustomScriptMenu
     target.rz = (m_noise.turbulence_noise(noise_period, time, seed * 1000 + 200, 0.1, 0) - 0.5) * 2 * (rotation_strength * Math.PI / 180);
 
     // acceleration pitch
-    target.rx = target.rx + (acceleration * 0.8 * Math.PI / 180);
+    // target.rx = target.rx + (acceleration * 4.0 * m_pitchIntensity * Math.PI / 180);
     // TrainzScript.Log("accel " + (string)acceleration);
+    
+    if (traincar != base.self)
+      pitchFactor = pitchFactor * -1;
 
     traincar.SetMeshOrientation("default", target.rx, target.ry, target.rz);
+    traincar.SetPitchBasedOnSpeed(pitchFactor);
   }
 };
