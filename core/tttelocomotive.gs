@@ -118,7 +118,6 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
   int DetermineCarPosition(void);
   void SniffMyTrain(void);
-  string HeadcodeDescription(int headcode);
   public void SetProperties(Soup soup);
   public Soup GetProperties(void);
   public string GetDescriptionHTML(void);
@@ -142,9 +141,8 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   void RefreshMenuBrowser();
   void UpdateInterfacePosition();
   void UpdateInterfacePositionHandler(Message msg);
-  thread void BrowserThread();
-  thread void TickThread(CustomScriptMenu menu);
   //thread void ScanBrowser(void);
+  thread void BrowserThread();
 
   void WhistleMonitor(Message msg);
   thread void HeadlightMonitor();
@@ -192,7 +190,6 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
   //public int CurrentMenu = BROWSER_NONE;
   bool BrowserClosed;
-  bool PopupClosed = true;
 
   int m_carPosition; // position of car in train - one of the options above
 
@@ -427,6 +424,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
     BrowserClosed = true;
   }
 
+  // @override
   public bool HasFocus()
   {
     return m_cameraTarget;
@@ -825,11 +823,13 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
       if(direction == "front")
       {
-        FrontCoupler.CoupleTo(OppositeCoupler);
+        if (FrontCoupler)
+          FrontCoupler.CoupleTo(OppositeCoupler);
       }
       else if(direction == "back")
       {
-        BackCoupler.CoupleTo(OppositeCoupler);
+        if (BackCoupler)
+          BackCoupler.CoupleTo(OppositeCoupler);
       }
     }
   }
@@ -1056,7 +1056,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
 
 
-    // ============================================================================
+  // ============================================================================
   // Name: VehicleCoupleHandler()
   // Parm: msg - Message to handle
   // Desc: Message handler for "Vehicle", "Coupled" messages
@@ -1179,92 +1179,14 @@ class TTTELocomotive isclass Locomotive, TTTEBase
       if(oldTrain != train)
       {
         Sniff(oldTrain, "Train", "", false);
-        Sniff(train, "Train", "", true);
+        if (train)
+          Sniff(train, "Train", "", true);
       }
     }
-    else
+    else if (train)
     {
       Sniff(train, "Train", "", true);
     }
-  }
-
-  // ============================================================================
-  // Name: HeadcodeDescription()
-  // Desc: Returns the description (aka name) of the headcode selected.
-  // We use this instead of placing it inside the traincar config to save extra
-  // Data the user has to put in their own creations. Plus, this will never change
-  // so there is no reason for the user to specify what headcodes to use.
-  // ============================================================================
-
-  string HeadcodeDescription(int headcode)
-  {
-    string temp = "xxx"; // Create a temporary scratch string to use
-
-    if (FlagTest(headcode, HEADCODE_NONE)) temp = strTable.GetString("headcode_none");
-    if (FlagTest(headcode, HEADCODE_ALL_LAMPS)) temp = strTable.GetString("headcode_all");
-    if (FlagTest(headcode, HEADCODE_TAIL_LIGHTS)) temp = strTable.GetString("headcode_tail");
-    if (FlagTest(headcode, HEADCODE_BRANCH)) temp = strTable.GetString("headcode_branch");
-    if (FlagTest(headcode, HEADCODE_EXPRESS)) temp = strTable.GetString("headcode_express");
-    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT)) temp = strTable.GetString("headcode_express_f1");
-    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_2)) temp = strTable.GetString("headcode_express_f2");
-    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_3)) temp = strTable.GetString("headcode_express_f3");
-    if (FlagTest(headcode, HEADCODE_GOODS)) temp = strTable.GetString("headcode_goods");
-    if (FlagTest(headcode, HEADCODE_LIGHT)) temp = strTable.GetString("headcode_light");
-    if (FlagTest(headcode, HEADCODE_THROUGH_FREIGHT)) temp = strTable.GetString("headcode_thru_freight");
-    if (FlagTest(headcode, HEADCODE_TVS)) temp = strTable.GetString("headcode_tvs");
-    return temp;
-  }
-
-  // ============================================================================
-  // Name: GetHeadcodeFlags()
-  // Desc: Converts a headcode number to a series of flags.
-  // ============================================================================
-
-  int GetHeadcodeFlags(int headcode_number)
-  {
-    int returnFlags = 0;
-    switch(headcode_number)
-    {
-      case 0:
-        returnFlags = HEADCODE_NONE;
-        break;
-      case 1:
-        returnFlags = HEADCODE_ALL_LAMPS;
-        break;
-      case 2:
-        returnFlags = HEADCODE_TAIL_LIGHTS;
-        break;
-      case 3:
-        returnFlags = HEADCODE_BRANCH;
-        break;
-      case 4:
-        returnFlags = HEADCODE_EXPRESS;
-        break;
-      case 5:
-        returnFlags = HEADCODE_EXPRESS_FREIGHT;
-        break;
-      case 6:
-        returnFlags = HEADCODE_EXPRESS_FREIGHT_2;
-        break;
-      case 7:
-        returnFlags = HEADCODE_EXPRESS_FREIGHT_3;
-        break;
-      case 8:
-        returnFlags = HEADCODE_GOODS;
-        break;
-      case 9:
-        returnFlags = HEADCODE_LIGHT;
-        break;
-      case 10:
-        returnFlags = HEADCODE_THROUGH_FREIGHT;
-        break;
-      case 11:
-        returnFlags = HEADCODE_TVS;
-        break;
-      default:
-        returnFlags = HEADCODE_NONE;
-    }
-    return returnFlags;
   }
 
   // ============================================================================
@@ -1857,62 +1779,6 @@ class TTTELocomotive isclass Locomotive, TTTEBase
       output.Print("</tr></td>");
     }
 
-    // //eye window
-    // if(GetFeatureSupported(FEATURE_EYES))
-    // {
-    //   output.Print("<tr><td>");
-    //   output.Print("<a href='live://open_eye'><img kuid='<kuid:414976:103313>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
-    //   //joystick window
-    //   output.Print("<tr><td>");
-    //   output.Print("<a href='live://open_joystick'><img kuid='<kuid:414976:105003>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
-    // }
-
-    // //lamp window
-    // if(GetFeatureSupported(FEATURE_LAMPS))
-    // {
-    //   output.Print("<tr><td>");
-    //   output.Print("<a href='live://open_lamp'><img kuid='<kuid:414976:103609>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
-    // }
-
-    // //livery window
-    // if(GetFeatureSupported(FEATURE_LIVERIES))
-    // {
-    //   output.Print("<tr><td>");
-    //   output.Print("<a href='live://open_livery'><img kuid='<kuid:414976:103610>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
-    // }
-
-    // //face window
-    // if(GetFeatureSupported(FEATURE_FACES))
-    // {
-    //   output.Print("<tr><td>");
-    //   output.Print("<a href='live://open_face'><img kuid='<kuid:414976:105808>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
-    // }
-
-    // //loco window
-    // output.Print("<tr><td>");
-    // output.Print("<a href='live://open_loco'><img kuid='<kuid:414976:103611>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    // output.Print("</tr></td>");
-
-    // //smoke window
-    // if(GetFeatureSupported(FEATURE_SMOKE))
-    // {
-    //   output.Print("<tr><td>");
-    //   output.Print("<a href='live://open_smoke'><img kuid='<kuid:414976:103612>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
-    // }
-
-    // if(GetOnlineLibrary())
-    // {
-    //   output.Print("<tr><td>");
-    //   output.Print("<a href='live://open_social'><img kuid='<kuid:414976:102857>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
-    // }
-
     int i;
     for(i = 0; i < customMenus.size(); i++)
     {
@@ -1948,9 +1814,6 @@ class TTTELocomotive isclass Locomotive, TTTEBase
     browser.ResizeHeightToFit();
     BrowserClosed = false;
 
-    if(!PopupClosed)
-      createPopupWindow();
-
     UpdateInterfacePosition();
   }
 
@@ -1981,6 +1844,13 @@ class TTTELocomotive isclass Locomotive, TTTEBase
     browser.ResizeHeightToFit();
   }
 
+  // @override
+  public bool ShouldShowPopup()
+  {
+    return HasFocus() or IsTargetLoco();
+  }
+
+    
   // ============================================================================
   // Name: BrowserThread()
   // Desc: Recreates the browser if it is closed. (should be swapped for a module change handler)
@@ -1990,57 +1860,25 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   {
     while(true)
     {
-      if (!(HasFocus() or IsTargetLoco()))
+      
+      if (!me.ShouldShowPopup())
       {
         CurrentMenu = null;
         browser = null;
         popup = null;
         BrowserClosed = true;
       }
-      if ((HasFocus() or IsTargetLoco()) and BrowserClosed)
+      if (me.ShouldShowPopup() and BrowserClosed)
       {
         //replace this with keybind
         createMenuWindow();
         BrowserClosed = false;
       }
 
-      //if(LockTargetWindow != null)
-      //{
-        //LockTargetWindow.SearchTick();
-      //}
-
       UpdateInterfacePosition();
 
       Sleep(0.1);
     }
-  }
-
-  // ============================================================================
-  // Name: TickThread()
-  // Desc: Ticks the current menu
-  // ============================================================================
-
-  thread void TickThread(CustomScriptMenu menu)
-  {
-    if(menu._tick_running)
-      return;
-    menu._tick_running = true;
-
-    while(CurrentMenu == menu or (menu.AlwaysTick() and menu._tick_running))
-    {
-      if(menu and menu.GetTickInterval() > 0.0 and menu._tick_running)
-      {
-        menu.Tick();
-        Sleep(menu.GetTickInterval());
-      }
-      else
-        Sleep(0.1);
-    }
-
-    //tell the menu to close
-    menu.Close();
-
-    menu._tick_running = false;
   }
 
   // ============================================================================
@@ -2087,93 +1925,6 @@ class TTTELocomotive isclass Locomotive, TTTEBase
         CurrentMenu.ProcessMessage(msg.minor);
     }
   }
-
-  // ============================================================================
-  // Name: ScanBrowser()
-  // Desc: Handles all browser input.
-  // ============================================================================
-
-  // thread void ScanBrowser()
-  // {
-	// 	Message msg;
-	// 	wait(){
-  //     //Eye Window
-  //     on "Browser-URL", "live://update", msg:
-  //     if ( browser and msg.src == browser )
-  //     {
-  //       ShowUpdatePrompt();
-  //       AssetObsolete = false;
-  //       RefreshBrowser();
-  //     }
-  //     msg.src = null;
-  //     continue;
-
-  //     //Main Window
-  //     on "Browser-URL", "live://return", msg:
-  //     if ( popup and msg.src == popup )
-  //     {
-  //         //CurrentMenu = BROWSER_NONE;
-  //         //RefreshBrowser();
-  //         closePopup();
-  //     }
-  //     msg.src = null;
-  //     continue;
-
-  //     //other messages
-  //     on "Browser-URL", "", msg:
-  //     {
-  //       //doesn't require the source to be the popup
-  //       if ( (popup and msg.src == popup) or (browser and msg.src == browser) )
-  //       {
-  //         if(TrainUtil.HasPrefix(msg.minor, "live://open_custom/"))
-  //         {
-  //           TrainzScript.Log("Opening custom menu.");
-  //           string command = Str.Tokens(msg.minor, "live://open_custom/")[0];
-  //           if(command)
-  //           {
-  //             int menuID = Str.UnpackInt(command);
-  //             //CustomScriptMenu menu = customMenus[menuID];
-  //             if(CurrentMenu != customMenus[menuID])
-  //             {
-  //               CurrentMenu = customMenus[menuID];
-  //               createPopupWindow();
-  //               RefreshBrowser();
-  //               CurrentMenu.Open();
-  //               TickThread(CurrentMenu);
-  //             }
-  //             else
-  //               closePopup();
-  //           }
-  //         }
-  //       }
-
-  //       if ( popup and msg.src == popup )
-  //       {
-  //         if(CurrentMenu)
-  //           CurrentMenu.ProcessMessage(msg.minor);
-  //       }
-  //     }
-  //     msg.src = null;
-  //     continue;
-
-  //     on "Browser-Closed", "", msg:
-  //     {
-  //     if ( browser and msg.src == browser ) browser = null;
-  //       //BrowserClosed = true;
-  //     }
-  //     msg.src = null;
-  //     continue;
-  //     on "Camera","Target-Changed", msg:
-  //     {
-  //       if(msg.src == me) HasFocus = true;
-  //       else HasFocus = false;
-  //     }
-  //     msg.src = null;
-  //     continue;
-
-  //     Sleep(0.5);
-	// 	}
-	// }
 };
 
 //Legacy tttestub compat

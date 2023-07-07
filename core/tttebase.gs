@@ -15,6 +15,10 @@ include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
 
+// yuck
+include "tttelocomotive.gs"
+include "tttewagon.gs"
+
 class TTTEBase isclass TTTEHelpers
 {
   public Vehicle self;
@@ -172,6 +176,85 @@ class TTTEBase isclass TTTEHelpers
   public CustomScriptMenu[] GetCustomMenus();
 
   // ============================================================================
+  // Name: HeadcodeDescription()
+  // Desc: Returns the description (aka name) of the headcode selected.
+  // We use this instead of placing it inside the traincar config to save extra
+  // Data the user has to put in their own creations. Plus, this will never change
+  // so there is no reason for the user to specify what headcodes to use.
+  // ============================================================================
+
+  string HeadcodeDescription(int headcode)
+  {
+    string temp = "xxx"; // Create a temporary scratch string to use
+
+    if (FlagTest(headcode, HEADCODE_NONE)) temp = strTable.GetString("headcode_none");
+    if (FlagTest(headcode, HEADCODE_ALL_LAMPS)) temp = strTable.GetString("headcode_all");
+    if (FlagTest(headcode, HEADCODE_TAIL_LIGHTS)) temp = strTable.GetString("headcode_tail");
+    if (FlagTest(headcode, HEADCODE_BRANCH)) temp = strTable.GetString("headcode_branch");
+    if (FlagTest(headcode, HEADCODE_EXPRESS)) temp = strTable.GetString("headcode_express");
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT)) temp = strTable.GetString("headcode_express_f1");
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_2)) temp = strTable.GetString("headcode_express_f2");
+    if (FlagTest(headcode, HEADCODE_EXPRESS_FREIGHT_3)) temp = strTable.GetString("headcode_express_f3");
+    if (FlagTest(headcode, HEADCODE_GOODS)) temp = strTable.GetString("headcode_goods");
+    if (FlagTest(headcode, HEADCODE_LIGHT)) temp = strTable.GetString("headcode_light");
+    if (FlagTest(headcode, HEADCODE_THROUGH_FREIGHT)) temp = strTable.GetString("headcode_thru_freight");
+    if (FlagTest(headcode, HEADCODE_TVS)) temp = strTable.GetString("headcode_tvs");
+    return temp;
+  }
+
+  // ============================================================================
+  // Name: GetHeadcodeFlags()
+  // Desc: Converts a headcode number to a series of flags.
+  // ============================================================================
+
+  int GetHeadcodeFlags(int headcode_number)
+  {
+    int returnFlags = 0;
+    switch(headcode_number)
+    {
+      case 0:
+        returnFlags = HEADCODE_NONE;
+        break;
+      case 1:
+        returnFlags = HEADCODE_ALL_LAMPS;
+        break;
+      case 2:
+        returnFlags = HEADCODE_TAIL_LIGHTS;
+        break;
+      case 3:
+        returnFlags = HEADCODE_BRANCH;
+        break;
+      case 4:
+        returnFlags = HEADCODE_EXPRESS;
+        break;
+      case 5:
+        returnFlags = HEADCODE_EXPRESS_FREIGHT;
+        break;
+      case 6:
+        returnFlags = HEADCODE_EXPRESS_FREIGHT_2;
+        break;
+      case 7:
+        returnFlags = HEADCODE_EXPRESS_FREIGHT_3;
+        break;
+      case 8:
+        returnFlags = HEADCODE_GOODS;
+        break;
+      case 9:
+        returnFlags = HEADCODE_LIGHT;
+        break;
+      case 10:
+        returnFlags = HEADCODE_THROUGH_FREIGHT;
+        break;
+      case 11:
+        returnFlags = HEADCODE_TVS;
+        break;
+      default:
+        returnFlags = HEADCODE_NONE;
+    }
+    return returnFlags;
+  }
+
+  // ============================================================================
   // Name: RefreshBrowser()
   // Desc: Updates all browser parameters by reloading the HTML strings.
   // ============================================================================
@@ -318,6 +401,33 @@ class TTTEBase isclass TTTEHelpers
     RefreshBrowser();
   }
 
+  // ============================================================================
+  // Name: TickThread()
+  // Desc: Ticks the current menu
+  // ============================================================================
+
+  thread void TickThread(CustomScriptMenu menu)
+  {
+    if(menu._tick_running)
+      return;
+    menu._tick_running = true;
+
+    while(CurrentMenu == menu or (menu.AlwaysTick() and menu._tick_running))
+    {
+      if(menu and menu.GetTickInterval() > 0.0 and menu._tick_running)
+      {
+        menu.Tick();
+        self.Sleep(menu.GetTickInterval());
+      }
+      else
+        self.Sleep(0.1);
+    }
+
+    //tell the menu to close
+    menu.Close();
+
+    menu._tick_running = false;
+  }
   
   // ============================================================================
   // Name: GetTTTELocomotiveSettings()
@@ -340,6 +450,22 @@ class TTTEBase isclass TTTEHelpers
     return null;
   }
 
+  public bool ShouldShowPopup()
+  {
+    return false;
+  }
+
+  bool InternalShouldShowPopup(Vehicle vehicle)
+  {
+    TTTEBase loco = cast<TTTELocomotive>(vehicle);
+    if (loco) return loco.ShouldShowPopup();
+
+    loco = cast<TTTEWagon>(vehicle);
+    if (loco) return loco.ShouldShowPopup();
+
+    return false;
+  }
+
   int GetTTTETrainIndex()
   {
     //is_TTTELocomotive
@@ -348,8 +474,7 @@ class TTTEBase isclass TTTEHelpers
     int i;
     for(i = 0; i < vehicles.size(); i++)
     {
-      Soup properties = vehicles[i].GetProperties();
-      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
+      bool is_TTTE = InternalShouldShowPopup(vehicles[i]);
 
       if(me == vehicles[i])
         return num_vehicles;
@@ -369,9 +494,7 @@ class TTTEBase isclass TTTEHelpers
     int i;
     for(i = 0; i < vehicles.size(); i++)
     {
-      Soup properties = vehicles[i].GetProperties();
-      bool is_TTTE = properties.GetNamedTagAsBool("is_TTTELocomotive", false);
-      if(is_TTTE)
+      if(InternalShouldShowPopup(vehicles[i]))
         num_vehicles++;
     }
 

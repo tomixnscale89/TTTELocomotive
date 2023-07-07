@@ -400,7 +400,7 @@ define float SPIN_LENGTH = 100.0;
         CoupleTarget.x = RelativeLocation.x;
         CoupleTarget.y = RelativeLocation.y;
         CoupleTarget.z = RelativeLocation.z; // + 0.028
-        TrainzScript.Log("target location " + CoupleTarget.AsString());
+        //TrainzScript.Log("target location " + CoupleTarget.AsString());
       }
       SetCoupleTarget(CoupleTarget.x, CoupleTarget.y, CoupleTarget.z, MidLength * 100.0);
       Sleep(0.02);

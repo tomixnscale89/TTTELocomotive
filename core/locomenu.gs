@@ -75,10 +75,10 @@ class LocoMenu isclass CustomScriptMenu
     output.Print(" " + base.strTable.GetString("couple_disable"));
     output.Print("</td></tr>");
 
-    output.Print("<tr><td>");
-    output.Print(HTMLWindow.CheckBox("live://property/brakes-broken", b_BrakesBroken));
-    output.Print(" Brakes Broken");
-    output.Print("</td></tr>");
+    // output.Print("<tr><td>");
+    // output.Print(HTMLWindow.CheckBox("live://property/brakes-broken", b_BrakesBroken));
+    // output.Print(" Brakes Broken");
+    // output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print("Rotation Method:<br>");

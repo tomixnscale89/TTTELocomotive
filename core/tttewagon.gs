@@ -15,6 +15,11 @@ class TTTEWagon isclass Vehicle, TTTEBase
 
   int DetermineCarPosition();
   void SniffMyTrain();
+  void createMenuWindow();
+
+  string GetMenuHTML();
+  thread void BrowserThread();
+  void UpdateInterfacePosition();
 
   // ****************************************************************************/
   // Define Variables
@@ -28,6 +33,10 @@ class TTTEWagon isclass Vehicle, TTTEBase
   Vehicle LastCoupleInteraction;
 
   int m_carPosition; // position of car in train - one of the options above
+  bool m_cameraTarget; // Is this the camera target?
+
+  bool BrowserClosed;
+
   Train train;
 
   // ============================================================================
@@ -36,10 +45,49 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   public void Init(Asset asset) // Let's keep the init at the top for ease of access
   {
+    int i;
+    
     // call the parent
     inherited(asset);
     self = me;
     BaseInit(asset);
+
+    FacesContainer = ExtensionsContainer.GetNamedSoup("faces");
+    ExtraLampsContainer = ExtensionsContainer.GetNamedSoup("extra-lamps");
+    FaceChartContainer = ExtensionsContainer.GetNamedSoup("face-chart");
+
+    if(FacesContainer.CountTags()) SetFeatureSupported(FEATURE_FACES);
+    if(HasMesh("eye_l") and HasMesh("eye_r")) SetFeatureSupported(FEATURE_EYES);
+    if(FaceChartContainer.CountTags()) SetFeatureSupported(FEATURE_FACECHART);
+
+    Soup TTTESettings = GetTTTELocomotiveSettings();
+    bool RandomizeFaces = TTTESettings.GetNamedSoup("random-faces/").GetNamedTagAsBool("value", false);
+    if(RandomizeFaces and FacesContainer.CountTags()) faceSelection = Math.Rand(0, FacesContainer.CountTags());
+
+    //set initial extra lamp states to none
+    if(ExtraLampsContainer)
+    {
+      int TagCount = ExtraLampsContainer.CountTags();
+      ExtraLampAssets = new Asset[TagCount];
+      ExtraLampVisibility = new bool[TagCount];
+      //int i;
+      for(i = 0; i < TagCount; i++)
+      {
+        string effectName = ExtraLampsContainer.GetIndexedTagName(i);
+        MeshObject lampMesh = GetFXAttachment(effectName);
+        ExtraLampVisibility[i] = false;
+        if(lampMesh)
+        {
+          ExtraLampAssets[i] = lampMesh.GetAsset();
+          SetFXAttachment(effectName, null);
+        }
+        else
+          ExtraLampAssets[i] = null;
+      }
+    }
+    
+    // Setup menus after all features are setup
+    SetupMenus();
 
     AddHandler(me, "TTTESetLivery", "", "SetLiveryHandler");
 
@@ -49,9 +97,13 @@ class TTTEWagon isclass Vehicle, TTTEBase
     AddHandler(me, "Vehicle", "Derailed", "VehicleDerailHandler");
     // lashed on as it happens to do the right thing
     AddHandler(me, "World", "ModuleInit", "VehicleDecoupleHandler");
+    AddHandler(me, "World", "ModuleInit", "ModuleInitHandler");
 
     // handler necessary for tail lights
     AddHandler(me, "Train", "Turnaround", "TrainTurnaroundHandler");
+    AddHandler(me, "Interface", "LayoutChanged", "UpdateInterfacePositionHandler");
+
+    AddHandler(Interface, "Camera", "Target-Changed",   "CameraTargetChangedHandler");
 
     // ****************************************************************************/
     // Define ACS Stuff
@@ -70,10 +122,23 @@ class TTTEWagon isclass Vehicle, TTTEBase
       FrontCoupler.PostInit(me, "front");
     if(BackCoupler)
       BackCoupler.PostInit(me, "back");
+    
+    
+    createMenuWindow();
+    AddHandler(me, "Browser-URL", "", "BrowserHandler");
+    BrowserThread();
 
     Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
     m_carPosition = DetermineCarPosition();
+    
+    train = me.GetMyTrain(); // Get the train
+    SniffMyTrain(); // Then sniff it
+  }
 
+  public void ModuleInitHandler(Message msg)
+  {
+    //regenerate browser
+    BrowserClosed = true;
   }
 
   void SetLiveryHandler(Message msg)
@@ -128,11 +193,13 @@ class TTTEWagon isclass Vehicle, TTTEBase
 
       if(direction == "front")
       {
-        FrontCoupler.CoupleTo(OppositeCoupler);
+        if(FrontCoupler)
+          FrontCoupler.CoupleTo(OppositeCoupler);
       }
       else if(direction == "back")
       {
-        BackCoupler.CoupleTo(OppositeCoupler);
+        if(BackCoupler)
+          BackCoupler.CoupleTo(OppositeCoupler);
       }
     }
   }
@@ -153,11 +220,13 @@ class TTTEWagon isclass Vehicle, TTTEBase
 
       if(direction == "front")
       {
-        FrontCoupler.DecoupleFrom(OppositeCoupler);
+        if(FrontCoupler)
+          FrontCoupler.DecoupleFrom(OppositeCoupler);
       }
       else if(direction == "back")
       {
-        BackCoupler.DecoupleFrom(OppositeCoupler);
+        if(BackCoupler)
+          BackCoupler.DecoupleFrom(OppositeCoupler);
       }
     }
   }
@@ -312,10 +381,11 @@ class TTTEWagon isclass Vehicle, TTTEBase
       if(oldTrain != train)
       {
         Sniff(oldTrain, "Train", "", false);
-        Sniff(train, "Train", "", true);
+        if (train)
+          Sniff(train, "Train", "", true);
       }
     }
-    else
+    else if (train)
     {
       Sniff(train, "Train", "", true);
     }
@@ -331,14 +401,15 @@ class TTTEWagon isclass Vehicle, TTTEBase
   {
     inherited(soup);
 
-    // faceSelection = soup.GetNamedTagAsInt("faces", faceSelection);
-    // DLSfaceSelection = -1;
-    // ConfigureFaces();
+    faceSelection = soup.GetNamedTagAsInt("faces", faceSelection);
+    DLSfaceSelection = -1;
+    ConfigureFaces();
 
     skinSelection = soup.GetNamedTagAsInt("skin", skinSelection);
     ConfigureSkins();
+
     // load headcode
-    //m_headCode = soup.GetNamedTagAsInt("headcode-lamps", m_headCode);
+    m_headCode = soup.GetNamedTagAsInt("headcode-lamps", m_headCode);
   }
 
 
@@ -354,9 +425,9 @@ class TTTEWagon isclass Vehicle, TTTEBase
     soup.SetNamedTag("is_TTTEWagon", true);
 
     // Save the headcode as a soup tag so we can access it in other locations.
-    //soup.SetNamedTag("headcode-lamps", m_headCode);
+    soup.SetNamedTag("headcode-lamps", m_headCode);
 
-    //soup.SetNamedTag("faces", faceSelection);
+    soup.SetNamedTag("faces", faceSelection);
 
     soup.SetNamedTag("skin",skinSelection);
 
@@ -378,50 +449,60 @@ class TTTEWagon isclass Vehicle, TTTEBase
     html = html + "<table cellspacing=2>";
 
 
-    //lamp icon
-    // // option to change headcode, this displays inside the ? HTML window in surveyor.
-    // html = html + "<tr><td>";
-    // html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
-    // html = html + "</tr></td>";
-    //lamp status
-    // string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
-    // html = html + "<tr><td>";
-    // html = html + strTable.GetString1("headcode_select", headcodeLampStr);
-    // html = html + "</tr></td>";
+    if(GetFeatureSupported(FEATURE_LAMPS))
+    {
+      //lamp icon
+      // // option to change headcode, this displays inside the ? HTML window in surveyor.
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
+      html = html + "</tr></td>";
+      //lamp status
+      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("headcode_select", headcodeLampStr);
+      html = html + "</tr></td>";
+    }
 
     //livery window
-    html = html + "<tr><td>";
-    html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
-    html = html + "</tr></td>";
-    
-    //livery status
-    string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
-    html = html + "<tr><td>";
-    html = html + strTable.GetString1("skin_select", classSkinStr);
-    html = html + "</tr></td>";
+    if(GetFeatureSupported(FEATURE_LIVERIES))
+    {
+      //livery window
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
+      html = html + "</tr></td>";
 
-    //face window
-    // html = html + "<tr><td>";
-    // html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
-    // html = html + "</tr></td>";
+      //livery status
+      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("skin_select", classSkinStr);
+      html = html + "</tr></td>";
+    }
 
-    //face status
-    // string FaceStr = "";
-    // if(faceSelection > -1)
-    //   FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
-    // else if(DLSfaceSelection > -1)
-    // {
-    //   Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
-    //   StringTable FaceStrTable = DLSFace.GetStringTable();
-    //   FaceStr = FaceStrTable.GetString("displayname");
-    //   if(!FaceStr or FaceStr == "")
-    //     FaceStr = DLSFace.GetLocalisedName();
-    // }
+    if(GetFeatureSupported(FEATURE_FACES))
+    {
+      //face window
+      html = html + "<tr><td>";
+      html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
+      html = html + "</tr></td>";
 
-    // string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
-    // html = html + "<tr><td>";
-    // html = html + strTable.GetString1("faces_select", classFaceStr);
-    // html = html + "</tr></td>";
+      //face status
+      string FaceStr = "";
+      if(faceSelection > -1)
+        FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
+      else if(DLSfaceSelection > -1)
+      {
+        Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
+        StringTable FaceStrTable = DLSFace.GetStringTable();
+        FaceStr = FaceStrTable.GetString("displayname");
+        if(!FaceStr or FaceStr == "")
+          FaceStr = DLSFace.GetLocalisedName();
+      }
+
+      string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
+      html = html + "<tr><td>";
+      html = html + strTable.GetString1("faces_select", classFaceStr);
+      html = html + "</tr></td>";
+    }
 
     return html;
   }
@@ -436,14 +517,14 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   string GetPropertyType(string p_propertyID)
   {
-    // if (p_propertyID == "headcode_lamps")
-    // {
-    //   return "list";
-    // }
-    // else if (p_propertyID == "faces")
-    // {
-    //   return "list";
-    // }
+    if (p_propertyID == "headcode_lamps")
+    {
+      return "list";
+    }
+    if (p_propertyID == "faces")
+    {
+      return "list";
+    }
     if (p_propertyID == "skin")
     {
       return "list";
@@ -463,14 +544,14 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   string GetPropertyName(string p_propertyID)
   {
-    // if (p_propertyID == "headcode_lamps")
-    // {
-    //   return strTable.GetString("headcode_name");
-    // }
-    // if (p_propertyID == "faces")
-    // {
-    //   return strTable.GetString("faces_name");
-    // }
+    if (p_propertyID == "headcode_lamps")
+    {
+      return strTable.GetString("headcode_name");
+    }
+    if (p_propertyID == "faces")
+    {
+      return strTable.GetString("faces_name");
+    }
     if (p_propertyID == "skin")
     {
       return strTable.GetString("skin_name");
@@ -491,14 +572,14 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   string GetPropertyDescription(string p_propertyID)
   {
-    // if (p_propertyID == "headcode_lamps")
-    // {
-    //   return strTable.GetString("headcode_description");
-    // }
-    // else if(p_propertyID == "faces")
-    // {
-    //   return strTable.GetString("faces_description");
-    // }
+    if (p_propertyID == "headcode_lamps")
+    {
+      return strTable.GetString("headcode_description");
+    }
+    if(p_propertyID == "faces")
+    {
+      return strTable.GetString("faces_description");
+    }
     if(p_propertyID == "skin")
     {
       return strTable.GetString("skin_description");
@@ -521,24 +602,26 @@ class TTTEWagon isclass Vehicle, TTTEBase
     int i;
     string [] result = new string[0];
 
-    // if (p_propertyID == "headcode_lamps")
-    // {
-    //   for (i = 0; i < 12; i++) // Let us loop through the entire possible headcodes and list them all.
-    //   {
-    //     result[i] = HeadcodeDescription(GetHeadcodeFlags(i));
-    //   }
-    // }
-    // else if (p_propertyID == "faces")
-    // {
-    //   for(i = 0; i < FacesContainer.CountTags(); i++) // Let us loop through the entire possible faces and list them all.
-    //   {
-    //     result[i] = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
-    //   }
-    // }
-    if (p_propertyID == "skin")
+    if (p_propertyID == "headcode_lamps")
+    {
+      for (i = 0; i < 12; i++) // Let us loop through the entire possible headcodes and list them all.
+      {
+        result[i] = HeadcodeDescription(GetHeadcodeFlags(i));
+      }
+    }
+    else if (p_propertyID == "faces")
+    {
+      for(i = 0; i < FacesContainer.CountTags(); i++) // Let us loop through the entire possible faces and list them all.
+      {
+        result[i] = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
+      }
+    }
+    else if (p_propertyID == "skin")
     {
       for(i = 0; i < LiveryContainer.CountTags(); i++) // Let us loop through the entire possible skins and list them all.
+      {
           result[i] = LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(i));
+      }
     }
     else
     {
@@ -560,24 +643,24 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   void SetPropertyValue(string p_propertyID, string p_value, int p_index)
   {
-    // if (p_propertyID == "headcode_lamps")
-    // {
-    //   if (p_index > -1 and p_index < 12)
-    //   {
-    //     m_headCode = GetHeadcodeFlags(p_index);
-    //     ConfigureHeadcodeLamps();
-    //   }
-    // }
-    // else if (p_propertyID == "faces")
-    // {
-    //   if (p_index > -1 and p_index < FacesContainer.CountTags())
-    //   {
-    //     faceSelection = p_index;
-    //     DLSfaceSelection = -1;
-    //     ConfigureFaces();
-    //   }
-    // }
-    if (p_propertyID == "skin")
+    if (p_propertyID == "headcode_lamps")
+    {
+      if (p_index > -1 and p_index < 12)
+      {
+        m_headCode = GetHeadcodeFlags(p_index);
+        ConfigureHeadcodeLamps();
+      }
+    }
+    else if (p_propertyID == "faces")
+    {
+      if (p_index > -1 and p_index < FacesContainer.CountTags())
+      {
+        faceSelection = p_index;
+        DLSfaceSelection = -1;
+        ConfigureFaces();
+      }
+    }
+    else if (p_propertyID == "skin")
     {
       if (p_index > -1 and p_index < LiveryContainer.CountTags())
       {
@@ -591,6 +674,189 @@ class TTTEWagon isclass Vehicle, TTTEBase
     }
   }
 
+  // ============================================================================
+  // Name: createMenuWindow()
+  // Desc: Creates the browser.
+  // ============================================================================
+  void createMenuWindow()
+  {
+    browser = null;
+    if ( !browser )	browser = Constructors.NewBrowser();
+    Sniff(browser, "Browser-URL", "", true);
+    
+    browser.SetCloseEnabled(false);
+  	//browser.SetWindowPosition(Interface.GetDisplayWidth()-450, Interface.GetDisplayHeight() - 625);
+  	browser.SetWindowSize(BROWSER_WIDTH, 400);
+    browser.SetWindowStyle(Browser.STYLE_NO_FRAME);
+    browser.SetMovableByDraggingBackground(false);
+  	browser.SetWindowVisible(true);
+  	browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+    browser.ResizeHeightToFit();
+    BrowserClosed = false;
+
+    UpdateInterfacePosition();
+  }
+
+  // ============================================================================
+  // Name: GetMenuHTML()
+  // Desc: Browser HTML tabs.
+  // ============================================================================
+
+  string GetMenuHTML()
+  {
+  	//StringTable strTable = GetAsset().GetStringTable();
+  	HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+
+    output.Print("<table cellspacing=2>");
+
+    int icon_scale = 32;
+
+    // if(AssetObsolete)
+    // {
+    //   //output.Print("<a href='live://update'>Out of date! Click here to update.</a>");
+    //   //output.Print("<br>");
+    //   output.Print("<tr><td>");
+    //   output.Print("<a href='live://update'><img kuid='<kuid:414976:101435>' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    //   output.Print("</tr></td>");
+    // }
+
+    int i;
+    for(i = 0; i < customMenus.size(); i++)
+    {
+      output.Print("<tr><td>");
+      output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
+      output.Print("</tr></td>");
+    }
+
+    output.Print("</table>");
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
+  // ============================================================================
+  // Name: UpdateInterfacePosition()
+  // Desc: Updates the position of all UI elements
+  // ============================================================================
+
+  void UpdateInterfacePosition()
+  {
+    int browserLeftOffset = (GetTTTETrainSize() - GetTTTETrainIndex() - 1) * (BROWSER_WIDTH + BROWSER_TRAIN_MARGIN);
+
+    int surveyorOffset = 0;
+    if(World.GetCurrentModule() == World.SURVEYOR_MODULE)
+      surveyorOffset = SURVEYOR_MENU_OFFSET;
+
+    if(browser) browser.SetWindowPosition(Interface.GetDisplayWidth() - BROWSER_WIDTH - browserLeftOffset, (Interface.GetDisplayHeight() / 2) - (browser.GetWindowHeight() / 2) + surveyorOffset);
+  }
+
+  void UpdateInterfacePositionHandler(Message msg)
+  {
+    UpdateInterfacePosition();
+  }
+
+  void RefreshMenuBrowser()
+  {
+    browser.LoadHTMLString(GetAsset(), GetMenuHTML());
+    browser.ResizeHeightToFit();
+  }
+
+  // ============================================================================
+  // Name: CameraTargetChangedHandler(Message msg)
+  // Parm:  Message msg
+  // Desc:
+  // ============================================================================
+  void CameraTargetChangedHandler(Message msg)
+  {
+    m_cameraTarget = (msg.src == me);
+  }
+
+  // @override
+  public bool HasFocus()
+  {
+    return m_cameraTarget;
+  }
+
+  // @override
+  public bool ShouldShowPopup()
+  {
+    return HasFocus();
+  }
+
+  // ============================================================================
+  // Name: BrowserThread()
+  // Desc: Recreates the browser if it is closed. (should be swapped for a module change handler)
+  // ============================================================================
+  thread void BrowserThread()
+  {
+    while(true)
+    {
+      
+      if (!me.ShouldShowPopup())
+      {
+        CurrentMenu = null;
+        browser = null;
+        popup = null;
+        BrowserClosed = true;
+      }
+      if (me.ShouldShowPopup() and BrowserClosed)
+      {
+        //replace this with keybind
+        createMenuWindow();
+        BrowserClosed = false;
+      }
+
+      UpdateInterfacePosition();
+
+      Sleep(0.1);
+    }
+  }
+
+  // ============================================================================
+  // Name: BrowserHandler(Message msg)
+  // Desc: Handles all browser input.
+  // ============================================================================
+  void BrowserHandler(Message msg)
+  {
+    TrainzScript.Log("handle browser message");
+    if(!(browser and msg.src == browser) and !(popup and msg.src == popup))
+      return;
+    
+    // if (msg.minor == "live://update")
+    // {
+    //   ShowUpdatePrompt();
+    //   AssetObsolete = false;
+    //   RefreshBrowser();
+    // }
+    if (msg.minor == "live://return")
+    {
+      closePopup();
+    }
+    else if(TrainUtil.HasPrefix(msg.minor, "live://open_custom/"))
+    {
+      TrainzScript.Log("Opening custom menu.");
+      string command = msg.minor["live://open_custom/".size(),];
+
+      int menuID = Str.UnpackInt(command);
+
+      if(CurrentMenu != customMenus[menuID])
+      {
+        CurrentMenu = customMenus[menuID];
+        createPopupWindow();
+        RefreshBrowser();
+        CurrentMenu.Open();
+        TickThread(CurrentMenu);
+      }
+      else
+        closePopup();
+    }
+    else
+    {
+      if(CurrentMenu)
+        CurrentMenu.ProcessMessage(msg.minor);
+    }
+  }
 };
 
 //Legacy tttestub compat
