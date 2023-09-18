@@ -7,6 +7,8 @@ class LocoMenu isclass CustomScriptMenu
   bool b_BrakesBroken = false;
   bool b_ShakeEnabled = false;
   bool b_ShakeAll = false;
+  bool b_UseSmoothedPitchVelocity = false;
+  bool b_UseConstantPitchVelocity = false;
   float b_ShakeIntensity = 0.02;
   float b_ShakePeriod = 0.04;
   float normal_maxtractiveeffort;
@@ -40,6 +42,16 @@ class LocoMenu isclass CustomScriptMenu
 
   public bool IsCore() { return true; }
   
+  public bool SupportsCGIRotation()
+  {
+    if (World.GetTrainzVersion() >= 5.1)
+    {
+      return true;
+    }
+    // pitching based on velocity is broken in old versions.
+    return false;
+  }
+
   public string GetMenuHTML()
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
@@ -94,7 +106,7 @@ class LocoMenu isclass CustomScriptMenu
     output.Print("<br>");
 
     if (m_rotationMode != ROTATION_CGI) output.Print("<a href='live://property/rotation-cgi'>");
-    output.Print("CGI");
+    output.Print("CGI (TRS22+ Only)");
     if (m_rotationMode != ROTATION_CGI) output.Print("</a>");
     output.Print("<br>");
 
@@ -109,17 +121,37 @@ class LocoMenu isclass CustomScriptMenu
     }
     else if (m_rotationMode == ROTATION_CGI)
     {
-      output.Print("<tr><td>");
-      output.Print("Wobble Intensity:<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobbleintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
-      output.Print("<br>");
-      output.Print("Wobble Speed:<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobblespeed' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
-      output.Print("<br>");
-      output.Print("Pitch Intensity:<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='pitchintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
-      output.Print("<br>");
-      output.Print("</td></tr>");
+      if (SupportsCGIRotation())
+      {
+        output.Print("<tr><td>");
+        output.Print(HTMLWindow.CheckBox("live://property/use-smoothed-pitch-velocity", b_UseSmoothedPitchVelocity));
+        output.Print(" Use Smoothed Pitch Velocity");
+        output.Print("</td></tr>");
+  
+        output.Print("<tr><td>");
+        output.Print(HTMLWindow.CheckBox("live://property/use-constant-pitch-velocity", b_UseConstantPitchVelocity));
+        output.Print(" Use Constant Pitch Velocity");
+        output.Print("</td></tr>");
+  
+        
+  
+        output.Print("<tr><td>");
+        output.Print("Wobble Intensity:<br>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobbleintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<br>");
+        output.Print("Wobble Speed:<br>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobblespeed' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<br>");
+        output.Print("Pitch Intensity:<br>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='pitchintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<br>");
+        output.Print("</td></tr>");
+      }
+      else
+      {
+        output.Print("<tr><td>");
+        output.Print("</td></tr>");
+      }
     }
 
     output.Print("</table>");
@@ -320,6 +352,16 @@ class LocoMenu isclass CustomScriptMenu
           vehicles[i].SetMeshOrientation("default", 0.0, 0.0, 0.0);
       }
     }
+    else if(cmd == "live://property/use-smoothed-pitch-velocity")
+    {
+      b_UseSmoothedPitchVelocity = !b_UseSmoothedPitchVelocity;
+      b_UseConstantPitchVelocity = false;
+    }
+    else if(cmd == "live://property/use-constant-pitch-velocity")
+    {
+      b_UseConstantPitchVelocity = !b_UseConstantPitchVelocity;
+      b_UseSmoothedPitchVelocity = false;
+    }
     else if(cmd == "live://property/loco-couple")
     {
       base.b_CoupleLockEnabled = !base.b_CoupleLockEnabled;
@@ -334,7 +376,10 @@ class LocoMenu isclass CustomScriptMenu
     }
     else if(cmd == "live://property/rotation-cgi")
     {
-      m_rotationMode = ROTATION_CGI;
+      if (SupportsCGIRotation())
+      {
+        m_rotationMode = ROTATION_CGI;
+      }
     }
 
     base.RefreshBrowser();
@@ -456,7 +501,11 @@ class LocoMenu isclass CustomScriptMenu
       Vehicle traincar = vehicles[i];
 
       float velocity = traincar.GetVelocity();
-      WorldCoordinate pos = traincar.GetMapObjectPosition();
+      if (b_UseSmoothedPitchVelocity)
+      {
+        velocity = base.self.GetMyTrain().GetSmoothedVelocity();
+        // velocity = m_lastVelocity[i] + (traincar.GetVelocity() - m_lastVelocity[i]) * 0.01;
+      }
 
       // prevent a jolt when we start
       if (i >= m_lastVelocity.size() or wasStopped)
@@ -486,8 +535,15 @@ class LocoMenu isclass CustomScriptMenu
       m_smoothedAcceleration[i] = m_smoothedAcceleration[i] + (acceleration - m_smoothedAcceleration[i]) * 0.01;
 
       // float jerk = (acceleration - m_lastAcceleration[i]) / timestep;
-
-      UpdateCGITraincar(traincar, i, velocity, m_smoothedAcceleration[i] * 0.05 * m_pitchIntensity * velocity_dim);
+      float jerk = m_smoothedAcceleration[i] * 0.05 * m_pitchIntensity * velocity_dim;
+      if (b_UseConstantPitchVelocity)
+      {
+        if (velocity >= 0.0f)
+          jerk = 1.0f * m_pitchIntensity * velocity_dim;
+        else
+          jerk = -1.0f * m_pitchIntensity * velocity_dim;
+      }
+      UpdateCGITraincar(traincar, i, velocity, jerk);
 
       m_lastVelocity[i] = velocity;
       // m_lastPosition[i] = pos;

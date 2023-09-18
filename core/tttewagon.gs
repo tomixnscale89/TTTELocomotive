@@ -63,7 +63,12 @@ class TTTEWagon isclass Vehicle, TTTEBase
     Soup TTTESettings = GetTTTELocomotiveSettings();
     bool RandomizeFaces = TTTESettings.GetNamedSoup("random-faces/").GetNamedTagAsBool("value", false);
     if(RandomizeFaces and FacesContainer.CountTags()) faceSelection = Math.Rand(0, FacesContainer.CountTags());
-
+    else if (FacesContainer.CountTags())
+    {
+      // give us a face.
+      faceSelection = 0;
+    }
+    
     //set initial extra lamp states to none
     if(ExtraLampsContainer)
     {
@@ -721,11 +726,17 @@ class TTTEWagon isclass Vehicle, TTTEBase
     //   output.Print("</tr></td>");
     // }
 
+    // give a little thumbnail of the traincar in question
+    output.Print("<tr><td>");
+    output.Print("<a href='live://focus-me' tooltip='" + GetLocalisedName() + "'><img kuid='" + GetAsset().GetKUID().GetHTMLString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    output.Print("</tr></td>");
+
     int i;
     for(i = 0; i < customMenus.size(); i++)
     {
       output.Print("<tr><td>");
-      output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
+      // output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
+      output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' color=#0377fc width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("</tr></td>");
     }
 
@@ -829,7 +840,11 @@ class TTTEWagon isclass Vehicle, TTTEBase
     //   AssetObsolete = false;
     //   RefreshBrowser();
     // }
-    if (msg.minor == "live://return")
+    if (msg.minor == "live://focus-me")
+    {
+      World.UserSetCamera(me);
+    }
+    else if (msg.minor == "live://return")
     {
       closePopup();
     }

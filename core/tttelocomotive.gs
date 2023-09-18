@@ -230,8 +230,14 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
     Soup TTTESettings = GetTTTELocomotiveSettings();
     bool RandomizeFaces = TTTESettings.GetNamedSoup("random-faces/").GetNamedTagAsBool("value", false);
-    if(RandomizeFaces and FacesContainer.CountTags()) faceSelection = Math.Rand(0, FacesContainer.CountTags());
 
+    if(RandomizeFaces and FacesContainer.CountTags()) faceSelection = Math.Rand(0, FacesContainer.CountTags());
+    else if (FacesContainer.CountTags())
+    {
+      // give us a face.
+      faceSelection = 0;
+    }
+    
     //check lamp support, a bit hacky
     Soup MeshTable = myConfig.GetNamedSoup("mesh-table");
     int i;
@@ -1779,6 +1785,11 @@ class TTTELocomotive isclass Locomotive, TTTEBase
       output.Print("</tr></td>");
     }
 
+    // give a little thumbnail of the traincar in question
+    output.Print("<tr><td>");
+    output.Print("<a href='live://focus-me' tooltip='" + GetLocalisedName() + "'><img kuid='" + GetAsset().GetKUID().GetHTMLString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
+    output.Print("</tr></td>");
+
     int i;
     for(i = 0; i < customMenus.size(); i++)
     {
@@ -1897,6 +1908,10 @@ class TTTELocomotive isclass Locomotive, TTTEBase
       AssetObsolete = false;
       RefreshBrowser();
     }
+    else if (msg.minor == "live://focus-me")
+    {
+      World.UserSetCamera(me);
+    }
     else if (msg.minor == "live://return")
     {
       closePopup();
@@ -1927,5 +1942,131 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   }
 };
 
+// TODO: implement this?
+// Moral of the story: never let brendan write user-facing code again kek
+/*
+class GlueAsset
+{
+  public TrainzGameObject caller;
+  public Asset baseAsset;
+  public string[] kuidTable;
+  string authorStr;
+  string authorEmail;
+
+  void EvilDialogBox();
+
+  public void InitTable()
+  {
+    int i;
+    Soup config = baseAsset.GetConfigSoup();
+    for (i = 0; i < config.CountTags(); i++)
+    {
+      string tagName = Str.CloneString(config.GetIndexedTagName(i));
+      Str.ToLower(tagName);
+
+      if (tagName == "author")
+      {
+        authorStr = config.GetNamedTag("author");
+      }
+      if (tagName == "contact-email")
+      {
+        authorEmail = config.GetNamedTag("contact-email");
+      }
+    }
+
+    Soup table = config.GetNamedSoup("kuid-table");
+    kuidTable = new string[0];
+    for (i = 0; i < table.CountTags(); i++)
+    {
+      string tagName = Str.CloneString(table.GetIndexedTagName(i));
+      Str.ToLower(tagName);
+      kuidTable[kuidTable.size()] = tagName;
+    }
+  }
+  
+  public Asset FindAsset(string asset)
+  {
+    string lowerAsset = Str.CloneString(asset);
+    Str.ToLower(lowerAsset);
+
+    int i;
+    for (i = 0; i < kuidTable.size(); i++)
+    {
+      if (kuidTable[i] == lowerAsset)
+        return baseAsset.FindAsset(asset);
+    }
+    
+    // don't call that function, it throws an exception in 19 SP2? onward.
+    EvilDialogBox();
+
+    return null;
+  }
+
+  void EvilDialogBox()
+  {
+    bool isThisMine = baseAsset.IsCreatedByLocalUser();
+    string dontShowAgainStr = "";
+    if (!isThisMine)
+    {
+      dontShowAgainStr = "ttteloco-evil-" + baseAsset.GetLocalisedName();
+    }
+    
+    string authorName = baseAsset.GetCreatorName();
+    if (authorStr)
+    {
+      authorName = authorName + ", a.k.a. " + authorStr;
+    }
+    if (authorEmail and !isThisMine)
+    {
+      authorName = authorName + ", who can be reached at " + authorEmail;
+    }
+
+    string kHelpMessage;
+    if (isThisMine)
+    {
+      kHelpMessage = "Hey you! " + authorName + "! Yeah you!\n" +
+      "According to my amazing powers of deduction, this asset (" + baseAsset.GetLocalisedName() + ") belongs to you!\n" +
+      "You've screwed up big time, so listen up!\n" +
+      "This TTTELocomotive asset has been configured improperly. But fret not, the solution is easy!\n" +
+      "In the asset files, you've used a tttestub.gs that's only supposed to be used for specific locomotives (those with custom driver/fireman attachments).\n" +
+      "Please use the tttestub.gs available here:\n" +
+      "https://github.com/tomixnscale89/TTTELocomotive/blob/master/tttestub.gs\n\n" +
+      "We're gonna be removing this dialog box soon, so if you see this message box please fix this ASAP!!\n" +
+      "Thanks!\n\t-The TTTELocomotive Team";
+      ;
+    }
+    else
+    {
+      kHelpMessage = "Hey you! Yeah you!\n" +
+      "This asset  (" + baseAsset.GetLocalisedName() + ") has been configured improperly!\n" +
+      "Please let the content author, \"" + authorName + "\" know!\n\n" +
+      "In the asset files, they've used a tttestub.gs that's only supposed to be used for specific locomotives (those with custom driver/fireman attachments).\n" +
+      "Please tell them to use the tttestub.gs available here:\n" +
+      "https://github.com/tomixnscale89/TTTELocomotive/blob/master/tttestub.gs\n\n" +
+      "We're gonna be removing this dialog box soon, so if you see this message box please tell the content cerator to fix this ASAP!!\n" +
+      "Thanks!\n\t-The TTTELocomotive Team";
+      ;
+    }
+
+    bool isError = isThisMine;
+
+    Interface.ShowMessageBox(caller, kHelpMessage, isError, "Got it!", "Cancel", dontShowAgainStr);
+  }
+};
+*/
+
 //Legacy tttestub compat
-class tttelocomotive isclass TTTELocomotive {};
+class tttelocomotive isclass TTTELocomotive
+{
+  /*
+  public Asset GetAsset()
+  {
+    GlueAsset asset = new GlueAsset();
+    asset.caller = me;
+    asset.baseAsset = self.GetAsset();
+
+    asset.InitTable();
+    return asset;
+  }
+  */
+};

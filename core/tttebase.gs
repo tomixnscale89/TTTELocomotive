@@ -831,8 +831,8 @@ class TTTEBase isclass TTTEHelpers
 
     strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
 
-
-    faceSelection = 0; // Since we are assuming the locomotive has a face, let's set it to zero so the default face will appear.
+    // default to no face.
+    faceSelection = -1;
     DLSfaceSelection = -1;
 
     
