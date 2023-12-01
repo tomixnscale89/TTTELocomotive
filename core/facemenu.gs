@@ -3,10 +3,53 @@ include "tttemenu.gs"
 
 class FaceMenu isclass CustomScriptMenu
 {
+  Soup m_faces;
+
   public bool IsCore() { return true; }
   
+  void UpdateFaces()
+  {
+    m_faces = Constructors.NewSoup();
+    int i;
+    for(i = 0; i < base.FacesContainer.CountTags(); i++)
+    {
+      string tagName = base.FacesContainer.GetIndexedTagName(i);
+      string faceName = base.FacesContainer.GetNamedTag(tagName);
+
+      string[] tok = Str.Tokens(faceName, null);
+
+      if (tok == null or tok.size() <= 1)
+      {
+        Soup data = m_faces.GetNamedSoupAdd(faceName);
+        data.SetNamedTag("real-name", faceName);
+        data.SetNamedTag("has-root", true);
+        data.SetNamedTag("root-index", i);
+      }
+      else
+      {
+        string baseName = tok[0];
+        string subName = faceName[baseName.size(),];
+        Str.TrimLeft(subName, null);
+
+        Soup data = m_faces.GetNamedSoupAdd(baseName);
+        data.SetNamedTag("real-name", faceName);
+
+        data.SetNamedTag("has-children", true);
+        Soup children = data.GetNamedSoupAdd("children");
+        
+
+        Soup subdata = Constructors.NewSoup();
+        subdata.SetNamedTag("label", subName);
+        subdata.SetNamedTag("index", i);
+        children.AddUniqueNamedSoup(subdata);
+      }
+    }
+  }
+
   public string GetMenuHTML()
   {
+    UpdateFaces();
+
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
     //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
@@ -16,25 +59,79 @@ class FaceMenu isclass CustomScriptMenu
     output.Print("<table>");
     output.Print("<tr> <td width='300'></td> </tr>");
     bool rowParity = false;
-    int i;
-    for(i = 0; i < base.FacesContainer.CountTags(); i++)
+    int i, j;
+    for(i = 0; i < m_faces.CountTags(); i++)
     {
       rowParity = !rowParity;
-      string faceName = base.FacesContainer.GetNamedTag(base.FacesContainer.GetIndexedTagName(i));
-      if (rowParity)
-        output.Print("<tr bgcolor=#0E2A35>");
-      else
-        output.Print("<tr bgcolor=#05171E>");
 
+      
+      Soup data = m_faces.GetNamedSoup(m_faces.GetIndexedTagName(i));
+      string baseName = data.GetNamedTag("real-name");
+
+      string rowcolor;
+
+      if (rowParity)
+        rowcolor = "#0E2A35";
+      else
+        rowcolor = "#05171E";
+      
+      output.Print("<tr bgcolor=" + rowcolor + ">");
       output.Print("<td>");
-      if(i != base.faceSelection)
-        output.Print("<a href='live://face_set/" + i + "'>");
-      output.Print(faceName);
-      if(i != base.faceSelection)
+
+      bool hasRootLink = false;
+      if (data.GetNamedTagAsBool("has-root"))
+      {
+        int rootIndex = data.GetNamedTagAsInt("root-index");
+        if(i != base.faceSelection)
+        {
+          output.Print("<a href='live://face_set/" + rootIndex + "'>");
+          hasRootLink = true;
+        }
+      }
+
+      output.Print(baseName);
+
+      if(hasRootLink)
         output.Print("</a>");
 
       output.Print("</td>");
       output.Print("</tr>");
+      
+      // Add a children row
+      if (data.GetNamedTagAsBool("has-children"))
+      {
+        output.Print("<tr bgcolor=" + rowcolor + ">");
+        output.Print("<td align=right>");
+        
+        // Embed a table so the entries are spaced apart.
+        output.Print("<table>");
+        output.Print("<tr>");
+        Soup children = data.GetNamedSoup("children");
+        for (j = 0; j < children.CountTags(); j++)
+        {
+          Soup childData = children.GetNamedSoup(children.GetIndexedTagName(j));
+          string subName = childData.GetNamedTag("label");
+          int subIndex = childData.GetNamedTagAsInt("index");
+
+          output.Print("<td>");
+
+          if(subIndex != base.faceSelection)
+            output.Print("<a href='live://face_set/" + subIndex + "'>");
+          
+          output.Print(subName);
+
+          if(subIndex != base.faceSelection)
+            output.Print("</a>");
+          
+          output.Print("</td>");
+        }
+        output.Print("</tr>");
+        output.Print("</table>");
+        // Embedded table end.
+
+        output.Print("</td>");
+        output.Print("</tr>");
+      }
     }
 
     Soup TTTESettings = base.GetTTTELocomotiveSettings();
