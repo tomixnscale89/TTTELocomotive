@@ -1,5 +1,6 @@
 include "tttemenu.gs"
 include "noise.gs"
+include "joystick.gs"
 
 class LocoMenu isclass CustomScriptMenu
 {
@@ -20,9 +21,7 @@ class LocoMenu isclass CustomScriptMenu
   define int ROTATION_CGI = 2;
   int m_rotationMode = 0;
 
-  Browser Joystick = null;
-  define int Joystick_Size = 75;
-  define int HalfSize = Joystick_Size / 2;
+  Joystick Joystick = new Joystick();
 
   int ShakeTime = 0;
   Orientation[] lastShakeTargets = new Orientation[0];
@@ -175,19 +174,11 @@ class LocoMenu isclass CustomScriptMenu
     return true;
   }
 
-  string GetJoystickContentHTML()
-  {
-    HTMLBuffer output = HTMLBufferStatic.Construct();
-    output.Print("<html><body>");
-    output.Print("<img kuid='<kuid:414976:104990>' width=" + (string)Joystick_Size + " height=" + (string)Joystick_Size + ">");
-    output.Print("</body></html>");
-
-    return output.AsString();
-  }
 
   public void Open()
   {
     m_noise.Init();
+    Joystick.Init(75);
     m_lastVelocity = new float[0];
     m_smoothedAcceleration = new float[0];
 
@@ -221,14 +212,14 @@ class LocoMenu isclass CustomScriptMenu
   public void Tick()
   {
     // delete the joystick if it's no longer necessary
-    if (m_rotationMode != ROTATION_JOYSTICK and Joystick)
-      Joystick = null;
+    if (m_rotationMode != ROTATION_JOYSTICK and Joystick.IsOpen())
+      Joystick.Close();
 
     if (m_rotationMode != ROTATION_NONE)
     {
       if (m_rotationMode == ROTATION_JOYSTICK)
       {
-        if (!Joystick)
+        if (!Joystick.IsOpen())
           CreateJoystick();
         
         UpdateJoystick();
@@ -303,7 +294,7 @@ class LocoMenu isclass CustomScriptMenu
     if(base.CurrentMenu != me and !b_ShakeEnabled and m_rotationMode != ROTATION_CGI)
     {
       //stop ticking if we're running in the background and shake is disabled
-      Joystick = null;
+      Joystick.Close();
       StopTick();
     }
   }
@@ -390,71 +381,22 @@ class LocoMenu isclass CustomScriptMenu
     int joystickPosX = base.popup.GetWindowLeft() + (base.popup.GetWindowWidth() / 2);
     int joystickPosY = base.popup.GetWindowBottom() - TTTEBase.POPUP_WIDTH / 2;
 
-    Joystick = Constructors.NewBrowser();
-
-    Joystick.SetCloseEnabled(false);
-    Joystick.LoadHTMLString(base.self.GetAsset(), GetJoystickContentHTML());
-    Joystick.SetWindowStyle(Browser.STYLE_POPOVER);
-    Joystick.SetWindowPriority(Browser.BP_Window); //must be called after style
-    Joystick.SetMovableByDraggingBackground(true);
-  	Joystick.SetWindowPosition(joystickPosX - HalfSize, joystickPosY - HalfSize);
-  	Joystick.SetWindowSize(Joystick_Size, Joystick_Size);
-  	Joystick.SetWindowVisible(true);
+    
+    Joystick.Create(base.self.GetAsset(), joystickPosX, joystickPosY);
   }
 
   void UpdateJoystick()
-  {      
-    if(Joystick == null)
-      return;
-  
-    Joystick.BringToFront();
-    // constrain to joystick box
+  {
     int BrowserTop      = base.popup.GetWindowBottom() - TTTEBase.POPUP_WIDTH;
     int BrowserBottom   = base.popup.GetWindowBottom();
     int BrowserLeft     = base.popup.GetWindowLeft();
     int BrowserRight    = base.popup.GetWindowRight();
-    int JoystickTop     = Joystick.GetWindowTop();
-    int JoystickBottom  = Joystick.GetWindowBottom();
-    int JoystickLeft    = Joystick.GetWindowLeft();
-    int JoystickRight   = Joystick.GetWindowRight();
-
-    //update center position
-    int HalfBrowserWidth = base.popup.GetWindowWidth() / 2;
-
-    //prevent divide by 0
-    if(HalfBrowserWidth == 0)
-      return;
-    
-    int joystickCenterX = base.popup.GetWindowLeft() + (base.popup.GetWindowWidth() / 2);
-    int joystickCenterY = base.popup.GetWindowBottom() - TTTEBase.POPUP_WIDTH / 2;
-
-    //get relative
-    int CenterLeft = joystickCenterX - HalfSize;
-    int CenterTop = joystickCenterY - HalfSize;
-    int RelativeX = JoystickLeft - CenterLeft;
-    int RelativeY = JoystickTop - CenterTop;
-
-    if(JoystickLeft < BrowserLeft) Joystick.SetWindowPosition(BrowserLeft, JoystickTop);
-    if(JoystickTop < BrowserTop) Joystick.SetWindowPosition(JoystickLeft, BrowserTop);
-    if(JoystickRight > BrowserRight) Joystick.SetWindowPosition(BrowserRight - Joystick_Size, JoystickTop);
-    if(JoystickBottom > BrowserBottom) Joystick.SetWindowPosition(JoystickLeft, BrowserBottom - Joystick_Size);
-
-    float OffsetX = ((float)RelativeX / (float)HalfBrowserWidth);
-    float OffsetY = ((float)RelativeY / (float)HalfBrowserWidth); // HalfBrowserHeight different browser dimensions
-    //OffsetX = Math.Fmax(Math.Fmin(OffsetX, Joystick_Range), -Joystick_Range);
-    //OffsetY = Math.Fmax(Math.Fmin(OffsetY, Joystick_Range), -Joystick_Range);
-    //normalize the offset
-    float length = Math.Sqrt(OffsetX * OffsetX + OffsetY * OffsetY) + 0.001; //prevent divide by zero
-    if(length > 1.0)
-    {
-      OffsetX = OffsetX / length;
-      OffsetY = OffsetY / length;
-    }
+    Joystick.Update(BrowserTop, BrowserBottom, BrowserLeft, BrowserRight);
 
     float max_rotation = 8;
 
     Vehicle loco = base.self;
-    loco.SetMeshOrientation("default", OffsetY * max_rotation * Math.PI / 180, 0, OffsetX * max_rotation * Math.PI / 180);
+    loco.SetMeshOrientation("default", Joystick.OffsetY * max_rotation * Math.PI / 180, 0, Joystick.OffsetX * max_rotation * Math.PI / 180);
   }
 
   float smoothstep(float x, float edge0, float edge1)

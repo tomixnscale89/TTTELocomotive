@@ -4,6 +4,8 @@ include "tttemenu.gs"
 class FaceMenu isclass CustomScriptMenu
 {
   Soup m_faces;
+  bool m_bEnableTilt = false;
+  Joystick m_tilt = new Joystick();
 
   public bool IsCore() { return true; }
   
@@ -32,7 +34,7 @@ class FaceMenu isclass CustomScriptMenu
         Str.TrimLeft(subName, null);
 
         Soup data = m_faces.GetNamedSoupAdd(baseName);
-        data.SetNamedTag("real-name", faceName);
+        data.SetNamedTag("real-name", baseName);
 
         data.SetNamedTag("has-children", true);
         Soup children = data.GetNamedSoupAdd("children");
@@ -82,7 +84,7 @@ class FaceMenu isclass CustomScriptMenu
       if (data.GetNamedTagAsBool("has-root"))
       {
         int rootIndex = data.GetNamedTagAsInt("root-index");
-        if(i != base.faceSelection)
+        if(rootIndex != base.faceSelection)
         {
           output.Print("<a href='live://face_set/" + rootIndex + "'>");
           hasRootLink = true;
@@ -209,6 +211,21 @@ class FaceMenu isclass CustomScriptMenu
       output.Print("</table>");
     }
 
+    
+    // output.Print("<table>"); 
+
+    // output.Print("<tr><td>");
+    // output.Print(HTMLWindow.CheckBox("live://property/enable-tilt", m_bEnableTilt));
+    // output.Print(" Enable Face Tilt");
+    // output.Print("</td></tr>");
+
+    // output.Print("<tr><td>"); 
+    // output.Print("Loco Rotation:<br>");
+    // output.Print("<img kuid='<kuid:414976:102981>' width=" + (string)TTTEBase.POPUP_WIDTH + " height=" + (string)TTTEBase.POPUP_WIDTH + ">");
+    // output.Print("</td></tr>");
+
+    // output.Print("</table>"); 
+
     output.Print("</body></html>");
     return output.AsString();
   }
@@ -220,7 +237,11 @@ class FaceMenu isclass CustomScriptMenu
 
   public void ProcessMessage(string cmd)
   {
-    if(TrainUtil.HasPrefix(cmd, "live://face_set/"))
+    if(cmd == "live://property/enable-tilt")
+    {
+      m_bEnableTilt = !m_bEnableTilt;
+    }
+    else if(TrainUtil.HasPrefix(cmd, "live://face_set/"))
     {
       string command = Str.Tokens(cmd, "live://face_set/")[0];
       if(command)
