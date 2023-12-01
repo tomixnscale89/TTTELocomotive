@@ -90,6 +90,8 @@ class TTTEWagon isclass Vehicle, TTTEBase
           ExtraLampAssets[i] = null;
       }
     }
+
+    SmokeboxContainer = ExtensionsContainer.GetNamedSoup("smokeboxes");
     
     // Setup menus after all features are setup
     SetupMenus();
