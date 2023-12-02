@@ -16,25 +16,25 @@ class EyeScriptMenu isclass CustomScriptMenu
     output.Print("<font><b>" + base.strTable.GetString("eye_menu") + "</font>");
     output.Print("<br>");
     output.Print("<a href='live://eye-reset' tooltip='" + base.strTable.GetString("tooltip_reset") + "'><font>" + base.strTable.GetString("reset_controls") + "</font></a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     //controls
     output.Print("<tr><td>");
     output.Print(base.strTable.GetString("eye_rotation_h"));
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print(base.strTable.GetString("eye_rotation_v"));
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     //dial is no longer advanced lol
     output.Print("<tr><td>");
     output.Print("<trainz-object style=dial width=100 height=100 id='eyeZ' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print("<a href='live://record'><font>" + base.strTable.GetString("recording_start") + "</font></a>");
@@ -42,13 +42,13 @@ class EyeScriptMenu isclass CustomScriptMenu
     output.Print("<a href='live://record-stop'><font>" + base.strTable.GetString("recording_stop") + "</font></a>");
     output.Print("<br>");
     output.Print("<a href='live://play'><font>" + base.strTable.GetString("recording_anim") + "</font></a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("</table>");
 
     output.Print("<br>");
     output.Print(HTMLWindow.CheckBox("live://eye-lock", base.useLockTarget));
-  	output.Print(base.strTable.GetString("target_lock") + "</tr></td>");
+  	output.Print(base.strTable.GetString("target_lock") + "</td></tr>");
     if(base.useLockTarget)
   	{
       string targetText = base.strTable.GetString("target_select");

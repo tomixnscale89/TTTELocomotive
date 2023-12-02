@@ -242,7 +242,7 @@ class smokeeditor isclass Locomotive
     //smoke window
     output.Print("<tr><td>");
     output.Print("<a href='live://open_smoke'>Smoke Editor</a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("</table>");
   	output.Print("</body></html>");
@@ -259,7 +259,7 @@ class smokeeditor isclass Locomotive
 
     output.Print("<tr><td>");
     output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     //Generate smoke containers
     int i;
@@ -296,12 +296,12 @@ class smokeeditor isclass Locomotive
             output.Print("<br>");
             output.Print("<trainz-text id='" + (string)i + curTagName + "-text" + "' text='" + (string)CurrentSmoke.GetNamedTagAsFloat(curTagName) + "'></trainz-text>");
             output.Print("<br>");
-            output.Print("</tr></td>");
+            output.Print("</td></tr>");
           }
         }
         output.Print("</table>");
       }
-      output.Print("</tr></td>");
+      output.Print("</td></tr>");
     }
 
     output.Print("</table>");

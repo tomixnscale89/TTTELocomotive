@@ -1338,32 +1338,32 @@ class tttelocomotive isclass Locomotive
 
     output.Print("<tr><td>");
     output.Print("<a href='live://return' tooltip='Return to the main tab selection'><b><font>Menu</font></b></a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     //Options
     output.Print("<tr><td>");
     output.Print("<font><b>Eye Controls</font>");
     output.Print("<br>");
     output.Print("<a href='live://eye-reset' tooltip='reset'><font>Reset Controls</font></a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     //controls
     output.Print("<tr><td>");
     output.Print("Eye Rotation Left/Right:");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print("Eye Rotation Up/Down:");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     //dial is no longer advanced lol
     output.Print("<tr><td>");
     output.Print("<trainz-object style=dial width=100 height=100 id='eyeZ' texture='newdriver/dcc/dcc_controller.tga' min=0.0 max=1.0 valmin=0.0 valmax=360.0 step=0 clickstep=1 value=0.0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print("<a href='live://record'><font>Start Recording</font></a>");
@@ -1371,11 +1371,11 @@ class tttelocomotive isclass Locomotive
     output.Print("<a href='live://record-stop'><font>Stop Recording</font></a>");
     output.Print("<br>");
     output.Print("<a href='live://play'><font>Play Animation</font></a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print(HTMLWindow.CheckBox("live://eye-target", b_EyeTargetEnabled) + " Enable Eye Target");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("</table>");
   	output.Print("</body></html>");
@@ -1391,7 +1391,7 @@ class tttelocomotive isclass Locomotive
     output.Print("<tr><td>");
     output.Print(HTMLWindow.CheckBox("live://property/loco-wheelslip", b_WheelslipEnabled));
     output.Print(" Wheelslip");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
     output.Print("</table>");
     output.Print("</body></html>");
 

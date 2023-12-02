@@ -9,6 +9,7 @@ include "facemenu.gs"
 include "locomenu.gs"
 include "smokemenu.gs"
 include "submeshmenu.gs"
+include "soundmenu.gs"
 include "socialmenu.gs"
 include "facechartmenu.gs"
 include "tttelib.gs"
@@ -41,6 +42,7 @@ class TTTEBase isclass TTTEHelpers
   public Soup ExtraLampsContainer;
   public Soup FaceChartContainer;
   public Soup SubmeshContainer;
+  public Soup SoundContainer;
   public bool[] ExtraLampVisibility;
   public Asset[] ExtraLampAssets;
   
@@ -63,6 +65,7 @@ class TTTEBase isclass TTTEHelpers
   define int FEATURE_BUFFERS      = 1 << 5;
   define int FEATURE_FACECHART    = 1 << 6;
   define int FEATURE_SUBMESHES    = 1 << 7;
+  define int FEATURE_SOUNDS       = 1 << 8;
 
   public define int CAR_DERAILED = -1;
   public define int CAR_CENTER   =  0;
@@ -89,6 +92,7 @@ class TTTEBase isclass TTTEHelpers
   CustomScriptMenu LocoMenu       = null;
   CustomScriptMenu SmokeMenu      = null;
   CustomScriptMenu SubmeshMenu    = null;
+  CustomScriptMenu SoundMenu      = null;
   CustomScriptMenu FaceChartMenu  = null;
   CustomScriptMenu SocialMenu     = null;
 
@@ -341,6 +345,12 @@ class TTTEBase isclass TTTEHelpers
     {
       SubmeshMenu = new SubmeshMenu();
       customMenus[customMenus.size()] = SubmeshMenu;
+    }
+
+    if (GetFeatureSupported(FEATURE_SOUNDS))
+    {
+      SoundMenu = new SoundMenu();
+      customMenus[customMenus.size()] = SoundMenu;
     }
 
     if(GetFeatureSupported(FEATURE_FACECHART))
@@ -847,6 +857,7 @@ class TTTEBase isclass TTTEHelpers
     LiveryTextureOptions = ExtensionsContainer.GetNamedSoup("livery-textures");
     BogeyLiveryTextureOptions = ExtensionsContainer.GetNamedSoup("bogey-livery-textures");
     SubmeshContainer = ExtensionsContainer.GetNamedSoup("submeshes");
+    SoundContainer = ExtensionsContainer.GetNamedSoup("sfx");
 
     eyeTranslateX = ExtensionsContainer.GetNamedTagAsBool("eye-translate-x", false);
     eyeTranslateY = ExtensionsContainer.GetNamedTagAsBool("eye-translate-y", false);
@@ -856,6 +867,7 @@ class TTTEBase isclass TTTEHelpers
 
     if(LiveryContainer.CountTags()) SetFeatureSupported(FEATURE_LIVERIES);
     if(SubmeshContainer.CountTags()) SetFeatureSupported(FEATURE_SUBMESHES);
+    if(SoundContainer.CountTags()) SetFeatureSupported(FEATURE_SOUNDS);
 
     Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
 

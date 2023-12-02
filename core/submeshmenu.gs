@@ -50,7 +50,9 @@ class SubmeshMenu isclass CustomScriptMenu
         output.Print("<td>");
         output.Print(HTMLWindow.CheckBox("live://toggle-submesh/" + (string)i, submeshState[i]));
         output.Print(" " + nameText);
-        output.Print("</tr></td>");
+        output.Print("</td>");
+        
+        output.Print("</tr>");
       }
       output.Print("</table>");
     }

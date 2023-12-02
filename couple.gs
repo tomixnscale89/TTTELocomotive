@@ -452,32 +452,32 @@ define float SPIN_LENGTH = 100.0;
     //Options
     output.Print("<tr><td>");
     output.Print("<font><b>IK Controls</font>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     //controls
     output.Print("<tr><td>");
     output.Print("X:");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='Xtarg' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print("Y:");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='Ytarg' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print("Z:");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='Ztarg' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("<tr><td>");
     output.Print("Middle:");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='Midframe' min=0.0 max=100.0 value=0.0 page-size=0></trainz-object>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     output.Print("</table>");
     output.Print("</body></html>");

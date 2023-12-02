@@ -108,7 +108,7 @@ class LampMenu isclass CustomScriptMenu
         output.Print("<td>");
         output.Print(HTMLWindow.CheckBox("live://extra-lamps/" + i, base.ExtraLampVisibility[i]));
         output.Print(" " + nameText);
-        output.Print("</tr></td>");
+        output.Print("</td></tr>");
       }
       output.Print("</table>");
     }

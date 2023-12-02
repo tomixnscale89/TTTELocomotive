@@ -50,17 +50,17 @@ class SmokeMenu isclass CustomScriptMenu
             output.Print("<br>");
             output.Print("<trainz-text id='" + (string)i + curTagName + "-text" + "' text='" + (string)CurrentSmoke.GetNamedTagAsFloat(curTagName) + "'></trainz-text>");
             output.Print("<br>");
-            output.Print("</tr></td>");
+            output.Print("</td></tr>");
           }
         }
         output.Print("</table>");
       }
-      output.Print("</tr></td>");
+      output.Print("</td></tr>");
     }
 
     //output.Print("<tr><td>");
     //output.Print("<a href='live://smoke-apply'>Apply</a>");
-    //output.Print("</tr></td>");
+    //output.Print("</td></tr>");
 
     output.Print("</table>");
     output.Print("</body></html>");

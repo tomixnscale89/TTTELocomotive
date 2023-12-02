@@ -462,12 +462,12 @@ class TTTEWagon isclass Vehicle, TTTEBase
       // // option to change headcode, this displays inside the ? HTML window in surveyor.
       html = html + "<tr><td>";
       html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
-      html = html + "</tr></td>";
+      html = html + "</td></tr>";
       //lamp status
       string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
       html = html + "<tr><td>";
       html = html + strTable.GetString1("headcode_select", headcodeLampStr);
-      html = html + "</tr></td>";
+      html = html + "</td></tr>";
     }
 
     //livery window
@@ -476,13 +476,13 @@ class TTTEWagon isclass Vehicle, TTTEBase
       //livery window
       html = html + "<tr><td>";
       html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
-      html = html + "</tr></td>";
+      html = html + "</td></tr>";
 
       //livery status
       string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
       html = html + "<tr><td>";
       html = html + strTable.GetString1("skin_select", classSkinStr);
-      html = html + "</tr></td>";
+      html = html + "</td></tr>";
     }
 
     if(GetFeatureSupported(FEATURE_FACES))
@@ -490,7 +490,7 @@ class TTTEWagon isclass Vehicle, TTTEBase
       //face window
       html = html + "<tr><td>";
       html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
-      html = html + "</tr></td>";
+      html = html + "</td></tr>";
 
       //face status
       string FaceStr = "";
@@ -508,7 +508,7 @@ class TTTEWagon isclass Vehicle, TTTEBase
       string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
       html = html + "<tr><td>";
       html = html + strTable.GetString1("faces_select", classFaceStr);
-      html = html + "</tr></td>";
+      html = html + "</td></tr>";
     }
 
     return html;
@@ -725,13 +725,13 @@ class TTTEWagon isclass Vehicle, TTTEBase
     //   //output.Print("<br>");
     //   output.Print("<tr><td>");
     //   output.Print("<a href='live://update'><img kuid='<kuid:414976:101435>' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    //   output.Print("</tr></td>");
+    //   output.Print("</td></tr>");
     // }
 
     // give a little thumbnail of the traincar in question
     output.Print("<tr><td>");
     output.Print("<a href='live://focus-me' tooltip='" + GetLocalisedName() + "'><img kuid='" + GetAsset().GetKUID().GetHTMLString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
-    output.Print("</tr></td>");
+    output.Print("</td></tr>");
 
     int i;
     for(i = 0; i < customMenus.size(); i++)
@@ -739,7 +739,7 @@ class TTTEWagon isclass Vehicle, TTTEBase
       output.Print("<tr><td>");
       // output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
       output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' color=#0377fc width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</tr></td>");
+      output.Print("</td></tr>");
     }
 
     output.Print("</table>");
