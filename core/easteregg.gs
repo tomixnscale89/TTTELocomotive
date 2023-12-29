@@ -71,10 +71,14 @@ class TetrisGame
   int m_score;
   Browser m_window;
   Browser m_background;
+  Browser m_scoreDisplay;
+  Browser m_holdWindow;
+  Browser m_queueWindow;
   Asset m_asset;
 
   define int NUM_ROWS = 20;
   define int NUM_COLS = 10;
+  define int NUM_QUEUED = 4;
 
   define int COL_NUL = 0;
   define int COL_RED = 0xFF0000;
@@ -105,6 +109,8 @@ class TetrisGame
 
   // Current piece type.
   int m_curPiece;
+  int m_heldPiece;
+  int[] m_queuedPieces = new int[NUM_QUEUED];
   // Clockwise rotation index.
   int m_curX;
   int m_curY;
@@ -210,6 +216,7 @@ class TetrisGame
   bool RotatePieceLeft();
   bool RotatePieceRight();
   void DropPiece();
+  void HoldPiece();
   void InitPieceTable();
   CellBlock GetPiece(int piece, int rot);
   
@@ -228,6 +235,9 @@ class TetrisGame
 
     m_asset = asset;
     m_background = Constructors.NewBrowser();
+    m_scoreDisplay = Constructors.NewBrowser();
+    m_holdWindow = Constructors.NewBrowser();
+    m_queueWindow = Constructors.NewBrowser();
     m_window = Constructors.NewBrowser();
 
     // Reset all parameters.
@@ -236,9 +246,15 @@ class TetrisGame
     m_timeSinceLastMove = 0.0;
     m_bIsPieceAboutToPlace = false;
     m_curPiece = -1;
+    m_heldPiece = -1;
     m_curX = 0;
     m_curY = 0;
     m_curRotation = 0;
+
+    int i;
+    for (i = 0; i < NUM_QUEUED; i++)
+      m_queuedPieces[i] = Math.Rand(0, 7);
+
     m_score = 0;
     m_bRunning = true;
     
@@ -250,6 +266,18 @@ class TetrisGame
     m_background.SetWindowStyle(Browser.STYLE_NO_FRAME);
     m_background.SetMovableByDraggingBackground(false);
     m_background.SetWindowVisible(true);
+
+    m_scoreDisplay.SetWindowStyle(Browser.STYLE_NO_FRAME);
+    m_scoreDisplay.SetMovableByDraggingBackground(false);
+    m_scoreDisplay.SetWindowVisible(true);
+
+    m_holdWindow.SetWindowStyle(Browser.STYLE_NO_FRAME);
+    m_holdWindow.SetMovableByDraggingBackground(false);
+    m_holdWindow.SetWindowVisible(true);
+
+    m_queueWindow.SetWindowStyle(Browser.STYLE_NO_FRAME);
+    m_queueWindow.SetMovableByDraggingBackground(false);
+    m_queueWindow.SetWindowVisible(true);
 
     ChooseNewPiece();
 
@@ -287,6 +315,96 @@ class TetrisGame
   	return output.AsString();
   }
 
+  string GetScoreHTML(int width, int height, int fontSize)
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+    output.Print("<table>");
+    output.Print("<tr bgcolor=#00000000 height=" + (string)height + "><td width=" + (string)width + ">");
+    output.Print("<font size=" + (string)fontSize + " color=#FFFFFF>" + (string)m_score + "</font>");
+    output.Print("</td></tr>");
+    output.Print("</table>");
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
+  void DrawBlock(int cellSize, CellBlock block, HTMLBuffer output)
+  {
+    string colorStr = GetHexString(block.GetColor());
+
+    // Tiny cell grid.
+    output.Print("<table cellpadding=0 cellspacing=0 border=8>");
+    int row, col;
+    for (row = 0; row < block.GetHeight(); row++)
+    {
+      output.Print("<tr height=" + (string)cellSize + ">");
+      for (col = 0; col < block.GetWidth(); col++)
+      {
+        output.Print("<td width=" + (string)cellSize + ">");
+        bool cell = block.Get(col, row);
+        if (cell)
+        {
+          // TrainzScript.Log("cell color " + (string)cell + " is " + GetHexString(cell));
+          output.Print("<img src='easteregg/block.png' color=#" + colorStr + " width=" + (string)cellSize + " height=" + (string)cellSize + ">");
+        }
+        else
+        {
+          // Nothing.
+          // output.Print("<img src='easteregg/slot.png' width=" + (string)cellSize + " height=" + (string)cellSize + ">");
+        }
+        output.Print("</td>");
+      }
+      output.Print("</tr>");
+    }
+    output.Print("</table>");
+  }
+
+  string GetHoldHTML(int width, int height)
+  {
+    CellBlock block = GetPiece(m_heldPiece, 0);
+
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+
+    if (block)
+    {
+      DrawBlock(m_cellSize / 2, block, output);
+    }
+
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
+  string GetQueueHTML(int width)
+  {
+    CellBlock block = GetPiece(m_heldPiece, 0);
+
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+    output.Print("<table>");
+
+    int i;
+    for (i = 0; i < NUM_QUEUED; i++)
+    {
+      int blockSize = (m_cellSize / 2) * 4 + 16;
+      
+      output.Print("<tr height=" + (string)blockSize + "><td width=" + (string)blockSize + ">");
+      CellBlock block = GetPiece(m_queuedPieces[i], 0);
+      if (block)
+      {
+        DrawBlock(m_cellSize / 2, block, output);
+      }
+      output.Print("</td></tr>");
+    }
+
+    output.Print("</table>");
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
   string GetDisplayHTML()
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
@@ -306,7 +424,7 @@ class TetrisGame
         int cell = GetCell(col, row);
         if (cell != 0)
         {
-          TrainzScript.Log("cell color " + (string)cell + " is " + GetHexString(cell));
+          // TrainzScript.Log("cell color " + (string)cell + " is " + GetHexString(cell));
           output.Print("<img src='easteregg/block.png' color=#" + GetHexString(cell) + " width=" + (string)m_cellSize + " height=" + (string)m_cellSize + ">");
         }
         else
@@ -331,7 +449,10 @@ class TetrisGame
 
     int w = m_cellSize * NUM_COLS;
     int h = m_cellSize * NUM_ROWS;
-    m_window.SetWindowPosition(Interface.GetDisplayWidth() / 2 - w / 2, Interface.GetDisplayHeight() / 2 - h / 2);
+
+    int windX = Interface.GetDisplayWidth() / 2 - w / 2;
+    int windY = Interface.GetDisplayHeight() / 2 - h / 2;
+    m_window.SetWindowPosition(windX, windY);
   	m_window.SetWindowSize(w, h);
     m_window.LoadHTMLString(m_asset, GetDisplayHTML());
     
@@ -339,6 +460,23 @@ class TetrisGame
     m_background.SetWindowSize(Interface.GetDisplayWidth(), Interface.GetDisplayHeight());
     m_background.LoadHTMLString(m_asset, GetBackgroundHTML());
 
+    m_scoreDisplay.SetWindowPosition(windX - 200, windY);
+    m_scoreDisplay.SetWindowSize(96, 32);
+    m_scoreDisplay.LoadHTMLString(m_asset, GetScoreHTML(96, 32, 18));
+
+    int holdSize = (m_cellSize / 2) * 4 + 16;
+    m_holdWindow.SetWindowPosition(windX - holdSize, windY);
+    m_holdWindow.SetWindowSize(holdSize, holdSize);
+    m_holdWindow.LoadHTMLString(m_asset, GetHoldHTML(holdSize, holdSize));
+
+    int queueWidth = (m_cellSize / 2) * 4 + 16;
+    m_queueWindow.SetWindowPosition(windX + w, windY);
+    m_queueWindow.SetWindowSize(queueWidth, queueWidth);
+    m_queueWindow.LoadHTMLString(m_asset, GetQueueHTML(queueWidth));
+    m_queueWindow.ResizeHeightToFit();
+
+    m_scoreDisplay.BringToFront();
+    m_holdWindow.BringToFront();
     m_window.BringToFront();
   }
 
@@ -351,7 +489,6 @@ class TetrisGame
   {
     if (!m_window or !m_bRunning)
     {
-      m_window = null;
       return false;
     }
 
@@ -371,12 +508,25 @@ class TetrisGame
   {
     World.SetCameraFlags(World.GetCameraFlags() & ~World.CAMERA_LOCKED);
     Interface.SetMapView(false);
+    m_window = null;
+    m_scoreDisplay = null;
+    m_background = null;
+
     m_bRunning = false;
   }
 
   void ChooseNewPiece()
   {
-    int piece = Math.Rand(0, 7);
+    m_timeSinceLastMove = 0;
+    m_fallTime = 0;
+
+    // Dequeue a piece.
+    int piece = m_queuedPieces[0];
+
+    int i;
+    for (i = 0; i < NUM_QUEUED - 1; i++)
+      m_queuedPieces[i] = m_queuedPieces[i + 1];
+    m_queuedPieces[NUM_QUEUED - 1] = Math.Rand(0, 7);
 
     m_curPiece = piece;
     m_curRotation = 0;
@@ -430,10 +580,11 @@ class TetrisGame
       // Drop it and attach it.
       DropPiece();
       AttachPiece();
-
-      m_timeSinceLastMove = 0;
-      m_fallTime = 0;
       ChooseNewPiece();
+    }
+    else if (m_bHold)
+    {
+      HoldPiece();
     }
 
     // Did our piece fall?
@@ -451,9 +602,6 @@ class TetrisGame
       if (m_timeSinceLastMove > 0.5)
       {
         AttachPiece();
-  
-        m_timeSinceLastMove = 0;
-        m_fallTime = 0;
         ChooseNewPiece();
       }
       else
@@ -788,6 +936,18 @@ class TetrisGame
     }
   }
 
+  void HoldPiece()
+  {
+    int tmp = m_curPiece;
+    m_curPiece = m_heldPiece;
+    m_heldPiece = tmp;
+
+    if (m_curPiece == -1)
+    {
+      ChooseNewPiece();
+    }
+  }
+
   // ============================================================================
   // Pieces
   // ============================================================================
@@ -883,7 +1043,7 @@ class TetrisGame
 
   CellBlock GetPiece(int piece, int rot)
   {
-    if (rot < 0 or rot > 3)
+    if (piece < 0 or piece > 6 or rot < 0 or rot > 3)
       return null;
     
     return m_pieceTable[piece * 4 + rot];
