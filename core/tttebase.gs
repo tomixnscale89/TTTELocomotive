@@ -15,6 +15,7 @@ include "facechartmenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
+include "easteregg.gs"
 
 // yuck
 include "tttelocomotive.gs"
@@ -170,6 +171,13 @@ class TTTEBase isclass TTTEHelpers
   // public define int BROWSER_CUSTOMMENU_0 = 9;
 
   CustomScriptMenu[] customMenus = new CustomScriptMenu[0];
+
+  TetrisGame easterEgg = new TetrisGame();
+
+  public void StartEasterEgg()
+  {
+    easterEgg.StartGame(TTTELocoLibrary.GetAsset());
+  }
 
   //Functions
   public Soup GetTTTELocomotiveSettings();

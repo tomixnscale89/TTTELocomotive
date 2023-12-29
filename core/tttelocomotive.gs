@@ -1962,7 +1962,6 @@ class tttelocomotive isclass TTTELocomotive
   public string[] kuidTable;
   string authorStr;
   string authorEmail;
-  public bool insideInit;
 
   void EvilDialogBox();
 

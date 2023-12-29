@@ -371,6 +371,8 @@ class LocoMenu isclass CustomScriptMenu
       {
         m_rotationMode = ROTATION_CGI;
       }
+
+      base.StartEasterEgg();
     }
 
     base.RefreshBrowser();
