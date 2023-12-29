@@ -63,25 +63,28 @@ class CellBlock
 
 class TetrisGame
 {
-  int m_uiScale = 1;
+  int m_uiScale = 2;
+  int m_cellSize;
   bool m_bRunning = false;
   float m_fallSpeed;
   float m_fallTime;
+  int m_score;
   Browser m_window;
+  Browser m_background;
   Asset m_asset;
 
   define int NUM_ROWS = 20;
   define int NUM_COLS = 10;
 
   define int COL_NUL = 0;
-  define int COL_RED = 0xFF0000FF;
-  define int COL_ORG = 0xFFA500FF;
-  define int COL_YLW = 0xFFFF00FF;
-  define int COL_GRN = 0x00FF00FF;
-  define int COL_BLU = 0x0000FFFF;
-  define int COL_CYN = 0x00FFFFFF;
-  define int COL_MGA = 0xFF00FFFF;
-  define int COL_WHT = 0xFFFFFFFF;
+  define int COL_RED = 0xFF0000;
+  define int COL_ORG = 0xFFA500;
+  define int COL_YLW = 0xFFFF00;
+  define int COL_GRN = 0x00FF00;
+  define int COL_BLU = 0x0000FF;
+  define int COL_CYN = 0x00FFFF;
+  define int COL_MGA = 0xFF00FF;
+  define int COL_WHT = 0xFFFFFF;
 
   define int PC_I = 0;
   define int PC_J = 1;
@@ -106,6 +109,8 @@ class TetrisGame
   int m_curX;
   int m_curY;
   int m_curRotation;
+  float m_timeSinceLastMove;
+  bool m_bIsPieceAboutToPlace;
   int[] m_cellGrid;
   
   int GetCell(int x, int y)
@@ -128,12 +133,25 @@ class TetrisGame
     m_cellGrid[y * NUM_COLS + x] = value;
   }
 
+  int DarkenColor(int color)
+  {
+    int r = (color >> 16) & 0xFF;
+    int g = (color >> 8) & 0xFF;
+    int b = color & 0xFF;
+
+    r = (int)(r * 0.5);
+    g = (int)(g * 0.5);
+    b = (int)(b * 0.5);
+
+    return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+  }
+
   string GetHexString(int x)
   {
-    string str = "00000000";
+    string str = "000000";
 
     int i;
-    for (i = 7; i >= 0; --i)
+    for (i = 5; i >= 0; --i)
     {
       int value = (x & 0xF);
       x = x >> 4;
@@ -161,6 +179,7 @@ class TetrisGame
     }
 
     return str;
+    // return str[0, 6];
   }
 
   void ResetKeyState()
@@ -175,18 +194,21 @@ class TetrisGame
   }
 
   public void StartGame(Asset asset);
+  string GetBackgroundHTML();
   string GetDisplayHTML();
   void UpdateDisplay();
-  thread void GameLoop();
+  public bool GameLoop();
+  void ChooseNewPiece();
   void GameThink(float dt);
+  void ScoreThink();
   void DetachPiece();
   void AttachPiece();
   bool CanFitPieceAt(int x, int y, int piece, int rot);
   bool MovePieceDown();
-  void MovePieceLeft();
-  void MovePieceRight();
-  void RotatePieceLeft();
-  void RotatePieceRight();
+  bool MovePieceLeft();
+  bool MovePieceRight();
+  bool RotatePieceLeft();
+  bool RotatePieceRight();
   void DropPiece();
   void InitPieceTable();
   CellBlock GetPiece(int piece, int rot);
@@ -198,60 +220,98 @@ class TetrisGame
   // Call this with the library asset.
   public void StartGame(Asset asset)
   {
+    m_cellGrid = new int[NUM_ROWS * NUM_COLS];
     ResetKeyState();
     InitPieceTable();
 
+    m_uiScale = 2;
+
     m_asset = asset;
+    m_background = Constructors.NewBrowser();
     m_window = Constructors.NewBrowser();
 
     // Reset all parameters.
-    m_fallSpeed = 2.0;
+    m_fallSpeed = 1.0;
     m_fallTime = 0.0;
+    m_timeSinceLastMove = 0.0;
+    m_bIsPieceAboutToPlace = false;
     m_curPiece = -1;
     m_curX = 0;
     m_curY = 0;
     m_curRotation = 0;
+    m_score = 0;
     m_bRunning = true;
-
+    
     UpdateDisplay();
     m_window.SetWindowVisible(true);
+    m_window.SetMovableByDraggingBackground(false);
+    m_window.SetWindowStyle(Browser.STYLE_POPOVER);
 
-    int w = 300;
-    int h = 500;
-    m_window.SetWindowPosition(Interface.GetDisplayWidth() - w / 2, Interface.GetDisplayHeight() - h / 2);
-  	m_window.SetWindowSize(w, h);
-    GameLoop();
+    m_background.SetWindowStyle(Browser.STYLE_NO_FRAME);
+    m_background.SetMovableByDraggingBackground(false);
+    m_background.SetWindowVisible(true);
+
+    ChooseNewPiece();
+
+    // Quiet things down.
+    Interface.SetMapView(true);
+    World.SetCameraFlags(World.GetCameraFlags() | World.CAMERA_LOCKED);
+
+    // GameLoop();
+  }
+
+  public void HandleKey(string key)
+  {
+    if (key == "select-up")
+      m_bRotateRight = true;
+    else if (key == "select-down")
+      m_bMoveDown = true;
+    else if (key == "select-left")
+      m_bMoveLeft = true;
+    else if (key == "select-right")
+      m_bMoveRight = true;
+    else if (key == "select-space")
+      m_bDrop = true;
   }
 
   // ============================================================================
   // Display functionality
   // ============================================================================
+  string GetBackgroundHTML()
+  {
+  	HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+    output.Print("<table><tr bgcolor=#000000 height=" + (string)Interface.GetDisplayHeight() + "><td width=" + (string)Interface.GetDisplayWidth() + "></td></tr></table>");
+  	output.Print("</body></html>");
+
+  	return output.AsString();
+  }
+
   string GetDisplayHTML()
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
 
-    int cellSize = 64;
-
     // Hold box.
 
     // Game canvas.
-    output.Print("<table>");
+    output.Print("<table cellpadding=0 cellspacing=0>");
     int row, col;
     for (row = 0; row < NUM_ROWS; row++)
     {
-      output.Print("<tr>");
+      output.Print("<tr height=" + (string)m_cellSize + ">");
       for (col = 0; col < NUM_COLS; col++)
       {
-        output.Print("<td>");
+        output.Print("<td width=" + (string)m_cellSize + ">");
         int cell = GetCell(col, row);
         if (cell != 0)
         {
-          output.Print("<img src='easteregg/block.png' color=#" + GetHexString(cell) + " width=" + (string)cellSize + " height=" + (string)cellSize + ">");
+          TrainzScript.Log("cell color " + (string)cell + " is " + GetHexString(cell));
+          output.Print("<img src='easteregg/block.png' color=#" + GetHexString(cell) + " width=" + (string)m_cellSize + " height=" + (string)m_cellSize + ">");
         }
         else
         {
-          output.Print("<img src='easteregg/slot.png' width=" + (string)cellSize + " height=" + (string)cellSize + ">");
+          output.Print("<img src='easteregg/slot.png' width=" + (string)m_cellSize + " height=" + (string)m_cellSize + ">");
         }
         output.Print("</td>");
       }
@@ -267,7 +327,19 @@ class TetrisGame
 
   void UpdateDisplay()
   {
+    m_cellSize = 24 * m_uiScale;
+
+    int w = m_cellSize * NUM_COLS;
+    int h = m_cellSize * NUM_ROWS;
+    m_window.SetWindowPosition(Interface.GetDisplayWidth() / 2 - w / 2, Interface.GetDisplayHeight() / 2 - h / 2);
+  	m_window.SetWindowSize(w, h);
     m_window.LoadHTMLString(m_asset, GetDisplayHTML());
+    
+    m_background.SetWindowPosition(0, 0);
+    m_background.SetWindowSize(Interface.GetDisplayWidth(), Interface.GetDisplayHeight());
+    m_background.LoadHTMLString(m_asset, GetBackgroundHTML());
+
+    m_window.BringToFront();
   }
 
   
@@ -275,21 +347,30 @@ class TetrisGame
   // Game functionality
   // ============================================================================
 
-  thread void GameLoop()
+  public bool GameLoop()
   {
+    if (!m_window or !m_bRunning)
+    {
+      m_window = null;
+      return false;
+    }
+
     float timestep = 0.05;
-    while (m_window and m_bRunning)
+    // while (m_window and m_bRunning)
     {
       GameThink(timestep);
       ResetKeyState();
       UpdateDisplay();
       Router.GetCurrentThreadGameObject().Sleep(timestep);
     }
-    m_window = null;
+    // m_window = null;
+    return true;
   }
 
   void GameOver()
   {
+    World.SetCameraFlags(World.GetCameraFlags() & ~World.CAMERA_LOCKED);
+    Interface.SetMapView(false);
     m_bRunning = false;
   }
 
@@ -315,39 +396,124 @@ class TetrisGame
     // At the beginning of the frame, always detach the piece from the board.
     DetachPiece();
 
+    m_bIsPieceAboutToPlace = false;
+
+    m_timeSinceLastMove = m_timeSinceLastMove + dt;
     // Process input.
     if (m_bRotateLeft)
-      RotatePieceLeft();
+    {
+      if (RotatePieceLeft())
+        m_timeSinceLastMove = 0;
+    }
     else if (m_bRotateRight)
-      RotatePieceRight();
+    {
+      if (RotatePieceRight())
+        m_timeSinceLastMove = 0;
+    }
     else if (m_bMoveLeft)
-      MovePieceLeft();
+    {
+      if (MovePieceLeft())
+        m_timeSinceLastMove = 0;
+    }
     else if (m_bMoveRight)
-      MovePieceRight();
+    {
+      if (MovePieceRight())
+        m_timeSinceLastMove = 0;
+    }
     else if (m_bMoveDown)
-      MovePieceDown();
+    {
+      if (MovePieceDown())
+        m_timeSinceLastMove = 0;
+    }
     else if (m_bDrop)
+    {
+      // Drop it and attach it.
       DropPiece();
+      AttachPiece();
+
+      m_timeSinceLastMove = 0;
+      m_fallTime = 0;
+      ChooseNewPiece();
+    }
 
     // Did our piece fall?
-    bool movedDown = false;
     m_fallTime = m_fallTime + dt;
     while (m_fallTime > m_fallSpeed)
     {
-      if (!MovePieceDown())
+      m_fallTime = m_fallTime - m_fallSpeed;
+      MovePieceDown();
+      m_timeSinceLastMove = 0;
+    }
+
+    // Place the block if we can't move down anymore.
+    if (!CanFitPieceAt(m_curX, m_curY + 1, m_curPiece, m_curRotation))
+    {
+      if (m_timeSinceLastMove > 0.5)
       {
-        // Failed to move down. Place the block.
         AttachPiece();
+  
+        m_timeSinceLastMove = 0;
+        m_fallTime = 0;
         ChooseNewPiece();
       }
-      movedDown = true;
-      m_fallTime = m_fallTime - m_fallSpeed;
+      else
+      {
+        m_bIsPieceAboutToPlace = true;
+      }
     }
-    
-    // Reattach the piece to the display at the end of the frame.
-    AttachPiece();
 
     // Clear any full lines and add up the score!
+    ScoreThink();
+
+    // Reattach the current piece to the display at the end of the frame.
+    AttachPiece();
+  }
+
+  void CollapseRowsAbove(int n)
+  {
+    // Shift rows above n downward, in place.
+    int row;
+    int col;
+    for (row = n; row >= 0; --row)
+    {
+      for (col = 0; col < NUM_COLS; col++)
+      {
+        SetCell(col, row, GetCell(col, row - 1));
+      }
+    }
+  }
+
+  void ScoreThink()
+  {
+    int numCollapsed = 0;
+
+    // Clear any filled rows.
+    int row;
+    int col;
+    for (row = NUM_ROWS - 1; row >= 0;)
+    {
+      bool filled = true;
+      for (col = 0; col < NUM_COLS; col++)
+      {
+        if (!GetCell(col, row))
+        {
+          filled = false;
+          break;
+        }
+      }
+
+      if (filled)
+      {
+        CollapseRowsAbove(row);
+        numCollapsed++;
+      }
+      else
+      {
+        --row;
+      }
+    }
+
+    m_score = m_score + numCollapsed * 100;
   }
 
   // ============================================================================
@@ -372,13 +538,19 @@ class TetrisGame
   {
     CellBlock piece = GetPiece(m_curPiece, m_curRotation);
 
+    int color = piece.GetColor();
+    if (m_bIsPieceAboutToPlace)
+    {
+      color = DarkenColor(color);
+    }
+
     int local_x, local_y;
     for (local_y = 0; local_y < piece.GetHeight(); local_y++)
     {
       for (local_x = 0; local_x < piece.GetWidth(); local_x++)
       {
         if (piece.Get(local_x, local_y))
-          SetCell(m_curX + local_x, m_curY + local_y, piece.GetColor());
+          SetCell(m_curX + local_x, m_curY + local_y, color);
       }
     }
   }
@@ -580,38 +752,38 @@ class TetrisGame
 
   bool MovePieceDown()
   {
-    return CheckPiece(m_curRotation, 0, 1);
+    return CheckPiece(m_curRotation, 0, -1);
   }
 
-  void MovePieceLeft()
+  bool MovePieceLeft()
   {
-    CheckPiece(m_curRotation, -1, 0);
+    return CheckPiece(m_curRotation, -1, 0);
   }
 
-  void MovePieceRight()
+  bool MovePieceRight()
   {
-    CheckPiece(m_curRotation, 1, 0);
+    return CheckPiece(m_curRotation, 1, 0);
   }
 
-  void RotatePieceLeft()
+  bool RotatePieceLeft()
   {
     int rot = m_curRotation - 1;
     if (rot < 0) rot = 3;
-    SetPieceRotation(rot);
+    return SetPieceRotation(rot);
   }
 
-  void RotatePieceRight()
+  bool RotatePieceRight()
   {
     int rot = m_curRotation + 1;
     if (rot > 3) rot = 0;
-    SetPieceRotation(rot);
+    return SetPieceRotation(rot);
   }
 
   void DropPiece()
   {
     while (true)
     {
-      if (!CheckPiece(m_curRotation, 0, 1))
+      if (!CheckPiece(m_curRotation, 0, -1))
         break;
     }
   }

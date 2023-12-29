@@ -172,11 +172,32 @@ class TTTEBase isclass TTTEHelpers
 
   CustomScriptMenu[] customMenus = new CustomScriptMenu[0];
 
+  bool easterEggRunning = false;
   TetrisGame easterEgg = new TetrisGame();
 
-  public void StartEasterEgg()
+  public thread void StartEasterEgg()
   {
+    if (easterEggRunning)
+      return;
+    
+    easterEggRunning = true;
     easterEgg.StartGame(TTTELocoLibrary.GetAsset());
+
+    while (true)
+    {
+      if (!easterEgg.GameLoop())
+        break;
+    }
+    easterEggRunning = false;
+  }
+
+  // Selection menu handler.
+  public void HandleSelect(Message msg)
+  {
+    if (!easterEggRunning)
+      return;
+    
+    easterEgg.HandleKey(msg.minor);
   }
 
   //Functions
