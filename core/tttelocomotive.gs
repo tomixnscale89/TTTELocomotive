@@ -112,6 +112,9 @@ include "tttewagon.gs"
 
 class TTTELocomotive isclass Locomotive, TTTEBase
 {
+  bool initSuccessful = false;
+  bool inLegacyInit = false;
+
   // ****************************************************************************/
   // Define Functions
   // ****************************************************************************/
@@ -202,8 +205,11 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   // ============================================================================
   public void Init(Asset asset) // Let's keep the init at the top for ease of access
   {
-    // call the parent
-    inherited(asset);
+    // For legacy tttestub compat, we now call inherited at the end.
+    // In the meantime, set m_trainzAsset, so calls to GetAsset still work.
+    m_trainzAsset = asset;
+    // inherited(asset);
+
     self = me;
     BaseInit(asset);
     
@@ -422,6 +428,12 @@ class TTTELocomotive isclass Locomotive, TTTEBase
       OnlineEyeThread();
     }
 
+    // Finally, call the parent.
+    inLegacyInit = true;
+    inherited(asset);
+    inLegacyInit = false;
+
+    initSuccessful = true;
   }
 
   public void ModuleInitHandler(Message msg)
@@ -1942,16 +1954,15 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   }
 };
 
-// TODO: implement this?
+//Legacy tttestub compat
 // Moral of the story: never let brendan write user-facing code again kek
-/*
-class GlueAsset
+class tttelocomotive isclass TTTELocomotive
 {
-  public TrainzGameObject caller;
   public Asset baseAsset;
   public string[] kuidTable;
   string authorStr;
   string authorEmail;
+  public bool insideInit;
 
   void EvilDialogBox();
 
@@ -1984,7 +1995,7 @@ class GlueAsset
     }
   }
   
-  public Asset FindAsset(string asset)
+  public bool HasAsset(string asset)
   {
     string lowerAsset = Str.CloneString(asset);
     Str.ToLower(lowerAsset);
@@ -1993,13 +2004,10 @@ class GlueAsset
     for (i = 0; i < kuidTable.size(); i++)
     {
       if (kuidTable[i] == lowerAsset)
-        return baseAsset.FindAsset(asset);
+        return true;
     }
-    
-    // don't call that function, it throws an exception in 19 SP2? onward.
-    EvilDialogBox();
 
-    return null;
+    return false;
   }
 
   void EvilDialogBox()
@@ -2008,13 +2016,14 @@ class GlueAsset
     string dontShowAgainStr = "";
     if (!isThisMine)
     {
+      // Always pester the content creator.
       dontShowAgainStr = "ttteloco-evil-" + baseAsset.GetLocalisedName();
     }
     
     string authorName = baseAsset.GetCreatorName();
     if (authorStr)
     {
-      authorName = authorName + ", a.k.a. " + authorStr;
+      authorName = authorName + " (a.k.a. " + authorStr + ")";
     }
     if (authorEmail and !isThisMine)
     {
@@ -2024,49 +2033,67 @@ class GlueAsset
     string kHelpMessage;
     if (isThisMine)
     {
-      kHelpMessage = "Hey you! " + authorName + "! Yeah you!\n" +
-      "According to my amazing powers of deduction, this asset (" + baseAsset.GetLocalisedName() + ") belongs to you!\n" +
+      kHelpMessage = "Hey you! " + authorName + "! Yeah, you!\n" +
+      "According to my amazing powers of deduction, this asset, " + baseAsset.GetLocalisedName() + ", belongs to you!\n" +
       "You've screwed up big time, so listen up!\n" +
       "This TTTELocomotive asset has been configured improperly. But fret not, the solution is easy!\n" +
       "In the asset files, you've used a tttestub.gs that's only supposed to be used for specific locomotives (those with custom driver/fireman attachments).\n" +
       "Please use the tttestub.gs available here:\n" +
       "https://github.com/tomixnscale89/TTTELocomotive/blob/master/tttestub.gs\n\n" +
       "We're gonna be removing this dialog box soon, so if you see this message box please fix this ASAP!!\n" +
-      "Thanks!\n\t-The TTTELocomotive Team";
-      ;
+      "If you don't, this asset will become faulty one day!\n" +
+      "Thanks!\n    -The TTTELocomotive Team";
     }
     else
     {
-      kHelpMessage = "Hey you! Yeah you!\n" +
-      "This asset  (" + baseAsset.GetLocalisedName() + ") has been configured improperly!\n" +
-      "Please let the content author, \"" + authorName + "\" know!\n\n" +
+      kHelpMessage = "Hey you! Yeah, you!\n" +
+      "This asset, " + baseAsset.GetLocalisedName() + ", has been configured improperly!\n" +
+      "Please redownload this locomotive from wherever you got it!\n" +
+      "If it's still broken, please let the content author, " + authorName + " know:\n\n" +
       "In the asset files, they've used a tttestub.gs that's only supposed to be used for specific locomotives (those with custom driver/fireman attachments).\n" +
       "Please tell them to use the tttestub.gs available here:\n" +
       "https://github.com/tomixnscale89/TTTELocomotive/blob/master/tttestub.gs\n\n" +
-      "We're gonna be removing this dialog box soon, so if you see this message box please tell the content cerator to fix this ASAP!!\n" +
-      "Thanks!\n\t-The TTTELocomotive Team";
-      ;
+      "We're gonna be removing this dialog box soon, so if you see this message box please tell the content creator to fix this ASAP!!\n" +
+      "If they don't, this asset will become faulty one day!\n" +
+      "Thanks!\n\n    -The TTTELocomotive Team";
     }
 
     bool isError = isThisMine;
 
-    Interface.ShowMessageBox(caller, kHelpMessage, isError, "Got it!", "Cancel", dontShowAgainStr);
+    Interface.ShowMessageBox(me, kHelpMessage, isError, "Got it!", "Cancel", dontShowAgainStr);
   }
-};
-*/
 
-//Legacy tttestub compat
-class tttelocomotive isclass TTTELocomotive
-{
-  /*
+  thread void SurvivedInit()
+  {
+  }
+
+  public void Init(Asset asset)
+  {
+    // Install the watchdog.
+    baseAsset = asset;
+    InitTable();
+    
+    inherited(asset);
+  }
+
+  public void Init()
+	{
+		inherited();
+
+    // If tttestub is bugged, we will die right after this call ends.
+    // Queue up a thread to check if we survived.
+    SurvivedInit();
+	}
+
   public Asset GetAsset()
   {
-    GlueAsset asset = new GlueAsset();
-    asset.caller = me;
-    asset.baseAsset = self.GetAsset();
+    // If we're calling GetAsset from a legacy tttestub's Init function, we're about to crash and burn.
+    if (inLegacyInit)
+    {
+      if (!HasAsset("driver") or !HasAsset("fireman"))
+        EvilDialogBox();
+    }
 
-    asset.InitTable();
-    return asset;
+    return inherited();
   }
-  */
 };
