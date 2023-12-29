@@ -290,16 +290,20 @@ class TetrisGame
 
   public void HandleKey(string key)
   {
-    if (key == "select-up")
+    if (key == "rotate-left")
+      m_bRotateLeft = true;
+    else if (key == "rotate-right")
       m_bRotateRight = true;
-    else if (key == "select-down")
+    else if (key == "move-down")
       m_bMoveDown = true;
-    else if (key == "select-left")
+    else if (key == "move-left")
       m_bMoveLeft = true;
-    else if (key == "select-right")
+    else if (key == "move-right")
       m_bMoveRight = true;
-    else if (key == "select-space")
+    else if (key == "drop")
       m_bDrop = true;
+    else if (key == "hold")
+      m_bHold = true;
   }
 
   // ============================================================================
@@ -367,10 +371,14 @@ class TetrisGame
     HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
 
+    output.Print("<table cellpadding=8>");
+    output.Print("<tr align='center' valign='center' height=" + (string)height + "><td width=" + (string)width + " bgcolor=#131D4F>");
     if (block)
     {
       DrawBlock(m_cellSize / 2, block, output);
     }
+    output.Print("</td></tr>");
+    output.Print("</table>");
 
   	output.Print("</body></html>");
 
@@ -383,14 +391,14 @@ class TetrisGame
 
     HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
-    output.Print("<table>");
+    output.Print("<table cellpadding=8 cellspacing=8>");
 
     int i;
     for (i = 0; i < NUM_QUEUED; i++)
     {
       int blockSize = (m_cellSize / 2) * 4 + 16;
       
-      output.Print("<tr height=" + (string)blockSize + "><td width=" + (string)blockSize + ">");
+      output.Print("<tr align='center' valign='center' height=" + (string)blockSize + "><td width=" + (string)blockSize + " bgcolor=#131D4F>");
       CellBlock block = GetPiece(m_queuedPieces[i], 0);
       if (block)
       {
@@ -456,27 +464,31 @@ class TetrisGame
   	m_window.SetWindowSize(w, h);
     m_window.LoadHTMLString(m_asset, GetDisplayHTML());
     
+    int margin = 32;
+
     m_background.SetWindowPosition(0, 0);
     m_background.SetWindowSize(Interface.GetDisplayWidth(), Interface.GetDisplayHeight());
     m_background.LoadHTMLString(m_asset, GetBackgroundHTML());
 
-    m_scoreDisplay.SetWindowPosition(windX - 200, windY);
-    m_scoreDisplay.SetWindowSize(96, 32);
-    m_scoreDisplay.LoadHTMLString(m_asset, GetScoreHTML(96, 32, 18));
-
     int holdSize = (m_cellSize / 2) * 4 + 16;
-    m_holdWindow.SetWindowPosition(windX - holdSize, windY);
+    int holdX = windX - holdSize - margin;
+    m_holdWindow.SetWindowPosition(holdX, windY);
     m_holdWindow.SetWindowSize(holdSize, holdSize);
     m_holdWindow.LoadHTMLString(m_asset, GetHoldHTML(holdSize, holdSize));
 
+    m_scoreDisplay.SetWindowPosition(holdX - 128 - margin, windY);
+    m_scoreDisplay.SetWindowSize(128, 32);
+    m_scoreDisplay.LoadHTMLString(m_asset, GetScoreHTML(128, 32, 18));
+
     int queueWidth = (m_cellSize / 2) * 4 + 16;
-    m_queueWindow.SetWindowPosition(windX + w, windY);
+    m_queueWindow.SetWindowPosition(windX + w + margin, windY);
     m_queueWindow.SetWindowSize(queueWidth, queueWidth);
     m_queueWindow.LoadHTMLString(m_asset, GetQueueHTML(queueWidth));
     m_queueWindow.ResizeHeightToFit();
 
     m_scoreDisplay.BringToFront();
     m_holdWindow.BringToFront();
+    m_queueWindow.BringToFront();
     m_window.BringToFront();
   }
 
@@ -945,6 +957,21 @@ class TetrisGame
     if (m_curPiece == -1)
     {
       ChooseNewPiece();
+    }
+    else
+    {
+      m_timeSinceLastMove = 0;
+      m_fallTime = 0;
+      m_curRotation = 0;
+  
+      CellBlock block = GetPiece(m_curPiece, 0);
+      m_curX = (NUM_COLS / 2) - (block.GetWidth() / 2);
+      m_curY = -1;
+  
+      if (!CanFitPieceAt(m_curX, m_curY, m_curPiece, m_curRotation))
+      {
+        GameOver();
+      }
     }
   }
 

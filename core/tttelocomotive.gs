@@ -351,11 +351,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
     AddHandler(me, "Interface", "LayoutChanged", "UpdateInterfacePositionHandler");
 
     // Easter egg.
-    AddHandler(me, "ControlSet", "select-up", "HandleSelect");
-    AddHandler(me, "ControlSet", "select-down", "HandleSelect");
-    AddHandler(me, "ControlSet", "select-left", "HandleSelect");
-    AddHandler(me, "ControlSet", "select-right", "HandleSelect");
-    AddHandler(me, "ControlSet", "select-space", "HandleSelect");
+    AddHandler(me, "ControlSet", "", "HandleSelect");
 
     //Multiplayer Message! Important!
     AddHandler(me, "TTTELocomotiveMP", "update", "MPUpdate");
