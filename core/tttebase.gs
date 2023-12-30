@@ -172,6 +172,15 @@ class TTTEBase isclass TTTEHelpers
 
   CustomScriptMenu[] customMenus = new CustomScriptMenu[0];
 
+  //Functions
+  public Soup GetTTTELocomotiveSettings();
+  public TTTEOnline GetOnlineLibrary();
+  int GetTTTETrainIndex();
+  int GetTTTETrainSize();
+
+  public CustomScriptMenu[] GetCustomMenus();
+
+  // Easter egg
   bool easterEggRunning = false;
   TetrisGame easterEgg = new TetrisGame();
 
@@ -181,7 +190,20 @@ class TTTEBase isclass TTTEHelpers
       return;
     
     easterEggRunning = true;
-    easterEgg.StartGame(TTTELocoLibrary.GetAsset());
+
+    OnlineGroup leaderboard = null;
+    if (GetOnlineLibrary())
+    {
+      leaderboard = GetOnlineLibrary().GetEasterEggGroup();
+    }
+
+    easterEgg.StartGame(TTTELocoLibrary.GetAsset(), leaderboard);
+
+    if (leaderboard)
+    {  
+      self.AddHandler(leaderboard, "OnlineGroup", "UsersChange", "LeaderboardChangeHandler");
+      self.AddHandler(leaderboard, "OnlineGroup", "ReceiveMessage", "LeaderboardUpdateHandler");
+    }
 
     while (true)
     {
@@ -200,13 +222,21 @@ class TTTEBase isclass TTTEHelpers
     easterEgg.HandleKey(msg.minor);
   }
 
-  //Functions
-  public Soup GetTTTELocomotiveSettings();
-  public TTTEOnline GetOnlineLibrary();
-  int GetTTTETrainIndex();
-  int GetTTTETrainSize();
+  public void LeaderboardChangeHandler(Message msg)
+  {
+    if (!easterEggRunning)
+      return;
 
-  public CustomScriptMenu[] GetCustomMenus();
+    easterEgg.UpdateLeaderboardUsers();
+  }
+
+  public void LeaderboardUpdateHandler(Message msg)
+  {
+    if (!easterEggRunning)
+      return;
+
+    easterEgg.UpdateLeaderboard();
+  }
 
   // ============================================================================
   // Name: HeadcodeDescription()
