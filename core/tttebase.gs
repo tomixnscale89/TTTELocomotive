@@ -227,7 +227,7 @@ class TTTEBase isclass TTTEHelpers
     if (!easterEggRunning)
       return;
 
-    easterEgg.UpdateLeaderboardUsers();
+    // easterEgg.UpdateLeaderboardUsers();
   }
 
   public void LeaderboardUpdateHandler(Message msg)

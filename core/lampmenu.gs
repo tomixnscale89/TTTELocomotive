@@ -3,14 +3,18 @@ include "tttemenu.gs"
 
 class LampMenu isclass CustomScriptMenu
 {
+  int easterCounter = 0;
+
   public bool IsCore() { return true; }
-  
+
+
   public string GetMenuHTML()
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
     //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
+    output.Print("<a href='live://easter_egg'>"); // Easter egg link
     output.Print("<table>");
       output.Print("<tr>");
         output.Print("<td></td>");
@@ -85,6 +89,7 @@ class LampMenu isclass CustomScriptMenu
         output.Print("</td>");
       output.Print("</tr>");
     output.Print("</table>");
+    output.Print("</a>"); // Easter egg link
 
     if(base.ExtraLampsContainer and base.ExtraLampsContainer.CountTags())
     {
@@ -155,6 +160,15 @@ class LampMenu isclass CustomScriptMenu
       {
         base.m_headCode = base.m_headCode ^ TTTEBase.HEADCODE_BR;
         base.ConfigureHeadcodeLamps();
+      }
+    }
+    else if(cmd == "live://easter_egg")
+    {
+      easterCounter++;
+      if (easterCounter >= 5)
+      {
+        easterCounter = 0;
+        base.StartEasterEgg();
       }
     }
     else if(TrainUtil.HasPrefix(cmd, "live://extra-lamps/"))

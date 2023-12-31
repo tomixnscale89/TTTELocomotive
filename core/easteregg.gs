@@ -83,7 +83,7 @@ class TetrisGame
   Browser m_leaderboardWindow;
   Asset m_asset;
   OnlineGroup m_leaderboardGroup;
-  string[] m_leaderboardPlayers;
+  // string[] m_leaderboardPlayers;
   Soup m_leaderboardScores;
 
   define int NUM_ROWS = 20;
@@ -116,6 +116,7 @@ class TetrisGame
   bool m_bMoveDown;     // DownArrow
   bool m_bDrop;         // Space
   bool m_bHold;         // C
+  bool m_bCanHold;
 
   // Current piece type.
   int m_curPiece;
@@ -213,7 +214,7 @@ class TetrisGame
   string GetBackgroundHTML();
   string GetDisplayHTML();
   void UpdateDisplay();
-  public void UpdateLeaderboardUsers();
+  // public void UpdateLeaderboardUsers();
   public void UpdateLeaderboard();
   public bool GameLoop();
   void ChooseNewPiece();
@@ -239,6 +240,8 @@ class TetrisGame
   // Call this with the library asset.
   public void StartGame(Asset asset, OnlineGroup leaderboard)
   {
+    TrainzScript.Log("Start game");
+
     m_cellGrid = new int[NUM_ROWS * NUM_COLS];
     ResetKeyState();
     InitPieceTable();
@@ -264,6 +267,7 @@ class TetrisGame
     m_curY = 0;
     m_curRotation = 0;
     m_overlaySize = 1.0;
+    m_bCanHold = true;
 
     int i;
     for (i = 0; i < NUM_QUEUED; i++)
@@ -306,10 +310,10 @@ class TetrisGame
     World.SetCameraFlags(World.GetCameraFlags() | World.CAMERA_LOCKED);
 
 
-    m_leaderboardPlayers = new string[0];
+    // m_leaderboardPlayers = new string[0];
     m_leaderboardScores = Constructors.NewSoup();
     m_leaderboardGroup = leaderboard;
-    UpdateLeaderboardUsers();
+    // UpdateLeaderboardUsers();
     UpdateLeaderboard();
 
     if (m_leaderboardGroup)
@@ -516,15 +520,58 @@ class TetrisGame
     output.Print("<table cellspacing=2 width=" + (string)width + ">");
     output.Print("<tr height=32><td>Leaderboard</td><td>Score</td></tr>");
 
-    if (m_leaderboardPlayers.size())
+    // if (m_leaderboardPlayers.size())
     {
       int i;
-  
-      for (i = 0; i < m_leaderboardPlayers.size(); i++)
+      int j;
+
+      string[] names = new string[m_leaderboardScores.CountTags()];
+      int[] scores = new int[m_leaderboardScores.CountTags()];
+      for (i = 0; i < m_leaderboardScores.CountTags(); i++)
       {
-        output.Print("<tr height=32>");
-        output.Print("<td>" + m_leaderboardPlayers[i] + "</td>");
-        output.Print("<td>" + (string)m_leaderboardScores.GetNamedTagAsInt(m_leaderboardPlayers[i], 0) + "</td>");
+        names[i] = m_leaderboardScores.GetIndexedTagName(i);
+        scores[i] = m_leaderboardScores.GetNamedTagAsInt(names[i], 0);
+      }
+
+      names[names.size()] = World.GetLocalPlayerName();
+      scores[scores.size()] = m_score;
+
+      // Bubble sort scores and names.
+      bool swap = false;
+      for (i = 0; i < scores.size() - 1; i++)
+      {
+        swap = false;
+        for (j = 0; j < scores.size() - i - 1; j++)
+        {
+          if (scores[j] < scores[j + 1])
+          {
+            string tmpName = names[j];
+            int tmpScore = scores[j];
+            names[j] = names[j + 1];
+            scores[j] = scores[j + 1];
+            names[j + 1] = tmpName;
+            scores[j + 1] = tmpScore;
+            swap = true;
+          }
+        }
+        
+        if (!swap)
+          break;
+      }
+      
+      bool rowParity = false;
+      for (i = 0; i < scores.size(); i++)
+      {
+        rowParity = !rowParity;
+        string rowcolor;
+        if (rowParity)
+          rowcolor = "#0E2A35";
+        else
+          rowcolor = "#05171E";
+
+        output.Print("<tr height=24 bgcolor=" + rowcolor + ">");
+        output.Print("<td>" + names[i] + "</td>");
+        output.Print("<td>" + (string)scores[i] + "</td>");
         output.Print("</tr>");
       }
     }
@@ -609,28 +656,32 @@ class TetrisGame
 
   public OnlineGroup GetLeaderboardGroup() { return m_leaderboardGroup; }
 
-  public void UpdateLeaderboardUsers()
-  {
-    if (!m_leaderboardGroup)
-      return;
+  // public void UpdateLeaderboardUsers()
+  // {
+  //   if (!m_leaderboardGroup)
+  //     return;
     
-    // Update the users list.
-    m_leaderboardPlayers = new string[0];
+  //   // Update the users list.
+  //   m_leaderboardPlayers = new string[0];
 
-    int i;
-    for (i = 0; i < m_leaderboardGroup.CountUsers(); i++)
-    {
-      m_leaderboardPlayers[m_leaderboardPlayers.size()] = m_leaderboardGroup.GetIndexedUser(i);
-    }
-  }
+  //   TrainzScript.Log((string)m_leaderboardGroup.CountUsers() + " leaderboard users!");
+  //   int i;
+  //   for (i = 0; i < m_leaderboardGroup.CountUsers(); i++)
+  //   {
+  //     TrainzScript.Log(m_leaderboardGroup.GetIndexedUser(i));
+  //     m_leaderboardPlayers[m_leaderboardPlayers.size()] = m_leaderboardGroup.GetIndexedUser(i);
+  //   }
+  // }
 
   bool CollectLeaderboardMessage()
   {
     string sourceUser = "";
     Soup data = Constructors.NewSoup();
     int result = m_leaderboardGroup.CollectMessage(sourceUser, data);
-    if (result != OnlineAccess.RESULT_OK)
+    if (result != OnlineAccess.RESULT_OK or sourceUser == "")
       return false;
+
+    TrainzScript.Log("Received leaderboard message from " + sourceUser + ", score=" + (string)data.GetNamedTagAsInt("score", -1));
     
     m_leaderboardScores.SetNamedTag(sourceUser, data.GetNamedTagAsInt("score", 0));
     return true;
@@ -641,7 +692,8 @@ class TetrisGame
     if (!m_leaderboardGroup)
       return;
 
-      while (true)
+      int nMessagesReceived = 100;
+      while (--nMessagesReceived)
       {
         if (!CollectLeaderboardMessage())
           break;
@@ -679,6 +731,9 @@ class TetrisGame
       if (!m_bRunning)
         return false;
 
+      // UpdateLeaderboardUsers();
+      UpdateLeaderboard();
+
       ResetKeyState();
       UpdateDisplay();
       Router.GetCurrentThreadGameObject().Sleep(timestep);
@@ -708,6 +763,7 @@ class TetrisGame
   {
     m_timeSinceLastMove = 0;
     m_fallTime = 0;
+    m_bCanHold = true;
 
     // Dequeue a piece.
     int piece = m_queuedPieces[0];
@@ -736,13 +792,14 @@ class TetrisGame
     m_nextLevelScore = m_nextLevelScore + 2000;
 
     
-    if (m_fallSpeed > 0.2)
+    if (m_fallSpeed > 0.25)
     {
       m_fallSpeed = m_fallSpeed - 0.2;
     }
     else
     {
       // Get progressively more impossible after level 5.
+
       m_fallSpeed = m_fallSpeed * 0.5;
     }
 
@@ -801,9 +858,10 @@ class TetrisGame
       if (!m_bRunning)
         return;
     }
-    else if (m_bHold)
+    else if (m_bHold and m_bCanHold)
     {
       HoldPiece();
+      m_bCanHold = false;
 
       // If we lost, early out.
       if (!m_bRunning)
@@ -1157,7 +1215,9 @@ class TetrisGame
 
   void DropPiece()
   {
-    while (true)
+    // Prevent infinite loop.
+    int nDrop = NUM_ROWS;
+    while (nDrop--)
     {
       if (!CheckPiece(m_curRotation, 0, -1))
         break;
