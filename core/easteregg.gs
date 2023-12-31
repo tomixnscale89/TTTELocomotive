@@ -63,7 +63,7 @@ class CellBlock
   public int GetColor() { return m_color; }
 };
 
-class TetrisGame
+class TetrisGame isclass GameObject
 {
   int m_uiScale = 2;
   int m_cellSize;
@@ -210,13 +210,14 @@ class TetrisGame
     m_bHold = false;
   }
 
-  public void StartGame(Asset asset, OnlineGroup leaderboard);
+  public void StartGame(Asset asset, GameObject parent, OnlineGroup leaderboard);
+  void HandleKey(string key);
   string GetBackgroundHTML();
   string GetDisplayHTML();
   void UpdateDisplay();
   // public void UpdateLeaderboardUsers();
   public void UpdateLeaderboard();
-  public bool GameLoop();
+  thread void GameLoop();
   void ChooseNewPiece();
   void GameThink(float dt);
   void ScoreThink();
@@ -238,7 +239,7 @@ class TetrisGame
   // ============================================================================
 
   // Call this with the library asset.
-  public void StartGame(Asset asset, OnlineGroup leaderboard)
+  public void StartGame(Asset asset, GameObject parent, OnlineGroup leaderboard)
   {
     TrainzScript.Log("Start game");
 
@@ -324,10 +325,44 @@ class TetrisGame
       m_leaderboardWindow.SetWindowVisible(true);
     }
 
-    // GameLoop();
+    // Handlers
+    AddHandler(parent, "ControlSet", "", "HandleSelect");
+
+    if (m_leaderboardGroup)
+    {  
+      AddHandler(m_leaderboardGroup, "OnlineGroup", "UsersChange", "LeaderboardChangeHandler");
+      AddHandler(m_leaderboardGroup, "OnlineGroup", "ReceiveMessage", "LeaderboardUpdateHandler");
+    }
+
+    GameLoop();
   }
 
-  public void HandleKey(string key)
+  // Selection menu handler.
+  void HandleSelect(Message msg)
+  {
+    if (!m_bRunning)
+      return;
+    
+    HandleKey(msg.minor);
+  }
+
+  void LeaderboardChangeHandler(Message msg)
+  {
+    if (!m_bRunning)
+      return;
+
+    // UpdateLeaderboardUsers();
+  }
+
+  void LeaderboardUpdateHandler(Message msg)
+  {
+    if (!m_bRunning)
+      return;
+
+    UpdateLeaderboard();
+  }
+
+  void HandleKey(string key)
   {
     if (key == "rotate-left")
       m_bRotateLeft = true;
@@ -715,31 +750,30 @@ class TetrisGame
   // Game functionality
   // ============================================================================
 
-  public bool GameLoop()
+  thread void GameLoop()
   {
     if (!m_window or !m_bRunning)
     {
-      return false;
+      return;
     }
 
     float timestep = 0.05;
-    // while (m_window and m_bRunning)
+    while (m_window and m_bRunning)
     {
       GameThink(timestep);
 
       // If we lost, early out.
       if (!m_bRunning)
-        return false;
+        return;
 
       // UpdateLeaderboardUsers();
       UpdateLeaderboard();
 
       ResetKeyState();
       UpdateDisplay();
-      Router.GetCurrentThreadGameObject().Sleep(timestep);
+      Sleep(timestep);
     }
-    // m_window = null;
-    return true;
+
   }
 
   void GameOver()

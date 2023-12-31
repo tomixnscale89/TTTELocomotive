@@ -181,61 +181,17 @@ class TTTEBase isclass TTTEHelpers
   public CustomScriptMenu[] GetCustomMenus();
 
   // Easter egg
-  bool easterEggRunning = false;
   TetrisGame easterEgg = new TetrisGame();
 
   public thread void StartEasterEgg()
   {
-    if (easterEggRunning)
-      return;
-    
-    easterEggRunning = true;
-
     OnlineGroup leaderboard = null;
     if (GetOnlineLibrary())
     {
       leaderboard = GetOnlineLibrary().GetEasterEggGroup();
     }
 
-    easterEgg.StartGame(TTTELocoLibrary.GetAsset(), leaderboard);
-
-    if (leaderboard)
-    {  
-      self.AddHandler(leaderboard, "OnlineGroup", "UsersChange", "LeaderboardChangeHandler");
-      self.AddHandler(leaderboard, "OnlineGroup", "ReceiveMessage", "LeaderboardUpdateHandler");
-    }
-
-    while (true)
-    {
-      if (!easterEgg.GameLoop())
-        break;
-    }
-    easterEggRunning = false;
-  }
-
-  // Selection menu handler.
-  public void HandleSelect(Message msg)
-  {
-    if (!easterEggRunning)
-      return;
-    
-    easterEgg.HandleKey(msg.minor);
-  }
-
-  public void LeaderboardChangeHandler(Message msg)
-  {
-    if (!easterEggRunning)
-      return;
-
-    // easterEgg.UpdateLeaderboardUsers();
-  }
-
-  public void LeaderboardUpdateHandler(Message msg)
-  {
-    if (!easterEggRunning)
-      return;
-
-    easterEgg.UpdateLeaderboard();
+    easterEgg.StartGame(TTTELocoLibrary.GetAsset(), self, leaderboard);
   }
 
   // ============================================================================
