@@ -181,7 +181,7 @@ class TTTEBase isclass TTTEHelpers
   public CustomScriptMenu[] GetCustomMenus();
 
   // Easter egg
-  TetrisGame easterEgg = new TetrisGame();
+  TetrisGame easterEgg;
 
   public thread void StartEasterEgg()
   {
@@ -189,6 +189,11 @@ class TTTEBase isclass TTTEHelpers
     if (GetOnlineLibrary())
     {
       leaderboard = GetOnlineLibrary().GetEasterEggGroup();
+    }
+
+    if (!easterEgg)
+    {
+      easterEgg = new TetrisGame();
     }
 
     easterEgg.StartGame(TTTELocoLibrary.GetAsset(), self, leaderboard);

@@ -127,6 +127,7 @@ class TetrisGame isclass GameObject
   int m_curY;
   int m_curRotation;
   float m_timeSinceLastMove;
+  float m_soundTime;
   bool m_bIsPieceAboutToPlace;
   int[] m_cellGrid;
   
@@ -219,6 +220,7 @@ class TetrisGame isclass GameObject
   public void UpdateLeaderboard();
   thread void GameLoop();
   void ChooseNewPiece();
+  void SoundThink(float dt);
   void GameThink(float dt);
   void ScoreThink();
   void DetachPiece();
@@ -261,6 +263,7 @@ class TetrisGame isclass GameObject
     m_fallSpeed = 1.0;
     m_fallTime = 0.0;
     m_timeSinceLastMove = 0.0;
+    m_soundTime = 1000000.0; // force start music loop
     m_bIsPieceAboutToPlace = false;
     m_curPiece = -1;
     m_heldPiece = -1;
@@ -760,6 +763,7 @@ class TetrisGame isclass GameObject
     float timestep = 0.05;
     while (m_window and m_bRunning)
     {
+      SoundThink(timestep);
       GameThink(timestep);
 
       // If we lost, early out.
@@ -839,6 +843,20 @@ class TetrisGame isclass GameObject
 
     m_overlayWindow.SetWindowVisible(true);
     m_overlaySize = 6.0;
+  }
+
+  void SoundThink(float dt)
+  {
+    m_soundTime = m_soundTime + dt;
+
+    // Make sure the music is able to loop.
+    // Keep this updated to match the audio file duration.
+    if (m_soundTime >= 137.143)
+    {
+      m_soundTime = 0;
+      TrainzScript.Log("Playing game loop");
+      World.PlaySound(m_asset, "easteregg/music_loop.wav", 1000.0, 1.0, 1000.0, null, null);
+    }
   }
 
   void GameThink(float dt)

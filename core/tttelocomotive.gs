@@ -1803,11 +1803,14 @@ class TTTELocomotive isclass Locomotive, TTTEBase
     output.Print("</td></tr>");
 
     int i;
-    for(i = 0; i < customMenus.size(); i++)
+    if (customMenus)
     {
-      output.Print("<tr><td>");
-      output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("</td></tr>");
+      for(i = 0; i < customMenus.size(); i++)
+      {
+        output.Print("<tr><td>");
+        output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
+        output.Print("</td></tr>");
+      }
     }
 
     output.Print("</table>");
