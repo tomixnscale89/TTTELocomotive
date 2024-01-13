@@ -11,6 +11,7 @@ class tttelib isclass Library
   //  FigureManager m_figureManager;
 
   Asset easterEgg_Asset;
+  KUID gameControls_KUID;
 
   public void Init(Asset asset)
   {
@@ -20,7 +21,7 @@ class tttelib isclass Library
     // m_figureManager = cast<FigureManager>(World.GetLibrary(asset.LookupKUIDTable("figure-library")));
 
     easterEgg_Asset = asset.FindAsset("misc-menu");
-
+    gameControls_KUID = asset.LookupKUIDTable("game-control-settings");
     //OA = GetOnlineAccess();
   }
 
@@ -42,6 +43,11 @@ class tttelib isclass Library
   public TTTEOnline GetOnlineLibrary()
   {
     return onlineLibrary;
+  }
+
+  public void OpenGameControlsWindow()
+  {
+    Interface.ShowGameOptionsPanel(gameControls_KUID);
   }
 
   // public FigureManager GetFigureManager()

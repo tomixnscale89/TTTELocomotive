@@ -2,6 +2,7 @@ include "gs.gs"
 include "Browser.gs"
 include "OnlineGroup.gs"
 include "OnlineAccess.gs"
+include "tttelib.gs"
 
 class CellBlock
 {
@@ -81,7 +82,9 @@ class TetrisGame isclass GameObject
   Browser m_queueWindow;
   Browser m_overlayWindow;
   Browser m_leaderboardWindow;
+  Browser m_settingsWindow;
   Asset m_asset;
+  tttelib m_tttelib;
   OnlineGroup m_leaderboardGroup;
   // string[] m_leaderboardPlayers;
   Soup m_leaderboardScores;
@@ -211,7 +214,7 @@ class TetrisGame isclass GameObject
     m_bHold = false;
   }
 
-  public void StartGame(Asset asset, GameObject parent, OnlineGroup leaderboard);
+  public void StartGame(tttelib asset, GameObject parent, OnlineGroup leaderboard);
   void HandleKey(string key);
   string GetBackgroundHTML();
   string GetDisplayHTML();
@@ -219,6 +222,7 @@ class TetrisGame isclass GameObject
   // public void UpdateLeaderboardUsers();
   public void UpdateLeaderboard();
   thread void GameLoop();
+  void GameOver();
   void ChooseNewPiece();
   void SoundThink(float dt);
   void GameThink(float dt);
@@ -235,13 +239,14 @@ class TetrisGame isclass GameObject
   void HoldPiece();
   void InitPieceTable();
   CellBlock GetPiece(int piece, int rot);
+  string GetSettingsHTML(int width, int height, int fontSize);
   
   // ============================================================================
   // Public interface
   // ============================================================================
 
   // Call this with the library asset.
-  public void StartGame(Asset asset, GameObject parent, OnlineGroup leaderboard)
+  public void StartGame(tttelib lib, GameObject parent, OnlineGroup leaderboard)
   {
     TrainzScript.Log("Start game");
 
@@ -251,13 +256,18 @@ class TetrisGame isclass GameObject
 
     m_uiScale = 2;
 
-    m_asset = asset;
+    m_tttelib = lib;
+    m_asset = lib.GetEasterEggAsset();
+    // m_parent = parent;
     m_background = Constructors.NewBrowser();
     m_scoreDisplay = Constructors.NewBrowser();
     m_holdWindow = Constructors.NewBrowser();
     m_queueWindow = Constructors.NewBrowser();
     m_window = Constructors.NewBrowser();
     m_overlayWindow = Constructors.NewBrowser();
+    m_settingsWindow = Constructors.NewBrowser();
+    m_settingsWindow.LoadHTMLString(m_asset, GetSettingsHTML(280, 64, 18));
+    parent.Sniff(m_settingsWindow, "Browser-URL", "", true);
 
     // Reset all parameters.
     m_fallSpeed = 1.0;
@@ -290,6 +300,7 @@ class TetrisGame isclass GameObject
     m_background.SetWindowStyle(Browser.STYLE_NO_FRAME);
     m_background.SetMovableByDraggingBackground(false);
     m_background.SetWindowVisible(true);
+    m_background.SetWindowPriority(Browser.BP_Lowest);
 
     m_scoreDisplay.SetWindowStyle(Browser.STYLE_NO_FRAME);
     m_scoreDisplay.SetMovableByDraggingBackground(false);
@@ -306,6 +317,12 @@ class TetrisGame isclass GameObject
     m_overlayWindow.SetWindowStyle(Browser.STYLE_NO_FRAME);
     m_overlayWindow.SetMovableByDraggingBackground(false);
     m_overlayWindow.SetWindowVisible(false);
+
+    m_settingsWindow.SetWindowStyle(Browser.STYLE_HUD_FRAME); // we need click events
+    m_settingsWindow.SetMovableByDraggingBackground(false);
+    m_settingsWindow.SetWindowVisible(true);
+    
+
 
     ChooseNewPiece();
 
@@ -330,6 +347,7 @@ class TetrisGame isclass GameObject
 
     // Handlers
     AddHandler(parent, "ControlSet", "", "HandleSelect");
+    AddHandler(parent, "Browser-URL", "", "BrowserHandler");
 
     if (m_leaderboardGroup)
     {  
@@ -338,6 +356,21 @@ class TetrisGame isclass GameObject
     }
 
     GameLoop();
+  }
+
+  void BrowserHandler(Message msg)
+  {
+    if (m_settingsWindow and msg.src == m_settingsWindow)
+    {
+      if (msg.minor == "live://open_controls_menu")
+      {
+        m_tttelib.OpenGameControlsWindow();
+      }
+      else if (msg.minor == "live://stop_easter_egg")
+      {
+        GameOver();
+      }
+    }
   }
 
   // Selection menu handler.
@@ -409,10 +442,36 @@ class TetrisGame isclass GameObject
     output.Print("<tr bgcolor=#00000000><td width=" + (string)width + ">");
     output.Print("<font size=" + (string)fontSize + " color=#FFFFFF>Level " + (string)m_level + "</font>");
     output.Print("</td></tr>");
-    
+
     output.Print("</table>");
   	output.Print("</body></html>");
 
+  	return output.AsString();
+  }
+
+  string GetSettingsHTML(int width, int height, int fontSize)
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+  	output.Print("<html><body>");
+
+    output.Print("<table width=100% cellspacing=4 cellpadding=4>");
+
+    int numRows = 2;
+
+    // string controlTooltip = "Open the control binds for the game. Typically, they'll be located at the bottom of the window.";
+
+    int rowHeight = (int)((float)height / numRows) - 10;
+    output.Print("<tr height=" + (string)rowHeight + " bgcolor=#131D4F><td width=100%>");
+    output.Print("<a href='live://open_controls_menu'>Open Control Binds (Requires Restart)</a>");
+    output.Print("</td></tr>");
+
+    output.Print("<tr height=" + (string)rowHeight + " bgcolor=#131D4F><td width=100%>");
+    output.Print("<a href='live://stop_easter_egg'>Quit</a>");
+    output.Print("</td></tr>");
+    
+    output.Print("</table>");
+
+  	output.Print("</body></html>");
   	return output.AsString();
   }
 
@@ -622,6 +681,15 @@ class TetrisGame isclass GameObject
 
   void UpdateDisplay()
   {
+    if (Interface.GetDisplayHeight() < 1100)
+    {
+      m_uiScale = 1;
+    }
+    else
+    {
+      m_uiScale = 2;
+    }
+
     m_cellSize = 24 * m_uiScale;
 
     int w = m_cellSize * NUM_COLS;
@@ -647,7 +715,7 @@ class TetrisGame isclass GameObject
 
     m_scoreDisplay.SetWindowPosition(holdX - 128 - margin, windY);
     m_scoreDisplay.SetWindowSize(128, 32);
-    m_scoreDisplay.LoadHTMLString(m_asset, GetScoreHTML(128, 18));
+    m_scoreDisplay.LoadHTMLString(m_asset, GetScoreHTML(128, m_uiScale * 8));
     m_scoreDisplay.ResizeHeightToFit();
 
     int queueWidth = (m_cellSize / 2) * 4 + 16;
@@ -655,6 +723,11 @@ class TetrisGame isclass GameObject
     m_queueWindow.SetWindowSize(queueWidth, queueWidth);
     m_queueWindow.LoadHTMLString(m_asset, GetQueueHTML(queueWidth));
     m_queueWindow.ResizeHeightToFit();
+
+    m_settingsWindow.SetWindowPosition(windX - 280 - margin, windY + h - 64);
+    m_settingsWindow.SetWindowSize(280, 64);
+    // m_settingsWindow.LoadHTMLString(m_asset, GetSettingsHTML(256, 64, 18));
+    m_settingsWindow.ResizeHeightToFit();
 
     int overlayW = 128 * m_overlaySize;
     int overlayH = 64 * m_overlaySize;
@@ -681,15 +754,18 @@ class TetrisGame isclass GameObject
     if (m_leaderboardWindow)
     {
       int leaderboardY = windY + holdSize + margin;
-      int leaderboardSize = holdSize + 64;
-      m_leaderboardWindow.SetWindowPosition(holdX - 64, leaderboardY);
+      int leaderboardSize = 176;
+      m_leaderboardWindow.SetWindowPosition(windX - leaderboardSize - margin, leaderboardY);
       m_leaderboardWindow.SetWindowSize(leaderboardSize, holdSize);
       m_leaderboardWindow.LoadHTMLString(m_asset, GetLeaderboardHTML(leaderboardSize));
       m_leaderboardWindow.ResizeHeightToFit();
       m_leaderboardWindow.BringToFront();
     }
 
+
     m_overlayWindow.BringToFront();
+
+    m_settingsWindow.BringToFront();
   }
 
   public OnlineGroup GetLeaderboardGroup() { return m_leaderboardGroup; }
@@ -790,10 +866,12 @@ class TetrisGame isclass GameObject
     m_scoreDisplay = null;
     m_background = null;
     m_overlayWindow = null;
+    m_settingsWindow = null;
 
     m_leaderboardGroup = null;
     m_leaderboardWindow = null;
 
+    m_tttelib = null;
     m_bRunning = false;
   }
 
