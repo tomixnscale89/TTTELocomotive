@@ -196,7 +196,7 @@ class TTTEBase isclass TTTEHelpers
       easterEgg = new TetrisGame();
     }
 
-    easterEgg.StartGame(TTTELocoLibrary.GetAsset(), self, leaderboard);
+    easterEgg.StartGame(TTTELocoLibrary.GetEasterEggAsset(), self, leaderboard);
   }
 
   // ============================================================================

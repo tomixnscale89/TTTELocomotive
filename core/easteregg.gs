@@ -433,7 +433,7 @@ class TetrisGame isclass GameObject
         if (cell)
         {
           // TrainzScript.Log("cell color " + (string)cell + " is " + GetHexString(cell));
-          output.Print("<img src='easteregg/block.png' color=#" + colorStr + " width=" + (string)cellSize + " height=" + (string)cellSize + ">");
+          output.Print("<img src='block.png' color=#" + colorStr + " width=" + (string)cellSize + " height=" + (string)cellSize + ">");
         }
         else
         {
@@ -516,11 +516,11 @@ class TetrisGame isclass GameObject
         if (cell != 0)
         {
           // TrainzScript.Log("cell color " + (string)cell + " is " + GetHexString(cell));
-          output.Print("<img src='easteregg/block.png' color=#" + GetHexString(cell) + " width=" + (string)m_cellSize + " height=" + (string)m_cellSize + ">");
+          output.Print("<img src='block.png' color=#" + GetHexString(cell) + " width=" + (string)m_cellSize + " height=" + (string)m_cellSize + ">");
         }
         else
         {
-          output.Print("<img src='easteregg/slot.png' width=" + (string)m_cellSize + " height=" + (string)m_cellSize + ">");
+          output.Print("<img src='slot.png' width=" + (string)m_cellSize + " height=" + (string)m_cellSize + ">");
         }
         output.Print("</td>");
       }
@@ -541,7 +541,7 @@ class TetrisGame isclass GameObject
 
     output.Print("<table cellpadding=8>");
     output.Print("<tr align='center' valign='center' height=" + (string)height + "><td width=" + (string)width + ">");
-    output.Print("<img src='easteregg/levelup.png' width=" + (string)width + " height=" + (string)height + ">");
+    output.Print("<img src='levelup.png' width=" + (string)width + " height=" + (string)height + ">");
     output.Print("</td></tr>");
     output.Print("</table>");
 
@@ -855,7 +855,7 @@ class TetrisGame isclass GameObject
     {
       m_soundTime = 0;
       TrainzScript.Log("Playing game loop");
-      World.PlaySound(m_asset, "easteregg/music_loop.wav", 1000.0, 1.0, 1000.0, null, null);
+      World.PlaySound(m_asset, "music_loop.wav", 1000.0, 1.0, 1000.0, null, null);
     }
   }
 
