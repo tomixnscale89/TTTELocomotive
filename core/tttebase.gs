@@ -170,7 +170,7 @@ class TTTEBase isclass TTTEHelpers
   // public define int BROWSER_SOCIALMENU   = 8;
   // public define int BROWSER_CUSTOMMENU_0 = 9;
 
-  CustomScriptMenu[] customMenus = new CustomScriptMenu[0];
+  CustomScriptMenu[] customMenus;
 
   //Functions
   public Soup GetTTTELocomotiveSettings();
@@ -318,6 +318,8 @@ class TTTEBase isclass TTTEHelpers
 
   public void SetupMenus()
   {
+    customMenus = new CustomScriptMenu[0];
+    
     if(GetFeatureSupported(FEATURE_EYES))
     {
       //eye window
