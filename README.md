@@ -23,3 +23,6 @@ Currently only tested in TRS19.
 * [Tomix](https://github.com/tomixnscale89) :page_with_curl: Code
 * [Ermelber](https://github.com/Ermelber):  Italian Localization
 * [Gericom](https://github.com/Gericom):  Dutch Localization
+* ILIOS: Russian Localization
+* Mika/NBSPlusTrains: German Localization
+* Xavier L&C: Spanish Localization
