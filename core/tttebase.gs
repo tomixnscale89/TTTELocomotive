@@ -10,8 +10,11 @@ include "locomenu.gs"
 include "smokemenu.gs"
 include "submeshmenu.gs"
 include "soundmenu.gs"
+include "loadsmenu.gs"
+include "attachmentsmenu.gs"
 include "socialmenu.gs"
 include "facechartmenu.gs"
+include "creditsmenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
@@ -33,6 +36,7 @@ class TTTEBase isclass TTTEHelpers
 
   //Config data
   public Soup myConfig;
+  public string ScriptCredits;
   public Soup ExtensionsContainer;
   public Soup FacesContainer;
   public Soup LiveryContainer;
@@ -46,6 +50,7 @@ class TTTEBase isclass TTTEHelpers
   public Soup SoundContainer;
   public bool[] ExtraLampVisibility;
   public Asset[] ExtraLampAssets;
+  public string[] MeshAttachments;
   
   Asset coupler_idle, coupler_coupled; // legacy couplers
 
@@ -67,6 +72,8 @@ class TTTEBase isclass TTTEHelpers
   define int FEATURE_FACECHART    = 1 << 6;
   define int FEATURE_SUBMESHES    = 1 << 7;
   define int FEATURE_SOUNDS       = 1 << 8;
+  define int FEATURE_LOADS        = 1 << 9;
+  define int FEATURE_ATTACHMENTS  = 1 << 10;
 
   public define int CAR_DERAILED = -1;
   public define int CAR_CENTER   =  0;
@@ -95,7 +102,10 @@ class TTTEBase isclass TTTEHelpers
   CustomScriptMenu SubmeshMenu    = null;
   CustomScriptMenu SoundMenu      = null;
   CustomScriptMenu FaceChartMenu  = null;
+  CustomScriptMenu LoadsMenu      = null;
+  CustomScriptMenu AttachmentsMenu = null;
   CustomScriptMenu SocialMenu     = null;
+  CustomScriptMenu CreditsMenu    = null;
 
   //Eye stuff
 	//These variables keep track of the rotation of the eyes, and will be dynamically updated incrementally. Rotations are defined relative to 0, with 0 being the absolute center of each axis.
@@ -381,6 +391,20 @@ class TTTEBase isclass TTTEHelpers
       customMenus[customMenus.size()] = FaceChartMenu;
     }
 
+    /*
+    if (GetFeatureSupported(FEATURE_LOADS))
+    {
+      LoadsMenu = new LoadsMenu();
+      customMenus[customMenus.size()] = LoadsMenu;
+    }
+    */
+
+    if (GetFeatureSupported(FEATURE_ATTACHMENTS))
+    {
+      AttachmentsMenu = new AttachmentsMenu();
+      customMenus[customMenus.size()] = AttachmentsMenu;
+    }
+
     if(GetOnlineLibrary())
     {
       SocialMenu = new SocialMenu();
@@ -392,6 +416,10 @@ class TTTEBase isclass TTTEHelpers
     for(i = 0; i < override_menus.size(); i++)
       customMenus[customMenus.size()] = override_menus[i];
 
+    // Credits menu last.
+    CreditsMenu = new CreditsMenu();
+    customMenus[customMenus.size()] = CreditsMenu;
+    
     for(i = 0; i < customMenus.size(); i++)
     {
       //customMenus[i].Init(me);
@@ -847,6 +875,52 @@ class TTTEBase isclass TTTEHelpers
 
     return soup;
   }
+  
+  // Load mesh effects from the config.
+  void LoadMeshEffects()
+  {
+    MeshAttachments = new string[0];
+
+    Soup meshTable = myConfig.GetNamedSoup("mesh-table");
+    
+    int iMesh;
+    int iEffect;
+
+    for(iMesh = 0; iMesh < meshTable.CountTags(); ++iMesh)
+    {
+      string meshName = meshTable.GetIndexedTagName(iMesh);
+      Soup mesh = meshTable.GetNamedSoup(meshName);
+      if (!mesh)
+        continue;
+      
+      Soup effects = mesh.GetNamedSoup("effects");
+      if (!effects)
+        continue;
+
+      for (iEffect = 0; iEffect < effects.CountTags(); ++iEffect)
+      {
+        string effectName = effects.GetIndexedTagName(iEffect);
+
+        if (effectName == "face" or TrainUtil.HasPrefix(effectName, "lamp") or TrainUtil.HasPrefix(effectName, "couple"))
+          continue;
+        
+        Soup effect = effects.GetNamedSoup(effectName);
+        if (!effect)
+          continue;
+        
+        string effectKind = effect.GetNamedTag("kind");
+        if (effectKind != "attachment")
+          continue;
+        
+        MeshAttachments[MeshAttachments.size()] = effectName;
+      }
+    }
+
+    if (MeshAttachments.size())
+    {
+      SetFeatureSupported(FEATURE_ATTACHMENTS);
+    }
+  }
 
   public void BaseInit(Asset asset)
   {
@@ -854,11 +928,12 @@ class TTTEBase isclass TTTEHelpers
 
     ScriptAsset = World.GetLibrary(asset.LookupKUIDTable("tttelocomotive")).GetAsset();
     myConfig = asset.GetConfigSoup();
-
+    
     // TRS22, trainzbuild 5.0
     // at some point switch to this
     // myConfig = asset.GetConfigSoupCached();
 
+    ScriptCredits = ScriptAsset.GetLocalisedDescription();
     ExtensionsContainer = myConfig.GetNamedSoup("extensions");
 
     strTable = ScriptAsset.GetStringTable(); // String table to be used for obtaining information inside the Config
@@ -891,6 +966,9 @@ class TTTEBase isclass TTTEHelpers
     if(SubmeshContainer.CountTags()) SetFeatureSupported(FEATURE_SUBMESHES);
     if(SoundContainer.CountTags()) SetFeatureSupported(FEATURE_SOUNDS);
 
+    ProductQueue[] queues = self.GetQueues();
+    if(queues and queues.size() != 0) SetFeatureSupported(FEATURE_LOADS);
+
     Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
 
     // Idle coupler mesh must have a default-mesh tag in the effects container or else it will not show.
@@ -900,8 +978,207 @@ class TTTEBase isclass TTTEHelpers
     if(SoupHasTag(KUIDTable, "lamp")) headlight_asset = asset.FindAsset("lamp");
 
     if(SoupHasTag(KUIDTable, "liveries")) textureSet = asset.FindAsset("liveries"); // Grab the textures we need for the livery swapping
+
+    LoadMeshEffects();
   }
-  
+
+  string TTTEGetDescriptionHTML(void)
+  {
+    HTMLBuffer output = HTMLBufferStatic.Construct();
+
+    output.Print("<html><body>");
+    output.Print("<table cellspacing=2>");
+
+    if(GetFeatureSupported(FEATURE_LAMPS))
+    {
+      //lamp icon
+      // // option to change headcode, this displays inside the ? HTML window in surveyor.
+      output.Print("<tr><td>");
+      output.Print("<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>");
+      output.Print("</td></tr>");
+      //lamp status
+      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
+      output.Print("<tr><td>");
+      output.Print(strTable.GetString1("headcode_select", headcodeLampStr));
+      output.Print("</td></tr>");
+    }
+    
+    if(GetFeatureSupported(FEATURE_LIVERIES))
+    {
+      //livery window
+      output.Print("<tr><td>");
+      output.Print("<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>");
+      output.Print("</td></tr>");
+
+      //livery status
+      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
+      output.Print("<tr><td>");
+      output.Print(strTable.GetString1("skin_select", classSkinStr));
+      output.Print("</td></tr>");
+    }
+
+    if(GetFeatureSupported(FEATURE_FACES))
+    {
+      //face window
+      output.Print("<tr><td>");
+      output.Print("<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>");
+      output.Print("</td></tr>");
+
+      //face status
+      string FaceStr = "";
+      if(faceSelection > -1)
+        FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
+      else if(DLSfaceSelection > -1)
+      {
+        Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
+        StringTable FaceStrTable = DLSFace.GetStringTable();
+        FaceStr = FaceStrTable.GetString("displayname");
+        if(!FaceStr or FaceStr == "")
+          FaceStr = DLSFace.GetLocalisedName();
+      }
+
+      string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
+      output.Print("<tr><td>");
+      output.Print(strTable.GetString1("faces_select", classFaceStr));
+      output.Print("</td></tr>");
+    }
+
+    if (GetFeatureSupported(FEATURE_ATTACHMENTS))
+    {
+      output.Print("<tr><td>");
+      output.Print("Attachments:");
+      output.Print("</td></tr>");
+
+      int i;
+      for (i = 0; i < MeshAttachments.size(); i++)
+      {
+        output.Print("<tr><td>");
+        output.Print("<a href='live://property/attachment-" + (string)i + "'>");
+        output.Print(MeshAttachments[i]);
+        output.Print("</a>");
+        output.Print("</td></tr>");
+      }
+      
+    }
+
+    return output.AsString();
+  }
+
+  // Base property accessors.
+  string TTTEGetPropertyType(string p_propertyID)
+  {
+    if (p_propertyID == "headcode_lamps") return "list";
+    if (p_propertyID == "faces") return "list";
+    if (p_propertyID == "skin") return "list";
+    if (TrainUtil.HasPrefix(p_propertyID, "attachment-")) return "asset-list,MESH|SY|TR";
+
+    return "";
+  }
+
+  string TTTEGetPropertyName(string p_propertyID)
+  {
+    if (p_propertyID == "headcode_lamps") return strTable.GetString("headcode_name");
+    if (p_propertyID == "faces") return strTable.GetString("faces_name");
+    if (p_propertyID == "skin") return strTable.GetString("skin_name");
+    if (TrainUtil.HasPrefix(p_propertyID, "attachment-")) return "Attachment";
+
+    return "";
+  }
+
+  string TTTEGetPropertyDescription(string p_propertyID)
+  {
+    if (p_propertyID == "headcode_lamps") return strTable.GetString("headcode_description");
+    if(p_propertyID == "faces") return strTable.GetString("faces_description");
+    if(p_propertyID == "skin") return strTable.GetString("skin_description");
+    if (TrainUtil.HasPrefix(p_propertyID, "attachment-")) return "Set an attachment effect.";
+
+    return "";
+  }
+
+  public string[] TTTEGetPropertyElementList(string p_propertyID)
+  {
+    int i;
+    string[] result = new string[0];
+
+    if (p_propertyID == "headcode_lamps")
+    {
+      for (i = 0; i < 12; i++) // Let us loop through the entire possible headcodes and list them all.
+      {
+        result[i] = HeadcodeDescription(GetHeadcodeFlags(i));
+      }
+    }
+    else if (p_propertyID == "faces")
+    {
+      for(i = 0; i < FacesContainer.CountTags(); i++) // Let us loop through the entire possible faces and list them all.
+      {
+        result[i] = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
+      }
+    }
+    else if (p_propertyID == "skin")
+    {
+      for(i = 0; i < LiveryContainer.CountTags(); i++) // Let us loop through the entire possible skins and list them all.
+      {
+          result[i] = LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(i));
+      }
+    }
+    else
+    {
+      result = null;
+    }
+
+    return result;
+  }
+
+  bool TTTESetPropertyValue(string p_propertyID, string p_value, int p_index)
+  {
+    if (p_propertyID == "headcode_lamps")
+    {
+      if (p_index > -1 and p_index < 12)
+      {
+        m_headCode = GetHeadcodeFlags(p_index);
+        ConfigureHeadcodeLamps();
+      }
+      return true;
+    }
+    if (p_propertyID == "faces")
+    {
+      if (p_index > -1 and p_index < FacesContainer.CountTags())
+      {
+        faceSelection = p_index;
+        DLSfaceSelection = -1;
+        ConfigureFaces();
+      }
+      return true;
+    }
+    if (p_propertyID == "skin")
+    {
+      if (p_index > -1 and p_index < LiveryContainer.CountTags())
+      {
+        skinSelection = p_index;
+        ConfigureSkins();
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  bool TTTESetPropertyValue(string p_propertyID, GSObject p_value, string p_readableName)
+  {
+    if (TrainUtil.HasPrefix(p_propertyID, "attachment-"))
+    {
+      string command = p_propertyID["attachment-".size(),];
+      int index = Str.ToInt(command);
+      Asset meshAsset = cast<Asset>(p_value);
+      self.SetFXAttachment(MeshAttachments[index], meshAsset);
+
+      RefreshBrowser();
+      return true;
+    }
+
+    return false;
+  }
+
   // ============================================================================
   // Custom Override Functions
   // Desc: Override the following functions in tttestub.gs to provide custom functionality.

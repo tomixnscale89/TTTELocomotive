@@ -133,6 +133,7 @@ class TTTEWagon isclass Vehicle, TTTEBase
     
     createMenuWindow();
     AddHandler(me, "Browser-URL", "", "BrowserHandler");
+    AddHandler(me, "CustomScriptMessage", "", "CustomScriptHandler");
     BrowserThread();
 
     Soup KUIDTable = myConfig.GetNamedSoup("kuid-table");
@@ -450,69 +451,10 @@ class TTTEWagon isclass Vehicle, TTTEBase
   public string GetDescriptionHTML(void)
   {
     string html = inherited();
-
-    //StringTable strTable = GetAsset().GetStringTable();
-    html = html + "<html><body>";
-    html = html + "<table cellspacing=2>";
-
-
-    if(GetFeatureSupported(FEATURE_LAMPS))
-    {
-      //lamp icon
-      // // option to change headcode, this displays inside the ? HTML window in surveyor.
-      html = html + "<tr><td>";
-      html = html + "<a href=live://property/headcode_lamps><img kuid='<kuid:414976:103609>' width=32 height=32></a>";
-      html = html + "</td></tr>";
-      //lamp status
-      string headcodeLampStr = "<a href=live://property/headcode_lamps>" + HeadcodeDescription(m_headCode) + "</a>";
-      html = html + "<tr><td>";
-      html = html + strTable.GetString1("headcode_select", headcodeLampStr);
-      html = html + "</td></tr>";
-    }
-
-    //livery window
-    if(GetFeatureSupported(FEATURE_LIVERIES))
-    {
-      //livery window
-      html = html + "<tr><td>";
-      html = html + "<a href=live://property/skin><img kuid='<kuid:414976:103610>' width=32 height=32></a>";
-      html = html + "</td></tr>";
-
-      //livery status
-      string classSkinStr = "<a href=live://property/skin>" + LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(skinSelection)) + "</a>";
-      html = html + "<tr><td>";
-      html = html + strTable.GetString1("skin_select", classSkinStr);
-      html = html + "</td></tr>";
-    }
-
-    if(GetFeatureSupported(FEATURE_FACES))
-    {
-      //face window
-      html = html + "<tr><td>";
-      html = html + "<a href=live://property/faces><img kuid='<kuid:414976:105808>' width=32 height=32></a>";
-      html = html + "</td></tr>";
-
-      //face status
-      string FaceStr = "";
-      if(faceSelection > -1)
-        FaceStr = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(faceSelection));
-      else if(DLSfaceSelection > -1)
-      {
-        Asset DLSFace = InstalledDLSFaces[DLSfaceSelection];
-        StringTable FaceStrTable = DLSFace.GetStringTable();
-        FaceStr = FaceStrTable.GetString("displayname");
-        if(!FaceStr or FaceStr == "")
-          FaceStr = DLSFace.GetLocalisedName();
-      }
-
-      string classFaceStr = "<a href=live://property/faces>" + FaceStr + "</a>";
-      html = html + "<tr><td>";
-      html = html + strTable.GetString1("faces_select", classFaceStr);
-      html = html + "</td></tr>";
-    }
-
+    html = html + TTTEGetDescriptionHTML();
     return html;
   }
+
 
   // ============================================================================
   // Name: GetPropertyType()
@@ -524,19 +466,8 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   string GetPropertyType(string p_propertyID)
   {
-    if (p_propertyID == "headcode_lamps")
-    {
-      return "list";
-    }
-    if (p_propertyID == "faces")
-    {
-      return "list";
-    }
-    if (p_propertyID == "skin")
-    {
-      return "list";
-    }
-
+    string ret = TTTEGetPropertyType(p_propertyID);
+    if (ret) return ret;
     return inherited(p_propertyID);
   }
 
@@ -551,22 +482,10 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   string GetPropertyName(string p_propertyID)
   {
-    if (p_propertyID == "headcode_lamps")
-    {
-      return strTable.GetString("headcode_name");
-    }
-    if (p_propertyID == "faces")
-    {
-      return strTable.GetString("faces_name");
-    }
-    if (p_propertyID == "skin")
-    {
-      return strTable.GetString("skin_name");
-    }
-
+    string ret = TTTEGetPropertyName(p_propertyID);
+    if (ret) return ret;
     return inherited(p_propertyID);
   }
-
 
 
   // ============================================================================
@@ -579,19 +498,8 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   string GetPropertyDescription(string p_propertyID)
   {
-    if (p_propertyID == "headcode_lamps")
-    {
-      return strTable.GetString("headcode_description");
-    }
-    if(p_propertyID == "faces")
-    {
-      return strTable.GetString("faces_description");
-    }
-    if(p_propertyID == "skin")
-    {
-      return strTable.GetString("skin_description");
-    }
-
+    string ret = TTTEGetPropertyDescription(p_propertyID);
+    if (ret) return ret;
     return inherited(p_propertyID);
   }
 
@@ -606,36 +514,9 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   public string[] GetPropertyElementList(string p_propertyID)
   {
-    int i;
-    string [] result = new string[0];
-
-    if (p_propertyID == "headcode_lamps")
-    {
-      for (i = 0; i < 12; i++) // Let us loop through the entire possible headcodes and list them all.
-      {
-        result[i] = HeadcodeDescription(GetHeadcodeFlags(i));
-      }
-    }
-    else if (p_propertyID == "faces")
-    {
-      for(i = 0; i < FacesContainer.CountTags(); i++) // Let us loop through the entire possible faces and list them all.
-      {
-        result[i] = FacesContainer.GetNamedTag(FacesContainer.GetIndexedTagName(i));
-      }
-    }
-    else if (p_propertyID == "skin")
-    {
-      for(i = 0; i < LiveryContainer.CountTags(); i++) // Let us loop through the entire possible skins and list them all.
-      {
-          result[i] = LiveryContainer.GetNamedTag(LiveryContainer.GetIndexedTagName(i));
-      }
-    }
-    else
-    {
-      result = inherited(p_propertyID);
-    }
-
-    return result;
+    string[] ret = TTTEGetPropertyElementList(p_propertyID);
+    if (ret) return ret;
+    return inherited(p_propertyID);
   }
 
 
@@ -650,34 +531,17 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // ============================================================================
   void SetPropertyValue(string p_propertyID, string p_value, int p_index)
   {
-    if (p_propertyID == "headcode_lamps")
-    {
-      if (p_index > -1 and p_index < 12)
-      {
-        m_headCode = GetHeadcodeFlags(p_index);
-        ConfigureHeadcodeLamps();
-      }
-    }
-    else if (p_propertyID == "faces")
-    {
-      if (p_index > -1 and p_index < FacesContainer.CountTags())
-      {
-        faceSelection = p_index;
-        DLSfaceSelection = -1;
-        ConfigureFaces();
-      }
-    }
-    else if (p_propertyID == "skin")
-    {
-      if (p_index > -1 and p_index < LiveryContainer.CountTags())
-      {
-        skinSelection = p_index;
-        ConfigureSkins();
-      }
-    }
-    else
+    if (!TTTESetPropertyValue(p_propertyID, p_value, p_index))
     {
       inherited(p_propertyID, p_value, p_index);
+    }
+  }
+
+  void SetPropertyValue(string p_propertyID, GSObject p_value, string p_readableName)
+  {
+    if (!TTTESetPropertyValue(p_propertyID, p_value, p_readableName))
+    {
+      inherited(p_propertyID, p_value, p_readableName);
     }
   }
 
@@ -873,6 +737,11 @@ class TTTEWagon isclass Vehicle, TTTEBase
       if(CurrentMenu)
         CurrentMenu.ProcessMessage(msg.minor);
     }
+  }
+
+  void CustomScriptHandler(Message msg)
+  {
+    if(CurrentMenu) CurrentMenu.CustomScriptMessage(msg);
   }
 };
 

@@ -42,6 +42,14 @@ class CustomScriptMenu
   }
 
   // ============================================================================
+  // Name: CustomScriptMessage(Message msg)
+  // Desc: Process a message callback.
+  // ============================================================================
+  public void CustomScriptMessage(Message msg)
+  {
+  }
+  
+  // ============================================================================
   // Name: Open()
   // Desc: Called when the menu is opened. Will be called each time the menu is opened, don't do any one-time initialization here.
   // ============================================================================
