@@ -17,10 +17,11 @@ class CreditsMenu isclass CustomScriptMenu
 
     // Localized description.
     string str = TrainUtil.StrSubst(base.ScriptCredits, "\n", "<br>");
-    output.Print(str);
+    output.Print("<label>" + str + "</label>");
 
-    output.Print("<br>");
-    output.Print("<a href='live://more-info'>For more info, click here!</a>");
+    // TODO: Make an actual wiki page?
+    // output.Print("<br>");
+    // output.Print("<a href='live://more-info'><h3>For more info, click here!</h3></a>");
 
     output.Print("</body></html>");
     return output.AsString();
@@ -28,7 +29,13 @@ class CreditsMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103374>";
+    // return "<kuid:414976:103374>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 20;
   }
 
   public void ProcessMessage(string cmd)

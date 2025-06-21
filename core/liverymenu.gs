@@ -22,9 +22,9 @@ class LiveryMenu isclass CustomScriptMenu
       rowParity = !rowParity;
       string liveryName = base.LiveryContainer.GetNamedTag(base.LiveryContainer.GetIndexedTagName(i));
       if (rowParity)
-        output.Print("<tr bgcolor=#0E2A35>");
+        output.Print("<tr bgcolor=" + Colors.Primary + ">");
       else
-        output.Print("<tr bgcolor=#05171E>");
+        output.Print("<tr bgcolor=" + Colors.PrimaryDark + ">");
 
       output.Print("<td>");
       if(i != base.skinSelection)
@@ -43,7 +43,13 @@ class LiveryMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103610>";
+    // return "<kuid:414976:103610>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 15;
   }
 
   public void ProcessMessage(string cmd)

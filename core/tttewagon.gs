@@ -581,7 +581,7 @@ class TTTEWagon isclass Vehicle, TTTEBase
 
     output.Print("<table cellspacing=2>");
 
-    int icon_scale = 32;
+    int icon_scale = 40;
 
     // if(AssetObsolete)
     // {
@@ -602,7 +602,20 @@ class TTTEWagon isclass Vehicle, TTTEBase
     {
       output.Print("<tr><td>");
       // output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' color=#0377fc width=" + icon_scale + " height=" + icon_scale + "></a>");
+      output.Print("<a href='live://open_custom/" + (string)i + "'></a>");
+
+      // <img kuid='" + customMenus[i].GetIconKUIDString() + "' color=#0377fc width=" + icon_scale + " height=" + icon_scale + ">
+      int textureIndex = customMenus[i].GetIconTextureIndex();
+      if (textureIndex >= 0)
+      {
+        output.Print("<img texturegroup='" + customMenus[i].GetIconKUIDString() + "' color=#0377fc textureindex=" + (string)textureIndex + " width=" + icon_scale + " height=" + icon_scale + ">");
+      }
+      else
+      {
+        output.Print("<img kuid='" + customMenus[i].GetIconKUIDString() + "' color=#0377fc width=" + icon_scale + " height=" + icon_scale + ">");
+      }
+
+      output.Print("</a>");
       output.Print("</td></tr>");
     }
 

@@ -34,6 +34,16 @@ class CustomScriptMenu
   }
 
   // ============================================================================
+  // Name: GetIconTextureIndex()
+  // Desc: Returns the index of the menu's icon in the texture-group asset
+  //       specified by GetIconKUIDString, or -1 if it isn't a texture group asset.
+  // ============================================================================
+  public int GetIconTextureIndex()
+  {
+    return -1;
+  }
+
+  // ============================================================================
   // Name: ProcessMessage(string cmd)
   // Desc: Process any link messages.
   // ============================================================================
@@ -48,7 +58,7 @@ class CustomScriptMenu
   public void CustomScriptMessage(Message msg)
   {
   }
-  
+
   // ============================================================================
   // Name: Open()
   // Desc: Called when the menu is opened. Will be called each time the menu is opened, don't do any one-time initialization here.

@@ -22,7 +22,13 @@ class JoystickMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:105003>";
+    // return "<kuid:414976:105003>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 28;
   }
 
   public void ProcessMessage(string cmd)

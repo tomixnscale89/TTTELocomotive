@@ -56,9 +56,9 @@ class FaceMenu isclass CustomScriptMenu
     output.Print("<html><body>");
     //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
-    output.Print(base.strTable.GetString("faces_description"));
+    output.Print("<label>" + base.strTable.GetString("faces_description") + "</label>");
     output.Print("<br>");
-    output.Print("<table>");
+    output.Print("<table cellpadding=2 cellspacing=2>");
     output.Print("<tr> <td width='300'></td> </tr>");
     bool rowParity = false;
     int i, j;
@@ -73,12 +73,12 @@ class FaceMenu isclass CustomScriptMenu
       string rowcolor;
 
       if (rowParity)
-        rowcolor = "#0E2A35";
+        rowcolor = Colors.Primary;
       else
-        rowcolor = "#05171E";
+        rowcolor = Colors.PrimaryDark;
       
       output.Print("<tr bgcolor=" + rowcolor + ">");
-      output.Print("<td>");
+      output.Print("<td valign=center>");
 
       bool hasRootLink = false;
       if (data.GetNamedTagAsBool("has-root"))
@@ -89,12 +89,22 @@ class FaceMenu isclass CustomScriptMenu
           output.Print("<a href='live://face_set/" + rootIndex + "'>");
           hasRootLink = true;
         }
+        else
+        {
+          output.Print("<font color=#d0d0d0>");
+        }
       }
 
-      output.Print(baseName);
+      output.Print("<label>" + baseName + "</label>");
 
       if(hasRootLink)
+      {
         output.Print("</a>");
+      }
+      else
+      {
+        output.Print("</font>");
+      }
 
       output.Print("</td>");
       output.Print("</tr>");
@@ -103,7 +113,7 @@ class FaceMenu isclass CustomScriptMenu
       if (data.GetNamedTagAsBool("has-children"))
       {
         output.Print("<tr bgcolor=" + rowcolor + ">");
-        output.Print("<td align=right>");
+        output.Print("<td align=right valign=center>");
         
         // Embed a table so the entries are spaced apart.
         output.Print("<table>");
@@ -118,12 +128,24 @@ class FaceMenu isclass CustomScriptMenu
           output.Print("<td>");
 
           if(subIndex != base.faceSelection)
+          {
             output.Print("<a href='live://face_set/" + subIndex + "'>");
+          }
+          else
+          {
+            output.Print("<font color=#d0d0d0>");
+          }
           
-          output.Print(subName);
+          output.Print("<label>" + subName + "</label>");
 
           if(subIndex != base.faceSelection)
+          {
             output.Print("</a>");
+          }
+          else
+          {
+            output.Print("</font>");
+          }
           
           output.Print("</td>");
         }
@@ -153,9 +175,9 @@ class FaceMenu isclass CustomScriptMenu
           faceName = DLSFace.GetLocalisedName();
 
         if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>"); // height='100'
+          output.Print("<tr bgcolor=" + Colors.Primary + ">"); // height='100'
         else
-          output.Print("<tr bgcolor=#05171E>");
+          output.Print("<tr bgcolor=" + Colors.PrimaryDark + ">");
 
         output.Print("<td>");
         output.Print("<trainz-object width=20 height=20 style=preview asset='" + DLSFace.GetKUID().GetHTMLString() + "'></trainz-object>");
@@ -187,9 +209,9 @@ class FaceMenu isclass CustomScriptMenu
         string faceName = DLSFace.GetLocalisedName();
 
         if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>"); // height='100'
+          output.Print("<tr bgcolor=" + Colors.Primary + ">"); // height='100'
         else
-          output.Print("<tr bgcolor=#05171E>");
+          output.Print("<tr bgcolor=" + Colors.PrimaryDark + ">");
 
         output.Print("<td>");
 
@@ -230,9 +252,16 @@ class FaceMenu isclass CustomScriptMenu
     return output.AsString();
   }
 
+
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:105808>";
+    // return "<kuid:414976:105808>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 33;
   }
 
   public void ProcessMessage(string cmd)

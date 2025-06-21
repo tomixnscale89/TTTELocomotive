@@ -27,7 +27,7 @@ class LoadsMenu isclass CustomScriptMenu
     int i;
     for (i = 0; i < queues.size(); i++)
     {
-      if (rowParity) rowcolor = "#0E2A35"; else rowcolor = "#05171E";
+      if (rowParity) rowcolor = Colors.Primary; else rowcolor = Colors.PrimaryDark;
       rowParity = !rowParity;
       output.Print("<tr bgcolor=" + rowcolor + "><td>");
       ProductQueue queue = queues[i];
@@ -54,7 +54,7 @@ class LoadsMenu isclass CustomScriptMenu
         rowParity = false;
         for (i = 0; i < filterAssets.size(); i++)
         {
-          if (rowParity) rowcolor = "#0E2A35"; else rowcolor = "#05171E";
+          if (rowParity) rowcolor = Colors.Primary; else rowcolor = Colors.PrimaryDark;
           rowParity = !rowParity;
           output.Print("<tr bgcolor=" + rowcolor + ">");
 
@@ -79,7 +79,7 @@ class LoadsMenu isclass CustomScriptMenu
       //   rowParity = false;
       //   for (i = 0; i < queueAssets.size(); i++)
       //   {
-      //     if (rowParity) rowcolor = "#0E2A35"; else rowcolor = "#05171E";
+      //     if (rowParity) rowcolor = Colors.Primary; else rowcolor = Colors.PrimaryDark;
       //     output.Print("<tr bgcolor=" + rowcolor + "><td>");
   
       //     output.Print(queueAssets[i].GetLocalisedName());
@@ -95,12 +95,17 @@ class LoadsMenu isclass CustomScriptMenu
     return output.AsString();
   }
 
-  
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103374>";
+    // return "<kuid:414976:103374>";
+    return "<kuid:414976:103758>";
   }
 
+  public int GetIconTextureIndex()
+  {
+    return 13;
+  }
+  
   public void ProcessMessage(string cmd)
   {
     if(TrainUtil.HasPrefix(cmd, "live://select-queue/"))

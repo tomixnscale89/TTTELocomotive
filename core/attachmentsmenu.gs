@@ -90,13 +90,13 @@ class AttachmentsMenu isclass CustomScriptMenu
     int i;
     for (i = 0; i < attachments.size(); i++)
     {
-      if (rowParity) rowcolor = "#0E2A35"; else rowcolor = "#05171E";
+      if (rowParity) rowcolor = Colors.Primary; else rowcolor = Colors.PrimaryDark;
       rowParity = !rowParity;
       output.Print("<tr bgcolor=" + rowcolor + "><td>");
       string att = attachments[i];
 
       output.Print("<a href='live://select-attachment/" + (string)i + "'>");
-      output.Print(att);
+      output.Print("<h2>" + att + "</h2>");
       output.Print("</a>");
 
       output.Print("<br>");
@@ -112,12 +112,12 @@ class AttachmentsMenu isclass CustomScriptMenu
         if (meshAsset)
         {
           output.Print("<tr><td>");
-          output.Print(meshAsset.GetLocalisedName());
+          output.Print("<h3>" + meshAsset.GetLocalisedName() + "</h3>");
           output.Print("</td></tr>");
         }
 
         output.Print("<tr><td>");
-        output.Print("Position X/Y/Z:");
+        output.Print("<label>Position X/Y/Z:</label>");
         output.Print("</td></tr>");
         
         output.Print("<tr><td>");
@@ -133,7 +133,7 @@ class AttachmentsMenu isclass CustomScriptMenu
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("Orientation RX/RY/RZ:");
+        output.Print("<label>Orientation RX/RY/RZ:</label>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
@@ -175,10 +175,15 @@ class AttachmentsMenu isclass CustomScriptMenu
     UpdateAttachmentTransforms();
   }
 
-  
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103374>";
+    // return "<kuid:414976:103722>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 26;
   }
 
   public void ProcessMessage(string cmd)

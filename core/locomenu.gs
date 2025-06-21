@@ -58,32 +58,29 @@ class LocoMenu isclass CustomScriptMenu
   	output.Print("<table>");
 
     output.Print("<tr><td>");
-    output.Print(HTMLWindow.CheckBox("live://property/loco-wheelslip", b_WheelslipEnabled));
-    output.Print(" " + base.strTable.GetString("wheelslip"));
+    output.Print(base.LabeledCheckbox("live://property/loco-wheelslip", b_WheelslipEnabled, base.strTable.GetString("wheelslip")));
     output.Print("</td></tr>");
 
     output.Print("<tr><td>");
-    output.Print(HTMLWindow.CheckBox("live://property/loco-shake", b_ShakeEnabled));
-    output.Print(" " + base.strTable.GetString("shake"));
+    output.Print(base.LabeledCheckbox("live://property/loco-shake", b_ShakeEnabled, base.strTable.GetString("shake")));
     if(b_ShakeEnabled)
     {
       output.Print("<br>");
-      output.Print(base.strTable.GetString("shake_intensity"));
+      output.Print("<label>" + base.strTable.GetString("shake_intensity") + "</label>");
       output.Print("<br>");
       output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='shakeintensity' min=0.0 max=0.02 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
-      output.Print(base.strTable.GetString("shake_period"));
+      output.Print("<label>" + base.strTable.GetString("shake_period") + "</label>");
+      output.Print("<br>");
       output.Print("<trainz-object style=edit-box link-on-focus-loss id=shakeperiod width=60 height=16></trainz-object>");
 
       output.Print("<br>");
-      output.Print(HTMLWindow.CheckBox("live://property/loco-shake-all", b_ShakeAll));
-      output.Print(" " + base.strTable.GetString("shake_all"));
+      output.Print(base.LabeledCheckbox("live://property/loco-shake-all", b_ShakeAll, base.strTable.GetString("shake_all")));
     }
     output.Print("</td></tr>");
 
     output.Print("<tr><td>");
-    output.Print(HTMLWindow.CheckBox("live://property/loco-couple", base.b_CoupleLockEnabled));
-    output.Print(" " + base.strTable.GetString("couple_disable"));
+    output.Print(base.LabeledCheckbox("live://property/loco-couple", base.b_CoupleLockEnabled, base.strTable.GetString("couple_disable")));
     output.Print("</td></tr>");
 
     // output.Print("<tr><td>");
@@ -92,21 +89,13 @@ class LocoMenu isclass CustomScriptMenu
     // output.Print("</td></tr>");
 
     output.Print("<tr><td>");
-    output.Print("Rotation Method:<br>");
+    output.Print("<h3>Rotation Method:</h3><br>");
 
-    if (m_rotationMode != ROTATION_NONE) output.Print("<a href='live://property/rotation-none'>");
-    output.Print("None");
-    if (m_rotationMode != ROTATION_NONE) output.Print("</a>");
+    output.Print(base.LabeledRadio("live://property/rotation-none", m_rotationMode == ROTATION_NONE, "None"));
     output.Print("<br>");
-
-    if (m_rotationMode != ROTATION_JOYSTICK) output.Print("<a href='live://property/rotation-joystick'>");
-    output.Print("Joystick");
-    if (m_rotationMode != ROTATION_JOYSTICK) output.Print("</a>");
+    output.Print(base.LabeledRadio("live://property/rotation-joystick", m_rotationMode == ROTATION_JOYSTICK, "Joystick"));
     output.Print("<br>");
-
-    if (m_rotationMode != ROTATION_CGI) output.Print("<a href='live://property/rotation-cgi'>");
-    output.Print("CGI (TRS22+ Only)");
-    if (m_rotationMode != ROTATION_CGI) output.Print("</a>");
+    output.Print(base.LabeledRadio("live://property/rotation-cgi", m_rotationMode == ROTATION_CGI, "CGI (TRS22+ Only)"));
     output.Print("<br>");
 
     output.Print("</td></tr>");
@@ -114,7 +103,7 @@ class LocoMenu isclass CustomScriptMenu
     if (m_rotationMode == ROTATION_JOYSTICK)
     {
       output.Print("<tr><td>");
-      output.Print("Loco Rotation:<br>");
+      output.Print("<label>Loco Rotation:</label><br>");
       output.Print("<img kuid='<kuid:414976:102981>' width=" + (string)TTTEBase.POPUP_WIDTH + " height=" + (string)TTTEBase.POPUP_WIDTH + ">");
       output.Print("</td></tr>");
     }
@@ -123,25 +112,23 @@ class LocoMenu isclass CustomScriptMenu
       if (SupportsCGIRotation())
       {
         output.Print("<tr><td>");
-        output.Print(HTMLWindow.CheckBox("live://property/use-smoothed-pitch-velocity", b_UseSmoothedPitchVelocity));
-        output.Print(" Use Smoothed Pitch Velocity");
+        output.Print(base.LabeledCheckbox("live://property/use-smoothed-pitch-velocity", b_UseSmoothedPitchVelocity, "Use Smoothed Pitch Velocity"));
         output.Print("</td></tr>");
   
         output.Print("<tr><td>");
-        output.Print(HTMLWindow.CheckBox("live://property/use-constant-pitch-velocity", b_UseConstantPitchVelocity));
-        output.Print(" Use Constant Pitch Velocity");
+        output.Print(base.LabeledCheckbox("live://property/use-constant-pitch-velocity", b_UseConstantPitchVelocity, "Use Constant Pitch Velocity"));
         output.Print("</td></tr>");
   
         
   
         output.Print("<tr><td>");
-        output.Print("Wobble Intensity:<br>");
+        output.Print("<label>Wobble Intensity:</label><br>");
         output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobbleintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("<br>");
-        output.Print("Wobble Speed:<br>");
+        output.Print("<label>Wobble Speed:</label><br>");
         output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobblespeed' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("<br>");
-        output.Print("Pitch Intensity:<br>");
+        output.Print("<label>Pitch Intensity:</label><br>");
         output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='pitchintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("<br>");
         output.Print("</td></tr>");
@@ -161,7 +148,13 @@ class LocoMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103611>";
+    // return "<kuid:414976:103611>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 11;
   }
 
   public float GetTickInterval()

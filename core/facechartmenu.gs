@@ -81,7 +81,13 @@ class FaceChartMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:105808>";
+    // return "<kuid:414976:105808>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 34;
   }
 
   void RegisterFace(string name, string suffix)

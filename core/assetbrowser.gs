@@ -164,16 +164,25 @@ class AssetBrowser isclass GameObject
     output.Print("<table width=392 cellspacing=2 cellpadding=2>");
     
     output.Print("<tr><td>");
-    output.Print("<a href='live://browse_loco'>Loco</a>");
-    output.Print("<a href='live://browse_scenery'>Scenery</a>");
-    output.Print("<a href='live://browse_mesh'>Mesh</a>");
-    output.Print("<a href='live://browse_all'>All</a>");
+    // output.Print("<a href='live://browse_scenery'>Scenery</a>");
+    output.Print("<table cellspacing=2><tr>");
+    output.Print("<td><a tooltip='Locos' href='live://browse_loco'><trainz-object style=graphic-button texture='<kuid:401543:2228>' width=32 height=32></a></td>");
+    output.Print("<td><a tooltip='Scenery' href='live://browse_scenery'><trainz-object style=graphic-button texture='<kuid:401543:2226>' width=32 height=32></a></td>");
+    output.Print("<td><a tooltip='Meshes' href='live://browse_mesh'><trainz-object style=graphic-button texture='<kuid:401543:2265>' width=32 height=32></a></td>");
+    output.Print("<td><a tooltip='All' href='live://browse_all'><trainz-object style=graphic-button texture='<kuid:401543:2229>' width=32 height=32></a></td>");
+    output.Print("</tr></table>");
+
     output.Print("</td></tr>");
 
     // output.Print("<br>");
     
     output.Print("<tr><td>");
-    output.Print("<trainz-object style=edit-box link-on-focus-loss id=search text='" + BrowserInterface.Quote(m_searchFilter) + "' width=100% height=16></trainz-object>");
+
+    output.Print("<table cellspacing=2><tr>");
+    output.Print("<td>Search: </td>");
+    output.Print("<td><trainz-object style=edit-box link-on-focus-loss id=search text='" + BrowserInterface.Quote(m_searchFilter) + "' width=100% height=16></trainz-object></td>");
+    output.Print("</tr></table>");
+    
     output.Print("</td></tr>");
 
     // height=100%
@@ -255,7 +264,7 @@ class AssetBrowser isclass GameObject
   thread void UpdateResultsInternal(int token)
   {
     string html = GetResultsHTML(token);
-    if (IsUpdateCancelled(token))
+    if (IsUpdateCancelled(token) or !m_browser)
       return;
     
     m_browser.SetElementProperty("results", "html", html);

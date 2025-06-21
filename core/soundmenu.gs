@@ -26,9 +26,9 @@ class SoundMenu isclass CustomScriptMenu
         string soundName = base.SoundContainer.GetIndexedTagName(i);
         string nameText = base.SoundContainer.GetNamedTag(soundName);
         if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>");
+          output.Print("<tr bgcolor=" + Colors.Primary + ">");
         else
-          output.Print("<tr bgcolor=#05171E>");
+          output.Print("<tr bgcolor=" + Colors.PrimaryDark + ">");
 
         output.Print("<td>");
         output.Print(nameText);
@@ -50,7 +50,13 @@ class SoundMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:102809>";
+    // return "<kuid:414976:102809>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 35;
   }
 
   public void ProcessMessage(string cmd)

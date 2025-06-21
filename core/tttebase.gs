@@ -18,6 +18,7 @@ include "creditsmenu.gs"
 include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
+include "colors.gs"
 include "easteregg.gs"
 
 // yuck
@@ -87,7 +88,7 @@ class TTTEBase isclass TTTEHelpers
   public define int BROWSER_TRAIN_MARGIN = 15;
   public define int SURVEYOR_MENU_OFFSET = 250;
 
-  public define int BROWSER_WIDTH = 40;
+  public define int BROWSER_WIDTH = 48;
   Browser browser;
   
   public CustomScriptMenu CurrentMenu = null;
@@ -288,17 +289,82 @@ class TTTEBase isclass TTTEHelpers
     return returnFlags;
   }
 
+  // public string HTMLText(string text)
+  // {
+  //   return "<font darkshadow face=Poppins>" + text + "</font>";
+  // }
+
+  public string ReplaceStr(string s, string remove, string replace)
+  {
+    if (!s  or  (s.size() < 1))
+      return "";
+
+    int i = Str.Find(s, remove, 0);
+    while (i >= 0)
+    {
+      string pre = s[,i];
+      string post = s[i + remove.size(),];
+      s = pre + replace + post;
+      i = Str.Find(s, remove, i);
+    }
+
+    return s;
+  }
+  
+  public string ApplyHTMLStyling(string html)
+  {
+    // Fun fact - you can have multiple html/body combos in the same browser to overlay elements on top of eachother.
+    // This is used in waybillmanager.gs.
+    // We do that here to set our background pattern.
+    html = "<html><body><img texturegroup='<kuid:414976:103770>' textureindex=2 width=100% height=100%></body></html>" + html;
+    // html = "<html><body><trainz-object style=browser id='background' width=100% height=100%></body></html>" + html;
+    // html = "<html><body><trainz-object style=edit-box read-only id='background' width=100% height=100%></body></html>" + html;
+    // html = "<html><body><trainz-object style=graphic-button id='background' texture='<kuid:414976:103770>' width=100% height=100%></body></html>" + html;
+
+    html = ReplaceStr(html, "<h1>", "<font darkshadow face=Poppins size=4>");
+    html = ReplaceStr(html, "</h1>", "</font>");
+
+    html = ReplaceStr(html, "<h2>", "<font shadow face=Poppins size=3>");
+    html = ReplaceStr(html, "</h2>", "</font>");
+
+    html = ReplaceStr(html, "<h3>", "<font shadow face=Poppins size=2>");
+    html = ReplaceStr(html, "</h3>", "</font>");
+
+    html = ReplaceStr(html, "<label>", "<font shadow face=Poppins size=1>");
+    html = ReplaceStr(html, "</label>", "</font>");
+
+    return html;
+  }
+
+  public void ApplyStylingProperties()
+  {
+    // popup.SetElementProperty("background", "can-click-through", "1");
+    // popup.SetElementProperty("background", "can-recieve-focus", "0");
+    // popup.SetElementProperty("background", "texture", "<kuid:414976:103770>");
+  }
+
+  public string LabeledCheckbox(string link, bool value, string label)
+  {
+    return "<table><tr><td valign=center>" + HTMLWindow.CheckBox(link, value) + "</td><td valign=center><label>" + label + "</label></td></tr></table>";
+  }
+
+  public string LabeledRadio(string link, bool value, string label)
+  {
+    return "<table><tr><td valign=center>" + HTMLWindow.RadioButton(link, value) + "</td><td valign=center><label>" + label + "</label></td></tr></table>";
+  }
+
   // ============================================================================
   // Name: RefreshBrowser()
   // Desc: Updates all browser parameters by reloading the HTML strings.
   // ============================================================================
-
   public void RefreshBrowser()
   {
     TrainzScript.Log("refreshing browser");
     if(CurrentMenu != null)
     {
-      popup.LoadHTMLString(self.GetAsset(), CurrentMenu.GetMenuHTML());
+      string html = ApplyHTMLStyling(CurrentMenu.GetMenuHTML());
+      popup.LoadHTMLString(self.GetAsset(), html);
+      ApplyStylingProperties();
       CurrentMenu.PostRefresh();
     }
 

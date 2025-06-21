@@ -1644,7 +1644,7 @@ class TTTELocomotive isclass Locomotive, TTTEBase
 
     output.Print("<table cellspacing=2>");
 
-    int icon_scale = 32;
+    int icon_scale = 40;
 
     if(AssetObsolete)
     {
@@ -1666,7 +1666,20 @@ class TTTELocomotive isclass Locomotive, TTTEBase
       for(i = 0; i < customMenus.size(); i++)
       {
         output.Print("<tr><td>");
-        output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
+
+        output.Print("<a href='live://open_custom/" + (string)i + "'>");
+
+        int textureIndex = customMenus[i].GetIconTextureIndex();
+        if (textureIndex >= 0)
+        {
+          output.Print("<img texturegroup='" + customMenus[i].GetIconKUIDString() + "' textureindex=" + (string)textureIndex + " width=" + icon_scale + " height=" + icon_scale + ">");
+        }
+        else
+        {
+          output.Print("<img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + ">");
+        }
+
+        output.Print("</a>");
         output.Print("</td></tr>");
       }
     }

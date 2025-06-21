@@ -94,7 +94,7 @@ class LampMenu isclass CustomScriptMenu
     if(base.ExtraLampsContainer and base.ExtraLampsContainer.CountTags())
     {
       output.Print("<br>");
-      output.Print("Custom Lamps:");
+      output.Print("<h2>Custom Lamps:</h2>");
       output.Print("<br>");
       output.Print("<table>");
       output.Print("<tr> <td width='300'></td> </tr>");
@@ -106,14 +106,15 @@ class LampMenu isclass CustomScriptMenu
         string effectName = base.ExtraLampsContainer.GetIndexedTagName(i);
         string nameText = base.ExtraLampsContainer.GetNamedTag(effectName);
         if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>");
+          output.Print("<tr bgcolor=" + Colors.Primary + ">");
         else
-          output.Print("<tr bgcolor=#05171E>");
+          output.Print("<tr bgcolor=" + Colors.PrimaryDark + ">");
 
         output.Print("<td>");
-        output.Print(HTMLWindow.CheckBox("live://extra-lamps/" + i, base.ExtraLampVisibility[i]));
-        output.Print(" " + nameText);
-        output.Print("</td></tr>");
+        output.Print(base.LabeledCheckbox("live://extra-lamps/" + i, base.ExtraLampVisibility[i], nameText));
+        output.Print("</td>");
+
+        output.Print("</tr>");
       }
       output.Print("</table>");
     }
@@ -125,7 +126,13 @@ class LampMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103609>";
+    // return "<kuid:414976:103609>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 29;
   }
 
   public void ProcessMessage(string cmd)

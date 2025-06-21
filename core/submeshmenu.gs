@@ -43,13 +43,12 @@ class SubmeshMenu isclass CustomScriptMenu
         string submeshName = base.SubmeshContainer.GetIndexedTagName(i);
         string nameText = base.SubmeshContainer.GetNamedTag(submeshName);
         if (rowParity)
-          output.Print("<tr bgcolor=#0E2A35>");
+          output.Print("<tr bgcolor=" + Colors.Primary + ">");
         else
-          output.Print("<tr bgcolor=#05171E>");
+          output.Print("<tr bgcolor=" + Colors.PrimaryDark + ">");
 
         output.Print("<td>");
-        output.Print(HTMLWindow.CheckBox("live://toggle-submesh/" + (string)i, submeshState[i]));
-        output.Print(" " + nameText);
+        output.Print(base.LabeledCheckbox("live://toggle-submesh/" + (string)i, submeshState[i], nameText));
         output.Print("</td>");
         
         output.Print("</tr>");
@@ -62,9 +61,16 @@ class SubmeshMenu isclass CustomScriptMenu
     return output.AsString();
   }
 
+
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:100362>";
+    // return "<kuid:414976:100362>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 31;
   }
 
   public void ProcessMessage(string cmd)

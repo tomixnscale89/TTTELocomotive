@@ -70,7 +70,13 @@ class SmokeMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103612>";
+    // return "<kuid:414976:103612>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 30;
   }
 
   // ============================================================================

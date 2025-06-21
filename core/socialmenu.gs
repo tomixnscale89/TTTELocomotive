@@ -36,7 +36,7 @@ class SocialMenu isclass CustomScriptMenu
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
-    output.Print("Invite your friends to control this locomotive!");
+    output.Print("<label>Invite your friends to control this locomotive!</label>");
     output.Print("<br>");
 
     OnlineGroup socialGroup = GetSocialGroup();
@@ -52,9 +52,9 @@ class SocialMenu isclass CustomScriptMenu
 
       rowParity = !rowParity;
       if (rowParity)
-        output.Print("<tr bgcolor=#0E2A35 height=20>");
+        output.Print("<tr bgcolor=" + Colors.Primary + " height=20>");
       else
-        output.Print("<tr bgcolor=#05171E height=20>");
+        output.Print("<tr bgcolor=" + Colors.PrimaryDark + " height=20>");
 
       output.Print("<td width=100>");
       output.Print(user);
@@ -64,13 +64,13 @@ class SocialMenu isclass CustomScriptMenu
       if(status == OnlineGroup.USER_STATUS_INSIDE)
       {
         if(user == base.assignedFriend)
-          output.Print("<a href='live://unassign_friend/" + (string)i + "'>Revoke Control</a>");
+          output.Print("<a href='live://unassign_friend/" + (string)i + "'><label>Revoke Control</label></a>");
         else
-          output.Print("<a href='live://assign_friend/" + (string)i + "'>Assign To Loco</a>");
+          output.Print("<a href='live://assign_friend/" + (string)i + "'><label>Assign To Loco</label></a>");
       }
       output.Print("</td>");
 
-      output.Print("<td width=50><a href='live://kick_friend/" + (string)i + "'>Kick</a></td>");
+      output.Print("<td width=50><a href='live://kick_friend/" + (string)i + "'><label>Kick</label></a></td>");
       
       output.Print("<td width=50>" + GetStatusString(status) + "</td>");
 
@@ -79,11 +79,11 @@ class SocialMenu isclass CustomScriptMenu
     output.Print("</table>");
 
     output.Print("<br>");
-    output.Print("iTrainz Username: ");
+    output.Print("<label>iTrainz Username:</label>");
     output.Print("<trainz-object style=edit-box link-on-focus-loss id=social_user width=250 height=16></trainz-object>");
     output.Print("<br>");
 
-    output.Print("<a href='live://invite_friend'>Invite</a>");
+    output.Print("<a href='live://invite_friend'><label>Invite</label></a>");
     output.Print("<br>");
 
     output.Print("</body></html>");
@@ -92,7 +92,13 @@ class SocialMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:102857>";
+    // return "<kuid:414976:102857>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 32;
   }
 
   public void ProcessMessage(string cmd)

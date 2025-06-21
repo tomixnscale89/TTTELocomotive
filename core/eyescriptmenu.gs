@@ -13,20 +13,20 @@ class EyeScriptMenu isclass CustomScriptMenu
 
     //Options
     output.Print("<tr><td>");
-    output.Print("<font><b>" + base.strTable.GetString("eye_menu") + "</font>");
+    output.Print("<h1><b>" + base.strTable.GetString("eye_menu") + "</h1>");
     output.Print("<br>");
-    output.Print("<a href='live://eye-reset' tooltip='" + base.strTable.GetString("tooltip_reset") + "'><font>" + base.strTable.GetString("reset_controls") + "</font></a>");
+    output.Print("<a href='live://eye-reset' tooltip='" + base.strTable.GetString("tooltip_reset") + "'><label>" + base.strTable.GetString("reset_controls") + "</label></a>");
     output.Print("</td></tr>");
 
     //controls
     output.Print("<tr><td>");
-    output.Print(base.strTable.GetString("eye_rotation_h"));
+    output.Print("<label>" + base.strTable.GetString("eye_rotation_h") + "</label>");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
     output.Print("</td></tr>");
 
     output.Print("<tr><td>");
-    output.Print(base.strTable.GetString("eye_rotation_v"));
+    output.Print("<label>" + base.strTable.GetString("eye_rotation_v") + "</label>");
     output.Print("<br>");
     output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
     output.Print("</td></tr>");
@@ -37,18 +37,18 @@ class EyeScriptMenu isclass CustomScriptMenu
     output.Print("</td></tr>");
 
     output.Print("<tr><td>");
-    output.Print("<a href='live://record'><font>" + base.strTable.GetString("recording_start") + "</font></a>");
+    output.Print("<a href='live://record'><label>" + base.strTable.GetString("recording_start") + "</label></a>");
     output.Print("<br>");
-    output.Print("<a href='live://record-stop'><font>" + base.strTable.GetString("recording_stop") + "</font></a>");
+    output.Print("<a href='live://record-stop'><label>" + base.strTable.GetString("recording_stop") + "</label></a>");
     output.Print("<br>");
-    output.Print("<a href='live://play'><font>" + base.strTable.GetString("recording_anim") + "</font></a>");
+    output.Print("<a href='live://play'><label>" + base.strTable.GetString("recording_anim") + "</label></a>");
     output.Print("</td></tr>");
 
     output.Print("</table>");
 
     output.Print("<br>");
-    output.Print(HTMLWindow.CheckBox("live://eye-lock", base.useLockTarget));
-  	output.Print(base.strTable.GetString("target_lock") + "</td></tr>");
+    output.Print(base.LabeledCheckbox("live://eye-lock", base.useLockTarget, base.strTable.GetString("target_lock")));
+
     if(base.useLockTarget)
   	{
       string targetText = base.strTable.GetString("target_select");
@@ -57,7 +57,7 @@ class EyeScriptMenu isclass CustomScriptMenu
       else if(base.eyeLockTarget != null)
         targetText = base.eyeLockTarget.GetAsset().GetLocalisedName();
   		output.Print("<br>");
-  		output.Print("<a href='live://eye-lock-select' tooltip='" + base.strTable.GetString("target_select_eye") + "'>" + targetText + "</a>");
+  		output.Print("<a href='live://eye-lock-select' tooltip='" + base.strTable.GetString("target_select_eye") + "'><label>" + targetText + "</label></a>");
   	}
 
   	output.Print("</body></html>");
@@ -67,7 +67,13 @@ class EyeScriptMenu isclass CustomScriptMenu
 
   public string GetIconKUIDString()
   {
-    return "<kuid:414976:103313>";
+    // return "<kuid:414976:103313>";
+    return "<kuid:414976:103758>";
+  }
+
+  public int GetIconTextureIndex()
+  {
+    return 27;
   }
 
   public void ProcessMessage(string cmd)
