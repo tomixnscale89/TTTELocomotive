@@ -602,7 +602,7 @@ class TTTEWagon isclass Vehicle, TTTEBase
     {
       output.Print("<tr><td>");
       // output.Print("<a href='live://open_custom/" + (string)i + "'><img kuid='" + customMenus[i].GetIconKUIDString() + "' width=" + icon_scale + " height=" + icon_scale + "></a>");
-      output.Print("<a href='live://open_custom/" + (string)i + "'></a>");
+      output.Print("<a href='live://open_custom/" + (string)i + "'>");
 
       // <img kuid='" + customMenus[i].GetIconKUIDString() + "' color=#0377fc width=" + icon_scale + " height=" + icon_scale + ">
       int textureIndex = customMenus[i].GetIconTextureIndex();
