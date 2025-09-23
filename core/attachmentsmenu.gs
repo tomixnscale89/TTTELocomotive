@@ -1,5 +1,6 @@
 include "tttemenu.gs"
 include "assetbrowser.gs"
+include "meshinspector.gs"
 
 class AttachmentsMenu isclass CustomScriptMenu
 {
@@ -16,9 +17,13 @@ class AttachmentsMenu isclass CustomScriptMenu
   AssetBrowser m_assetBrowser;
   int m_selectingAttachment;
 
+  MeshInspector m_inspector;
+  int m_inspectingAttachment;
+
   public void Init()
   {
     m_selectingAttachment = -1;
+    m_inspectingAttachment = -1;
 
     attachmentPosX = new float[base.MeshAttachments.size()];
     attachmentPosY = new float[base.MeshAttachments.size()];
@@ -33,6 +38,30 @@ class AttachmentsMenu isclass CustomScriptMenu
   {
     m_assetBrowser = new AssetBrowser();
     m_assetBrowser.Init(base.self.GetAsset(), base.self, "CustomScriptMessage");
+  }
+
+  void CreateAttachmentInspector(int iAtt)
+  {
+    if (m_inspector)
+    {
+      m_inspector.Close();
+      m_inspector = null;
+    }
+
+    if (m_inspectingAttachment == iAtt)
+    {
+      m_inspectingAttachment = -1;
+      return;
+    }
+
+    string att = base.MeshAttachments[iAtt];
+    MeshObject mesh = base.self.GetFXAttachment(att);
+    if (!mesh)
+      return;
+    
+    m_inspector = new MeshInspector();
+    m_inspector.Init(mesh, base.self);
+    m_inspectingAttachment = iAtt;
   }
 
   void SetAttachmentTransforms()
@@ -73,6 +102,20 @@ class AttachmentsMenu isclass CustomScriptMenu
       mesh.SetMeshTranslation("default", attachmentPosX[i], attachmentPosY[i], attachmentPosZ[i]);
       mesh.SetMeshOrientation("default", attachmentRotX[i], attachmentRotY[i], attachmentRotZ[i]);
     }
+  }
+
+  void ResetAttachment(int iAtt)
+  {
+    attachmentPosX[iAtt] = 0;
+    attachmentPosY[iAtt] = 0;
+    attachmentPosZ[iAtt] = 0;
+
+    attachmentRotX[iAtt] = 0;
+    attachmentRotY[iAtt] = 0;
+    attachmentRotZ[iAtt] = 0;
+
+    SetAttachmentTransforms();
+    UpdateAttachmentTransforms();
   }
 
   public string GetMenuHTML()
@@ -116,20 +159,40 @@ class AttachmentsMenu isclass CustomScriptMenu
           output.Print("</td></tr>");
         }
 
+        output.Print("<tr>");
+        output.Print("<td>");
+
+        output.Print("<table><tr>");
+        output.Print("<td>");
+        output.Print("<a href='live://attachment-properties/" + (string)i + "'><label>Properties</label></a>");
+        output.Print("</td>");
+
+        output.Print("<td>");
+        output.Print("<a href='live://attachment-reset/" + (string)i + "'><label>Reset</label></a>");
+        output.Print("</td>");
+
+        output.Print("<td>");
+        output.Print("<a href='live://attachment-clear/" + (string)i + "'><label>Clear</label></a>");
+        output.Print("</td>");
+        output.Print("</tr></table>");
+
+        output.Print("</td>");
+        output.Print("</tr>");
+
         output.Print("<tr><td>");
         output.Print("<label>Position X/Y/Z:</label>");
         output.Print("</td></tr>");
         
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-x-" + (string)i + "' min=-1.0 max=1.0 value=" + (string)attachmentPosX[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-x-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosX[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-y-" + (string)i + "' min=-1.0 max=1.0 value=" + (string)attachmentPosY[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-y-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosY[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-z-" + (string)i + "' min=-1.0 max=1.0 value=" + (string)attachmentPosZ[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-z-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosZ[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
@@ -195,6 +258,33 @@ class AttachmentsMenu isclass CustomScriptMenu
       {
         m_selectingAttachment = Str.ToInt(command);
         CreateAssetBrowser();
+      }
+    }
+    else if(TrainUtil.HasPrefix(cmd, "live://attachment-properties/"))
+    {
+      string command = cmd["live://attachment-properties/".size(),];
+      if(command)
+      {
+        int iAtt = Str.ToInt(command);
+        CreateAttachmentInspector(iAtt);
+      }
+    }
+    else if(TrainUtil.HasPrefix(cmd, "live://attachment-reset/"))
+    {
+      string command = cmd["live://attachment-reset/".size(),];
+      if(command)
+      {
+        int iAtt = Str.ToInt(command);
+        ResetAttachment(iAtt);
+      }
+    }
+    else if(TrainUtil.HasPrefix(cmd, "live://attachment-clear/"))
+    {
+      string command = cmd["live://attachment-clear/".size(),];
+      if(command)
+      {
+        string att = base.MeshAttachments[Str.ToInt(command)];
+        base.self.SetFXAttachment(att, null);
       }
     }
 
