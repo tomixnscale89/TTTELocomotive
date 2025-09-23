@@ -671,6 +671,9 @@ class TTTEWagon isclass Vehicle, TTTEBase
   // @override
   public bool ShouldShowPopup()
   {
+    if (AttachParent and AttachParent.ShouldShowPopup())
+      return true;
+
     return HasFocus();
   }
 

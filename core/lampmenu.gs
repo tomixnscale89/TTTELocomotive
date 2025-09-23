@@ -1,12 +1,25 @@
 include "tttemenu.gs"
-
+include "lightstyle.gs"
 
 class LampMenu isclass CustomScriptMenu
 {
   int easterCounter = 0;
+  public bool b_AnimatedLight = false;
 
   public bool IsCore() { return true; }
 
+  void UpdateLightColor()
+  {
+    base.popup.SetElementProperty("headlight-r", "value", (string)base.headlightR);
+    base.popup.SetElementProperty("headlight-g", "value", (string)base.headlightG);
+    base.popup.SetElementProperty("headlight-b", "value", (string)base.headlightB);
+    base.popup.SetElementProperty("headlight-intensity", "value", (string)base.headlightScale);
+  }
+
+  public void PostRefresh()
+  {
+    UpdateLightColor();
+  }
 
   public string GetMenuHTML()
   {
@@ -91,6 +104,50 @@ class LampMenu isclass CustomScriptMenu
     output.Print("</table>");
     output.Print("</a>"); // Easter egg link
 
+    output.Print("<br>");
+    output.Print(base.LabeledCheckbox("live://animate-light", b_AnimatedLight, "Animated Light"));
+    if (b_AnimatedLight)
+    {
+      output.Print("<label>R</label>");
+      output.Print("<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-r' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<br>");
+      output.Print("<label>G</label>");
+      output.Print("<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-g' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<br>");
+      output.Print("<label>B</label>");
+      output.Print("<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-b' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<br>");
+      output.Print("<label>Intensity</label>");
+      output.Print("<br>");
+      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-intensity' min=0.0 max=4.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<br>");
+
+      // Light styles.
+      output.Print("<table>");
+      output.Print("<tr> <td width='300'></td> </tr>");
+      int i;
+
+      bool rowParity = false;
+      for (i = 0; i < LightStyle.Count(); i++)
+      {
+        rowParity = !rowParity;
+        if (rowParity)
+          output.Print("<tr bgcolor=" + Colors.Primary + ">");
+        else
+          output.Print("<tr bgcolor=" + Colors.PrimaryDark + ">");
+
+        output.Print("<td>");
+        output.Print(base.LabeledRadio("live://set-lightstyle/" + (string)i, (base.lightStyle == i), LightStyle.GetName(i)));
+        output.Print("</td>");
+
+        output.Print("</tr>");
+      }
+      output.Print("</table>");
+    }
+
     if(base.ExtraLampsContainer and base.ExtraLampsContainer.CountTags())
     {
       output.Print("<br>");
@@ -169,6 +226,14 @@ class LampMenu isclass CustomScriptMenu
         base.ConfigureHeadcodeLamps();
       }
     }
+    else if (cmd == "live://animate-light")
+    {
+      b_AnimatedLight = !b_AnimatedLight;
+      if (!b_AnimatedLight)
+      {
+        base.lightStyle = -1;
+      }
+    }
     else if(cmd == "live://easter_egg")
     {
       easterCounter++;
@@ -176,6 +241,15 @@ class LampMenu isclass CustomScriptMenu
       {
         easterCounter = 0;
         base.StartEasterEgg();
+      }
+    }
+    else if(TrainUtil.HasPrefix(cmd, "live://set-lightstyle/"))
+    {
+      string command = Str.Tokens(cmd, "live://set-lightstyle/")[0];
+      if(command)
+      {
+        int style = Str.UnpackInt(command);
+        base.SetLightStyle(style);
       }
     }
     else if(TrainUtil.HasPrefix(cmd, "live://extra-lamps/"))

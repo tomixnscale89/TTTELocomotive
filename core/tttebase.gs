@@ -19,6 +19,7 @@ include "tttelib.gs"
 include "vehicle.gs"
 include "stringtable.gs"
 include "colors.gs"
+include "lightstyle.gs"
 include "easteregg.gs"
 
 // yuck
@@ -55,6 +56,12 @@ class TTTEBase isclass TTTEHelpers
   
   Asset coupler_idle, coupler_coupled; // legacy couplers
 
+  public int lightStyle = -1;
+  public float headlightIntensity = 1.0;
+  public float headlightR = 1.0;
+  public float headlightG = 1.0;
+  public float headlightB = 1.0;
+  public float headlightScale = 1.0;
 
   public bool useLockTarget = false;
   public bool selectingTarget = false;
@@ -107,6 +114,9 @@ class TTTEBase isclass TTTEHelpers
   CustomScriptMenu AttachmentsMenu = null;
   CustomScriptMenu SocialMenu     = null;
   CustomScriptMenu CreditsMenu    = null;
+
+  // Special reference to our attach parent if we're an FXAttachment.
+  public TTTEBase AttachParent = null;
 
   //Eye stuff
 	//These variables keep track of the rotation of the eyes, and will be dynamically updated incrementally. Rotations are defined relative to 0, with 0 being the absolute center of each axis.
@@ -594,6 +604,8 @@ class TTTEBase isclass TTTEHelpers
 
   int GetTTTETrainIndex()
   {
+    if (AttachParent) return AttachParent.GetTTTETrainSize();
+    
     //is_TTTELocomotive
     Vehicle[] vehicles = self.GetMyTrain().GetVehicles();
     int num_vehicles = 0;
@@ -614,6 +626,8 @@ class TTTEBase isclass TTTEHelpers
 
   int GetTTTETrainSize()
   {
+    if (AttachParent) return AttachParent.GetTTTETrainSize();
+    
     //is_TTTELocomotive
     Vehicle[] vehicles = self.GetMyTrain().GetVehicles();
     int num_vehicles = 0;
@@ -660,6 +674,69 @@ class TTTEBase isclass TTTEHelpers
     else
       self.SetFXAttachment(effectName, null);
   }
+
+
+  // ============================================================================
+  // Name: UpdateHeadlightColor()
+  // Desc: Update the headlight color.
+  // ============================================================================
+  public void UpdateHeadlightColor()
+  {
+    if (LampMenu != null and CurrentMenu == LampMenu and popup and popup.GetWindowVisible())
+    {
+      headlightScale = Str.ToFloat(popup.GetElementProperty("headlight-intensity", "value"));
+      headlightR = Str.ToFloat(popup.GetElementProperty("headlight-r", "value"));
+      headlightG = Str.ToFloat(popup.GetElementProperty("headlight-g", "value"));
+      headlightB = Str.ToFloat(popup.GetElementProperty("headlight-b", "value"));
+    }
+
+    float scale = headlightScale * headlightScale;
+
+    self.SetHeadlightColor(headlightR * scale * headlightIntensity, headlightG * scale * headlightIntensity, headlightB * scale * headlightIntensity);
+  }
+
+
+  // ============================================================================
+  // Name: LightStyleThread()
+  // Desc: Background thread for updating light styles.
+  // ============================================================================
+  bool bLightStyleThreadRunning = false;
+  thread void LightStyleThread(void)
+  {
+    if (bLightStyleThreadRunning)
+      return;
+    bLightStyleThreadRunning = true;
+
+    float time = 0;
+    while (lightStyle != -1)
+    {
+      headlightIntensity = LightStyle.AnimateLight(time, LightStyle.Get(lightStyle));
+      UpdateHeadlightColor();
+
+      time = time + 0.1;
+      self.Sleep(0.1);
+    }
+
+    bLightStyleThreadRunning = false;
+  }
+
+
+  // ============================================================================
+  // Name: SetLightStyle()
+  // Desc: Set a custom lamp style
+  // ============================================================================
+  public void SetLightStyle(int style)
+  {
+    if (lightStyle == style)
+      return;
+    
+    lightStyle = style;
+    if (lightStyle != -1)
+    {
+      LightStyleThread();
+    }
+  }
+
 
   // ============================================================================
   // Name: BufferThread()

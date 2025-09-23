@@ -1744,6 +1744,9 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   // @override
   public bool ShouldShowPopup()
   {
+    if (AttachParent and AttachParent.ShouldShowPopup())
+      return true;
+    
     return HasFocus() or IsTargetLoco();
   }
 
@@ -1757,7 +1760,6 @@ class TTTELocomotive isclass Locomotive, TTTEBase
   {
     while(true)
     {
-      
       if (!me.ShouldShowPopup())
       {
         CurrentMenu = null;
