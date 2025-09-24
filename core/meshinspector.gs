@@ -77,7 +77,10 @@ class MeshInspector isclass GameObject
     m_bQueryComplete = true;
     m_bQueryFailed = false;
 
-    m_config = m_asset.GetConfigSoupCached();
+    // NOTE: GetConfigSoup should fall through to GetConfigSoupCached()
+    // without requiring us to bump the build number to 4.9/5.0
+    // m_config = m_asset.GetConfigSoupCached();
+    m_config = m_asset.GetConfigSoup();
     Soup meshTable = m_config.GetNamedSoup("mesh-table");
     LoadMeshTable(meshTable);
 
