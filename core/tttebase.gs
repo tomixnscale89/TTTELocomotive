@@ -370,6 +370,21 @@ class TTTEBase isclass TTTEHelpers
     html = ReplaceStr(html, "<label>", "<font shadow face='Segoe UI' size=1>");
     html = ReplaceStr(html, "</label>", "</font>");
 
+    // Custom slider styling.
+    // background='file://trainz/asset/<kuid:414976:103770>/well.tga'
+
+    string sliderStyle = "background='file://trainz/asset/<kuid2:414976:103758:1>/slider_bg.png'"
+                       + " less='file://trainz/asset/<kuid2:414976:103758:1>/arrow_up.png'"
+                       + " less-over='file://trainz/asset/<kuid2:414976:103758:1>/arrow_red_up.png'"
+                       + " more='file://trainz/asset/<kuid2:414976:103758:1>/arrow_down.png'"
+                       + " more-over='file://trainz/asset/<kuid2:414976:103758:1>/arrow_red_down.png'"
+                       + " thumb='file://trainz/asset/<kuid2:414976:103758:1>/thumb.png'"
+                       + " thumb-over='file://trainz/asset/<kuid2:414976:103758:1>/thumb_red.png'"
+                       + " thumb-width=32 thumb-height=32 arrow-width=32 arrow-height=32"
+                       ;
+
+    html = ReplaceStr(html, "theme=ttte-slider", sliderStyle);
+
     return html;
   }
 

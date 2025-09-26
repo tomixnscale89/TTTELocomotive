@@ -184,15 +184,15 @@ class AttachmentsMenu isclass CustomScriptMenu
         output.Print("</td></tr>");
         
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-x-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosX[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='att-pos-x-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosX[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-y-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosY[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='att-pos-y-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosY[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-pos-z-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosZ[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='att-pos-z-" + (string)i + "' min=-2.0 max=2.0 value=" + (string)attachmentPosZ[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
@@ -200,15 +200,15 @@ class AttachmentsMenu isclass CustomScriptMenu
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-rot-x-" + (string)i + "' min=-3.14 max=3.14 value=" + (string)attachmentRotX[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='att-rot-x-" + (string)i + "' min=-3.14 max=3.14 value=" + (string)attachmentRotX[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-rot-y-" + (string)i + "' min=-3.14 max=3.14 value=" + (string)attachmentRotY[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='att-rot-y-" + (string)i + "' min=-3.14 max=3.14 value=" + (string)attachmentRotY[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
 
         output.Print("<tr><td>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='att-rot-z-" + (string)i + "' min=-3.14 max=3.14 value=" + (string)attachmentRotZ[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='att-rot-z-" + (string)i + "' min=-3.14 max=3.14 value=" + (string)attachmentRotZ[i] + " page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("</td></tr>");
         
         output.Print("</table>");

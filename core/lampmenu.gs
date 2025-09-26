@@ -114,19 +114,19 @@ class LampMenu isclass CustomScriptMenu
     {
       output.Print("<label>R</label>");
       output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-r' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-r' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
       output.Print("<label>G</label>");
       output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-g' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-g' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
       output.Print("<label>B</label>");
       output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-b' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-b' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
       output.Print("<label>Intensity</label>");
       output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='headlight-intensity' min=0.0 max=4.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-intensity' min=0.0 max=4.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
 
       // Light styles.
