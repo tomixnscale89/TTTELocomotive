@@ -19,16 +19,16 @@ class EyeScriptMenu isclass CustomScriptMenu
     output.Print("</td></tr>");
 
     //controls
-    output.Print("<tr><td>");
+    output.Print("<tr><td width=100%>");
     output.Print("<label>" + base.strTable.GetString("eye_rotation_h") + "</label>");
     output.Print("<br>");
-    output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+    output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=20 id='eyeX' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
     output.Print("</td></tr>");
 
-    output.Print("<tr><td>");
+    output.Print("<tr><td width=100%>");
     output.Print("<label>" + base.strTable.GetString("eye_rotation_v") + "</label>");
     output.Print("<br>");
-    output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
+    output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=20 id='eyeY' min=-38 max=38 value=0.0 page-size=0></trainz-object>");
     output.Print("</td></tr>");
 
     //dial is no longer advanced lol

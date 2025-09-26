@@ -315,18 +315,45 @@ class TTTEBase isclass TTTEHelpers
       string pre = s[,i];
       string post = s[i + remove.size(),];
       s = pre + replace + post;
+      
+      i = i + replace.size();
       i = Str.Find(s, remove, i);
     }
 
     return s;
   }
   
-  public string ApplyHTMLStyling(string html)
+  public string ApplyHTMLStyling(string html, bool bSlim)
   {
+    // Hack: shrink the inner HTML with a table to give us some padding.
+    if (!bSlim)
+    {
+      // html = ReplaceStr(html, "<body>", "<body><table cellpadding=2><tr><td>");
+      // html = ReplaceStr(html, "</body>", "</td></tr></table></body>");
+      html = ReplaceStr(html, "<body>", "<body><rect left=5% top=5% right=95%>");
+      html = ReplaceStr(html, "</body>", "</rect></body>");
+    }
+
+    // Generate a repeating background pattern.
+    string bgStr = "";
+
+    int bgOffset;
+    int bgHeight = 350;
+    int bgMaxHeight = 3200;
+    for (bgOffset = 0; bgOffset < bgMaxHeight; bgOffset = bgOffset + bgHeight)
+    {
+      bgStr = bgStr + "<rect floating left=0% right=100% top=" + (string)bgOffset + " bottom=" + (string)(bgOffset + bgHeight) + ">";
+      bgStr = bgStr + "<img texturegroup='<kuid:414976:103770>' textureindex=2 width=100% height=" + (string)bgHeight + ">";
+      bgStr = bgStr + "</rect>";
+    }
+
     // Fun fact - you can have multiple html/body combos in the same browser to overlay elements on top of eachother.
     // This is used in waybillmanager.gs.
     // We do that here to set our background pattern.
-    html = "<html><body><img texturegroup='<kuid:414976:103770>' textureindex=2 width=100% height=100%></body></html>" + html;
+    // html = "<html><body><img texturegroup='<kuid:414976:103770>' textureindex=2 width=100% height=100%></body></html>" + html;
+    html = "<html><body>" + bgStr + "</body></html>" + html;
+
+
     // html = "<html><body><trainz-object style=browser id='background' width=100% height=100%></body></html>" + html;
     // html = "<html><body><trainz-object style=edit-box read-only id='background' width=100% height=100%></body></html>" + html;
     // html = "<html><body><trainz-object style=graphic-button id='background' texture='<kuid:414976:103770>' width=100% height=100%></body></html>" + html;
@@ -340,7 +367,7 @@ class TTTEBase isclass TTTEHelpers
     html = ReplaceStr(html, "<h3>", "<font shadow face=Poppins size=2>");
     html = ReplaceStr(html, "</h3>", "</font>");
 
-    html = ReplaceStr(html, "<label>", "<font shadow face=Poppins size=1>");
+    html = ReplaceStr(html, "<label>", "<font shadow face='Segoe UI' size=1>");
     html = ReplaceStr(html, "</label>", "</font>");
 
     return html;
@@ -372,7 +399,10 @@ class TTTEBase isclass TTTEHelpers
     TrainzScript.Log("refreshing browser");
     if(CurrentMenu != null)
     {
-      string html = ApplyHTMLStyling(CurrentMenu.GetMenuHTML());
+      bool bSlim = false;
+      if (CurrentMenu == JoystickMenu) bSlim = true;
+
+      string html = ApplyHTMLStyling(CurrentMenu.GetMenuHTML(), bSlim);
       popup.LoadHTMLString(self.GetAsset(), html);
       ApplyStylingProperties();
       CurrentMenu.PostRefresh();

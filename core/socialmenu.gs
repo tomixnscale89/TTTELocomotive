@@ -36,6 +36,10 @@ class SocialMenu isclass CustomScriptMenu
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
+
+    output.Print("<h1><b>Social</h1>");
+    output.Print("<br>");
+
     output.Print("<label>Invite your friends to control this locomotive!</label>");
     output.Print("<br>");
 

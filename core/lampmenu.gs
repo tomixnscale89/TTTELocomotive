@@ -25,6 +25,10 @@ class LampMenu isclass CustomScriptMenu
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
+
+    output.Print("<h1><b>Lamps</h1>");
+    output.Print("<br>");
+
     //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
     output.Print("<br>");
     output.Print("<a href='live://easter_egg'>"); // Easter egg link

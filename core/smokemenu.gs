@@ -9,6 +9,10 @@ class SmokeMenu isclass CustomScriptMenu
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
+
+    output.Print("<h1><b>Smoke</h1>");
+    output.Print("<br>");
+
     output.Print("<table>");
 
     //Generate smoke containers

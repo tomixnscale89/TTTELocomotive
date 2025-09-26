@@ -32,9 +32,14 @@ class FaceMenu isclass CustomScriptMenu
         string baseName = tok[0];
         string subName = faceName[baseName.size(),];
         Str.TrimLeft(subName, null);
+        Str.TrimLeft(subName, "-:");
+        Str.TrimLeft(subName, null);
 
         Soup data = m_faces.GetNamedSoupAdd(baseName);
         data.SetNamedTag("real-name", baseName);
+
+        if (subName.size() >= 5)
+          data.SetNamedTag("has-long-names", true);
 
         data.SetNamedTag("has-children", true);
         Soup children = data.GetNamedSoupAdd("children");
@@ -48,15 +53,33 @@ class FaceMenu isclass CustomScriptMenu
     }
   }
 
+  public string ReplaceNBSP(string str)
+  {
+    string out = "";
+    int i;
+    for (i = 0; i < str.size(); i++)
+    {
+      int c = str[i];
+      if (c == ' ') out = out + "&nbsp;";
+      else out[out.size()] = c;
+    }
+
+    return out;
+  }
+
   public string GetMenuHTML()
   {
     UpdateFaces();
 
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
+
+    output.Print("<h1><b>Faces</h1>");
+
     //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
-    output.Print("<br>");
-    output.Print("<label>" + base.strTable.GetString("faces_description") + "</label>");
+    // output.Print("<br>");
+    // output.Print("<label>" + base.strTable.GetString("faces_description") + "</label>");
+
     output.Print("<br>");
     output.Print("<table cellpadding=2 cellspacing=2>");
     output.Print("<tr> <td width='300'></td> </tr>");
@@ -112,12 +135,17 @@ class FaceMenu isclass CustomScriptMenu
       // Add a children row
       if (data.GetNamedTagAsBool("has-children"))
       {
+        bool bVertical = data.GetNamedTagAsBool("has-long-names");
+
         output.Print("<tr bgcolor=" + rowcolor + ">");
         output.Print("<td align=right valign=center>");
         
         // Embed a table so the entries are spaced apart.
         output.Print("<table>");
-        output.Print("<tr>");
+
+        // Horizontal - one long row.
+        if (!bVertical) output.Print("<tr>");
+
         Soup children = data.GetNamedSoup("children");
         for (j = 0; j < children.CountTags(); j++)
         {
@@ -125,7 +153,20 @@ class FaceMenu isclass CustomScriptMenu
           string subName = childData.GetNamedTag("label");
           int subIndex = childData.GetNamedTagAsInt("index");
 
-          output.Print("<td>");
+          // string subName2 = ReplaceNBSP(subName);
+
+          // Vertical - each face gets its own row.
+          if (bVertical)
+          {
+            output.Print("<tr>");
+            output.Print("<td align=right>");
+          }
+          else
+          {
+            output.Print("<td>");
+          }
+
+          output.Print("<nowrap>");
 
           if(subIndex != base.faceSelection)
           {
@@ -135,7 +176,7 @@ class FaceMenu isclass CustomScriptMenu
           {
             output.Print("<font color=#d0d0d0>");
           }
-          
+
           output.Print("<label>" + subName + "</label>");
 
           if(subIndex != base.faceSelection)
@@ -146,10 +187,15 @@ class FaceMenu isclass CustomScriptMenu
           {
             output.Print("</font>");
           }
-          
+
+          output.Print("</nowrap>");
+
           output.Print("</td>");
+
+          if (bVertical) output.Print("</tr>");
         }
-        output.Print("</tr>");
+
+        if (!bVertical) output.Print("</tr>");
         output.Print("</table>");
         // Embedded table end.
 

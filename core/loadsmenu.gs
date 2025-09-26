@@ -17,6 +17,9 @@ class LoadsMenu isclass CustomScriptMenu
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
 
+    output.Print("<h1><b>Loads</h1>");
+    output.Print("<br>");
+
     ProductQueue[] queues = base.self.GetQueues();
 
     // List queues.

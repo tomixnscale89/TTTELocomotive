@@ -10,9 +10,11 @@ class LiveryMenu isclass CustomScriptMenu
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
     //output.Print("<a href='live://return' tooltip='" + strTable.GetString("tooltip_return") + "'><b><font>" + strTable.GetString("menu") + "</font></b></a>");
+    output.Print("<h1><b>Liveries</h1>");
     output.Print("<br>");
-    output.Print(base.strTable.GetString("skin_description"));
-    output.Print("<br>");
+    // output.Print("<label>" + base.strTable.GetString("skin_description") + "</label>");
+    // output.Print("<br>");
+
     output.Print("<table>");
     output.Print("<tr> <td width='300'></td> </tr>");
     bool rowParity = false;
@@ -29,7 +31,9 @@ class LiveryMenu isclass CustomScriptMenu
       output.Print("<td>");
       if(i != base.skinSelection)
         output.Print("<a href='live://livery_set/" + i + "'>");
-      output.Print(liveryName);
+
+      output.Print("<label>" + liveryName + "</label>");
+
       if(i != base.skinSelection)
         output.Print("</a>");
 

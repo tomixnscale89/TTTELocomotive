@@ -15,6 +15,9 @@ class CreditsMenu isclass CustomScriptMenu
     HTMLBuffer output = HTMLBufferStatic.Construct();
     output.Print("<html><body>");
 
+    output.Print("<h1><b>Credits</h1>");
+    output.Print("<br>");
+
     // Localized description.
     string str = TrainUtil.StrSubst(base.ScriptCredits, "\n", "<br>");
     output.Print("<label>" + str + "</label>");

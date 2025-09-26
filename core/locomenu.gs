@@ -55,6 +55,18 @@ class LocoMenu isclass CustomScriptMenu
   {
     HTMLBuffer output = HTMLBufferStatic.Construct();
   	output.Print("<html><body>");
+
+    if (m_rotationMode == ROTATION_JOYSTICK)
+    {
+      output.Print("<rect left=0% right=100% top=0%>");
+      output.Print("<img kuid='<kuid:414976:102981>' width=" + (string)TTTEBase.POPUP_WIDTH + " height=" + (string)TTTEBase.POPUP_WIDTH + ">");
+      output.Print("</rect>");
+      output.Print("<br>");
+    }
+
+    output.Print("<h1><b>Locomotive</h1>");
+    output.Print("<br>");
+
   	output.Print("<table>");
 
     output.Print("<tr><td>");
@@ -103,8 +115,9 @@ class LocoMenu isclass CustomScriptMenu
     if (m_rotationMode == ROTATION_JOYSTICK)
     {
       output.Print("<tr><td>");
-      output.Print("<label>Loco Rotation:</label><br>");
-      output.Print("<img kuid='<kuid:414976:102981>' width=" + (string)TTTEBase.POPUP_WIDTH + " height=" + (string)TTTEBase.POPUP_WIDTH + ">");
+      // output.Print("<label>Loco Rotation:</label><br>");
+      // output.Print("<img kuid='<kuid:414976:102981>' width=" + (string)TTTEBase.POPUP_WIDTH + " height=" + (string)TTTEBase.POPUP_WIDTH + ">");
+
       output.Print("</td></tr>");
     }
     else if (m_rotationMode == ROTATION_CGI)
@@ -123,13 +136,13 @@ class LocoMenu isclass CustomScriptMenu
   
         output.Print("<tr><td>");
         output.Print("<label>Wobble Intensity:</label><br>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobbleintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='wobbleintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("<br>");
         output.Print("<label>Wobble Speed:</label><br>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='wobblespeed' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='wobblespeed' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("<br>");
         output.Print("<label>Pitch Intensity:</label><br>");
-        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=300 height=16 id='pitchintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+        output.Print("<trainz-object style=slider horizontal theme=standard-slider width=100% height=16 id='pitchintensity' min=0.0 max=1.0 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
         output.Print("<br>");
         output.Print("</td></tr>");
       }
@@ -141,6 +154,7 @@ class LocoMenu isclass CustomScriptMenu
     }
 
     output.Print("</table>");
+
     output.Print("</body></html>");
 
     return output.AsString();
@@ -372,7 +386,8 @@ class LocoMenu isclass CustomScriptMenu
   void CreateJoystick()
   {
     int joystickPosX = base.popup.GetWindowLeft() + (base.popup.GetWindowWidth() / 2);
-    int joystickPosY = base.popup.GetWindowBottom() - TTTEBase.POPUP_WIDTH / 2;
+    // int joystickPosY = base.popup.GetWindowBottom() - TTTEBase.POPUP_WIDTH / 2;
+    int joystickPosY = base.popup.GetWindowTop() + TTTEBase.POPUP_WIDTH / 2;
 
     
     Joystick.Create(base.self.GetAsset(), joystickPosX, joystickPosY);
@@ -380,8 +395,11 @@ class LocoMenu isclass CustomScriptMenu
 
   void UpdateJoystick()
   {
-    int BrowserTop      = base.popup.GetWindowBottom() - TTTEBase.POPUP_WIDTH;
-    int BrowserBottom   = base.popup.GetWindowBottom();
+    // int BrowserTop      = base.popup.GetWindowBottom() - TTTEBase.POPUP_WIDTH;
+    // int BrowserBottom   = base.popup.GetWindowBottom();
+
+    int BrowserTop      = base.popup.GetWindowTop();
+    int BrowserBottom   = base.popup.GetWindowTop() + TTTEBase.POPUP_WIDTH;
     int BrowserLeft     = base.popup.GetWindowLeft();
     int BrowserRight    = base.popup.GetWindowRight();
     Joystick.Update(BrowserTop, BrowserBottom, BrowserLeft, BrowserRight);
