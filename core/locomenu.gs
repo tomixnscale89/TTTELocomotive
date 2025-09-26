@@ -80,7 +80,7 @@ class LocoMenu isclass CustomScriptMenu
       output.Print("<br>");
       output.Print("<label>" + base.strTable.GetString("shake_intensity") + "</label>");
       output.Print("<br>");
-      output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=300 height=32 id='shakeintensity' min=0.0 max=0.02 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='shakeintensity' min=0.0 max=0.02 value=0.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
       output.Print("<br>");
       output.Print("<label>" + base.strTable.GetString("shake_period") + "</label>");
       output.Print("<br>");
