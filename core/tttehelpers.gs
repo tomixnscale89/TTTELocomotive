@@ -41,7 +41,7 @@ class TTTEHelpers
   // Name: SoupHasTag()
   // Desc: Determine if a Soup contains a tag.
   // ============================================================================
-  bool SoupHasTag(Soup testSoup, string tagName)
+  public bool SoupHasTag(Soup testSoup, string tagName)
   {
     if(testSoup.GetIndexForNamedTag(tagName) == -1)
       return false;

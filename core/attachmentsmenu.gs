@@ -1,6 +1,13 @@
 include "tttemenu.gs"
 include "assetbrowser.gs"
 include "meshinspector.gs"
+include "asyncqueryhelper.gs"
+
+class AttachmentReflection
+{
+  public Asset asset;
+  public string[] rootMeshes;
+};
 
 class AttachmentsMenu isclass CustomScriptMenu
 {
@@ -79,6 +86,118 @@ class AttachmentsMenu isclass CustomScriptMenu
     }
   }
 
+  Asset[] m_attachmentSearchAsset;
+  AsyncQueryHelper[] m_attachmentSearch;
+  Soup[] m_attachmentConfig;
+  Soup GetConfigAsync(Asset asset, int i)
+  {
+    // Ensure capacity.
+    if (!m_attachmentSearchAsset)
+      m_attachmentSearchAsset = new Asset[0];
+
+    if (!m_attachmentSearch)
+      m_attachmentSearch = new AsyncQueryHelper[0];
+
+    if (!m_attachmentConfig)
+      m_attachmentConfig = new Soup[0];
+
+    while (m_attachmentSearchAsset.size() <= i)
+      m_attachmentSearchAsset[m_attachmentSearchAsset.size()] = null;
+
+    while (m_attachmentSearch.size() <= i)
+      m_attachmentSearch[m_attachmentSearch.size()] = null;
+      
+    while (m_attachmentConfig.size() <= i)
+      m_attachmentConfig[m_attachmentConfig.size()] = null;
+
+    if (m_attachmentSearchAsset[i] != asset)
+    {
+      // Start a new search.
+      if (asset) m_attachmentSearch[i] = asset.CacheConfigSoup();
+      else m_attachmentSearch[i] = null;
+      m_attachmentSearchAsset[i] = asset;
+      m_attachmentConfig[i] = null;
+    }
+
+    // Return the config if it's already cached
+    if (m_attachmentConfig[i])
+      return m_attachmentConfig[i];
+
+    // Invalid search
+    if (!m_attachmentSearch[i])
+      return null;
+    
+    int ec = m_attachmentSearch[i].GetQueryErrorCode();
+
+    // Still waiting.
+    if (ec == AsyncQueryHelper.ERROR_NOT_COMPLETE)
+      return null;
+
+    if (!m_attachmentSearch[i].IsErrorCode(ec))
+    {
+      m_attachmentConfig[i] = asset.GetConfigSoup();
+      return m_attachmentConfig[i];
+    }
+
+    // Search failed. Restart next frame.
+    m_attachmentSearchAsset[i] = null;
+    return null;
+  }
+
+  AttachmentReflection[] m_attachmentReflection;
+
+  AttachmentReflection GetAttachmentReflection(MeshObject mesh, int i)
+  {
+    if (!m_attachmentReflection)
+      m_attachmentReflection = new AttachmentReflection[0];
+
+    while (m_attachmentReflection.size() <= i)
+      m_attachmentReflection[m_attachmentReflection.size()] = new AttachmentReflection();
+    
+    // Already cached.
+    Asset asset = mesh.GetAsset();
+    if (m_attachmentReflection[i].asset == asset)
+      return m_attachmentReflection[i];
+
+    // Cache the config asynchronously.
+    Soup config = GetConfigAsync(asset, i);
+    if (!config)
+      return null;
+
+    m_attachmentReflection[i].asset = asset;
+    string[] rootMeshes = new string[0];
+
+    Soup meshTable = config.GetNamedSoup("mesh-table");
+    int iMesh;
+    for (iMesh = 0; iMesh < meshTable.CountTags(); iMesh++)
+    {
+      string meshName = meshTable.GetIndexedTagName(iMesh);
+      Soup properties = meshTable.GetNamedSoup(meshName);
+
+      if (base.SoupHasTag(properties, "att-parent"))
+        continue;
+      
+      rootMeshes[rootMeshes.size()] = meshName;
+    }
+
+    m_attachmentReflection[i].rootMeshes = rootMeshes;
+    return m_attachmentReflection[i];
+  }
+
+  void UpdateAttachmentAsync(MeshObject mesh, int i)
+  {
+    AttachmentReflection refl = GetAttachmentReflection(mesh, i);
+    if (!refl)
+      return;
+
+    int iMesh;
+    for (iMesh = 0; iMesh < refl.rootMeshes.size(); iMesh++)
+    {
+      mesh.SetMeshTranslation(refl.rootMeshes[iMesh], attachmentPosX[i], attachmentPosY[i], attachmentPosZ[i]);
+      mesh.SetMeshOrientation(refl.rootMeshes[iMesh], attachmentRotX[i], attachmentRotY[i], attachmentRotZ[i]);
+    }
+  }
+
   void UpdateAttachmentTransforms()
   {
     string[] attachments = base.MeshAttachments;
@@ -99,8 +218,9 @@ class AttachmentsMenu isclass CustomScriptMenu
       attachmentRotY[i] = Str.ToFloat(base.popup.GetElementProperty("att-rot-y-" + (string)i, "value"));
       attachmentRotZ[i] = Str.ToFloat(base.popup.GetElementProperty("att-rot-z-" + (string)i, "value"));
 
-      mesh.SetMeshTranslation("default", attachmentPosX[i], attachmentPosY[i], attachmentPosZ[i]);
-      mesh.SetMeshOrientation("default", attachmentRotX[i], attachmentRotY[i], attachmentRotZ[i]);
+      UpdateAttachmentAsync(mesh, i);
+      // mesh.SetMeshTranslation("default", attachmentPosX[i], attachmentPosY[i], attachmentPosZ[i]);
+      // mesh.SetMeshOrientation("default", attachmentRotX[i], attachmentRotY[i], attachmentRotZ[i]);
     }
   }
 
