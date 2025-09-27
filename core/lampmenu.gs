@@ -112,26 +112,47 @@ class LampMenu isclass CustomScriptMenu
     output.Print(base.LabeledCheckbox("live://animate-light", b_AnimatedLight, "Animated Light"));
     if (b_AnimatedLight)
     {
+      output.Print("<table width=100%>");
+
+      output.Print("<tr><td>");
       output.Print("<label>R</label>");
-      output.Print("<br>");
+      output.Print("</td></tr>");
+
+      output.Print("<tr><td>");
       output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-r' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
-      output.Print("<br>");
+      output.Print("</td></tr>");
+
+      output.Print("<tr><td>");
       output.Print("<label>G</label>");
-      output.Print("<br>");
+      output.Print("</td></tr>");
+
+      output.Print("<tr><td>");
       output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-g' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
-      output.Print("<br>");
+      output.Print("</td></tr>");
+
+      output.Print("<tr><td>");
       output.Print("<label>B</label>");
-      output.Print("<br>");
+      output.Print("</td></tr>");
+
+      output.Print("<tr><td>");
       output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-b' min=0.0 max=1.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
-      output.Print("<br>");
+      output.Print("</td></tr>");
+
+      output.Print("<tr><td>");
       output.Print("<label>Intensity</label>");
-      output.Print("<br>");
+      output.Print("</td></tr>");
+
+      output.Print("<tr><td>");
       output.Print("<trainz-object style=slider horizontal theme=ttte-slider width=100% height=32 id='headlight-intensity' min=0.0 max=4.0 value=1.0 page-size=0.001 draw-marks=0 draw-lines=0></trainz-object>");
+      output.Print("</td></tr>");
+
+      output.Print("</table>");
+      
       output.Print("<br>");
 
       // Light styles.
-      output.Print("<table>");
-      output.Print("<tr> <td width='300'></td> </tr>");
+      output.Print("<table width=100%>");
+      // output.Print("<tr> <td width='300'></td> </tr>");
       int i;
 
       bool rowParity = false;
@@ -157,8 +178,8 @@ class LampMenu isclass CustomScriptMenu
       output.Print("<br>");
       output.Print("<h2>Custom Lamps:</h2>");
       output.Print("<br>");
-      output.Print("<table>");
-      output.Print("<tr> <td width='300'></td> </tr>");
+      output.Print("<table width=100%>");
+      // output.Print("<tr> <td width='300'></td> </tr>");
       bool rowParity = false;
       int i;
       for(i = 0; i < base.ExtraLampsContainer.CountTags(); i++)
