@@ -20,7 +20,7 @@ class SmokeMenu isclass CustomScriptMenu
     for(i = 0; i < base.SmokeEdits.CountTags(); i++)
     {
       Soup CurrentSmoke = base.SmokeEdits.GetNamedSoup((string)i);
-      output.Print("<tr><td>");
+      output.Print("<tr><td width=100%>");
       output.Print("<b>");
       output.Print("smoke" + (string)i + " ");
       output.Print("</b>");

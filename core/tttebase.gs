@@ -328,10 +328,11 @@ class TTTEBase isclass TTTEHelpers
     // Hack: shrink the inner HTML with a table to give us some padding.
     if (!bSlim)
     {
-      // html = ReplaceStr(html, "<body>", "<body><table cellpadding=2><tr><td>");
-      // html = ReplaceStr(html, "</body>", "</td></tr></table></body>");
-      html = ReplaceStr(html, "<body>", "<body><rect left=5% top=5% right=95%>");
-      html = ReplaceStr(html, "</body>", "</rect></body>");
+      // borderspace=8 
+      html = ReplaceStr(html, "<body>", "<body><table border=4 cellpadding=16 bordercolor=" + Colors.Primary + "><tr><td width=100%>");
+      html = ReplaceStr(html, "</body>", "</td></tr></table></body>");
+      // html = ReplaceStr(html, "<body>", "<body><rect left=5% top=5% right=95%>");
+      // html = ReplaceStr(html, "</body>", "</rect></body>");
     }
 
     // Generate a repeating background pattern.
@@ -543,6 +544,9 @@ class TTTEBase isclass TTTEHelpers
     
     for(i = 0; i < customMenus.size(); i++)
     {
+      if (!customMenus[i])
+        continue;
+      
       //customMenus[i].Init(me);
       customMenus[i].base = me;
       customMenus[i].Init();
