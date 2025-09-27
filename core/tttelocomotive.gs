@@ -1665,6 +1665,9 @@ class TTTELocomotive isclass Locomotive, TTTEBase
     {
       for(i = 0; i < customMenus.size(); i++)
       {
+        if (!customMenus[i])
+          continue;
+        
         output.Print("<tr><td>");
 
         output.Print("<a href='live://open_custom/" + (string)i + "'>");

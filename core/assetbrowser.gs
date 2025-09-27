@@ -78,16 +78,27 @@ class AssetBrowser isclass GameObject
 
     if (m_searchFilter != "")
     {
-      types[iFilter] = TrainzAssetSearch.FILTER_AND; // vals[iFilter] = "";
-      iFilter++;
-      types[iFilter] = TrainzAssetSearch.FILTER_KEYWORD; vals[iFilter] = m_searchFilter;
-      iFilter++;
+      // types[iFilter] = TrainzAssetSearch.FILTER_AND; // vals[iFilter] = "";
+      // iFilter++;
+
+      // This is only a partial keyword search.
+      // types[iFilter] = TrainzAssetSearch.FILTER_KEYWORD; vals[iFilter] = m_searchFilter;
+      // iFilter++;
+
+      // Instead, tokenize, and add each potential keyword as a separate filter.
+      string[] keywords = Str.Tokens(m_searchFilter, " \t\r\n'\",()-");
+      int iTok;
+      for (iTok = 0; iTok < keywords.size(); ++iTok)
+      {
+        types[iFilter] = TrainzAssetSearch.FILTER_KEYWORD; vals[iFilter] = keywords[iTok];
+        iFilter++;
+      }
     }
 
     if (m_categoryFilter != "")
     {
-      types[iFilter] = TrainzAssetSearch.FILTER_AND; // vals[iFilter] = "";
-      iFilter++;
+      // types[iFilter] = TrainzAssetSearch.FILTER_AND; // vals[iFilter] = "";
+      // iFilter++;
       types[iFilter] = TrainzAssetSearch.FILTER_CATEGORY; vals[iFilter] = m_categoryFilter;
       iFilter++;
     }
@@ -219,7 +230,7 @@ class AssetBrowser isclass GameObject
     {
       GameObject callingThread = Router.GetCurrentThreadGameObject();
 
-      output.Print("<table>");
+      output.Print("<table width=100%>");
       // output.Print("<tr> <td width='300'></td> </tr>");
       output.Print("<tr> <td></td> <td></td> </tr>");
       m_assetList = m_search.GetResults();
